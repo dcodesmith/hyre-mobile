@@ -68,11 +68,10 @@ export function VerifyOtpForm({
 					value={otpCode}
 					onChangeText={onOtpCodeChange}
 					autoCapitalize="none"
-					returnKeyType="send"
+					returnKeyType="done"
 					keyboardType="number-pad"
 					autoComplete="one-time-code"
 					textContentType="oneTimeCode"
-					onSubmitEditing={onSubmit}
 					editable={!isSubmitting}
 					aria-invalid={!!error}
 					className="w-full"

@@ -5,7 +5,6 @@ import { Label } from "@/components/ui/label";
 import { Text } from "@/components/ui/text";
 import { VerifyOtpForm } from "@/components/ui/verify-otp-form";
 import { AuthContext } from "@/context/auth-context";
-import { useRouter } from "expo-router";
 import {
 	AUTH_DEFAULTS,
 	fetchCurrentUser,
@@ -19,6 +18,7 @@ import {
 	getSavedAuthToken,
 	saveAuthToken,
 } from "@/storage/auth-token";
+import { useRouter } from "expo-router";
 import {
 	createContext,
 	type PropsWithChildren,
