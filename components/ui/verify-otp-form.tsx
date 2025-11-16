@@ -1,0 +1,144 @@
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Text } from "@/components/ui/text";
+import * as React from "react";
+import { type TextStyle, View } from "react-native";
+
+const RESEND_CODE_INTERVAL_SECONDS = 30;
+
+const TABULAR_NUMBERS_STYLE: TextStyle = { fontVariant: ["tabular-nums"] };
+
+type VerifyOtpFormProps = {
+	otpCode: string;
+	onOtpCodeChange: (code: string) => void;
+	onSubmit: () => void;
+	onCancel: () => void;
+	onResendCode: () => void;
+	isSubmitting: boolean;
+	error: string | null;
+	previewCode?: string | null;
+};
+
+export function VerifyOtpForm({
+	otpCode,
+	onOtpCodeChange,
+	onSubmit,
+	onCancel,
+	onResendCode,
+	isSubmitting,
+	error,
+	previewCode,
+}: VerifyOtpFormProps) {
+	const { countdown, restartCountdown } = useCountdown(
+		RESEND_CODE_INTERVAL_SECONDS,
+	);
+
+	const handleResend = () => {
+		onResendCode();
+		restartCountdown();
+	};
+
+	return (
+		<View className="gap-6 w-full">
+			<View className="gap-1.5">
+				<Label htmlFor="code" className="text-base">Verification code</Label>
+				<Input
+					id="code"
+					value={otpCode}
+					onChangeText={onOtpCodeChange}
+					autoCapitalize="none"
+					returnKeyType="send"
+					keyboardType="number-pad"
+					autoComplete="one-time-code"
+					textContentType="oneTimeCode"
+					onSubmitEditing={onSubmit}
+					editable={!isSubmitting}
+					aria-invalid={!!error}
+					className="w-full"
+					placeholder="000000"
+				/>
+				{!!previewCode && (
+					<Text variant="small" className="text-muted-foreground">
+						Test code: {previewCode}
+					</Text>
+				)}
+				{!!error && (
+					<Text variant="small" className="text-destructive">
+						{error}
+					</Text>
+				)}
+				<Button
+					variant="link"
+					size="sm"
+					disabled={countdown > 0 || isSubmitting}
+					onPress={handleResend}
+				>
+					<Text className="text-xs">
+						Didn&apos;t receive the code? Resend{" "}
+						{countdown > 0 ? (
+							<Text className="text-xs" style={TABULAR_NUMBERS_STYLE}>
+								({countdown})
+							</Text>
+						) : null}
+					</Text>
+				</Button>
+			</View>
+			<View className="gap-3">
+				<Button 
+					className="w-full" 
+					onPress={onSubmit}
+					disabled={isSubmitting || otpCode.trim().length < 4}
+				>
+					<Text>{isSubmitting ? "Verifying..." : "Verify"}</Text>
+				</Button>
+				<Button
+					variant="ghost"
+					className="mx-auto"
+					onPress={onCancel}
+					disabled={isSubmitting}
+				>
+					<Text>Cancel</Text>
+				</Button>
+			</View>
+		</View>
+	);
+}
+
+function useCountdown(seconds = 30) {
+	const [countdown, setCountdown] = React.useState(seconds);
+	const intervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+
+	const startCountdown = React.useCallback(() => {
+		setCountdown(seconds);
+
+		if (intervalRef.current) {
+			clearInterval(intervalRef.current);
+		}
+
+		intervalRef.current = setInterval(() => {
+			setCountdown((prev) => {
+				if (prev <= 1) {
+					if (intervalRef.current) {
+						clearInterval(intervalRef.current);
+						intervalRef.current = null;
+					}
+					return 0;
+				}
+				return prev - 1;
+			});
+		}, 1000);
+	}, [seconds]);
+
+	React.useEffect(() => {
+		startCountdown();
+
+		return () => {
+			if (intervalRef.current) {
+				clearInterval(intervalRef.current);
+			}
+		};
+	}, [startCountdown]);
+
+	return { countdown, restartCountdown: startCountdown };
+}

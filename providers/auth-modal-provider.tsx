@@ -1,16 +1,4 @@
 import {
-	createContext,
-	type PropsWithChildren,
-	useCallback,
-	useContext,
-	useEffect,
-	useMemo,
-	useState,
-} from "react";
-import { Alert } from "react-native";
-
-import { Button } from "@/components/ui/button";
-import {
 	BottomSheet,
 	BottomSheetContent,
 	BottomSheetDescription,
@@ -18,8 +6,10 @@ import {
 	BottomSheetHeader,
 	BottomSheetTitle,
 } from "@/components/ui/bottom-sheet";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
+import { VerifyOtpForm } from "@/components/ui/verify-otp-form";
 import { AuthContext } from "@/context/auth-context";
 import {
 	AUTH_DEFAULTS,
@@ -34,6 +24,16 @@ import {
 	getSavedAuthToken,
 	saveAuthToken,
 } from "@/storage/auth-token";
+import {
+	createContext,
+	type PropsWithChildren,
+	useCallback,
+	useContext,
+	useEffect,
+	useMemo,
+	useState,
+} from "react";
+import { Alert } from "react-native";
 
 type AuthModalContextValue = {
 	openLoginModal: () => void;
@@ -287,29 +287,39 @@ export const AuthModalProvider = ({ children }: PropsWithChildren) => {
 					loading={isRequestingOtp}
 				/>
 
-				<LoginModal
-					title="Enter your code"
-					description={
-						pendingEmail
-							? `We sent a 1-time passcode to ${pendingEmail}. Paste it below to finish signing in.`
-							: ""
-					}
-					visible={isOtpModalVisible}
-					confirmLabel={isVerifyingOtp ? "Verifying..." : "Verify"}
-					confirmDisabled={!isOtpValid || isVerifyingOtp}
-					onConfirm={handleVerifyOtp}
-					onClose={closeLoginModal}
-					value={otpInput}
-					onChangeValue={setOtpInput}
-					error={otpError}
-					keyboardType="number-pad"
-					placeholder="000000"
-					autoComplete="one-time-code"
-					loading={isVerifyingOtp}
-					accessoryLabel={
-						otpPreviewCode ? `Test code: ${otpPreviewCode}` : undefined
-					}
-				/>
+			<BottomSheet open={isOtpModalVisible} onOpenChange={(open) => !open && closeLoginModal()}>
+				<BottomSheetContent>
+					<BottomSheetHeader>
+						<BottomSheetTitle>Enter your code</BottomSheetTitle>
+						{pendingEmail && (
+							<BottomSheetDescription>
+								We sent a 1-time passcode to {pendingEmail}. Paste it below to finish signing in.
+							</BottomSheetDescription>
+						)}
+					</BottomSheetHeader>
+
+					<VerifyOtpForm
+						otpCode={otpInput}
+						onOtpCodeChange={setOtpInput}
+						onSubmit={handleVerifyOtp}
+						onCancel={closeLoginModal}
+						onResendCode={async () => {
+							if (pendingEmail) {
+								try {
+									const response = await requestOtp(pendingEmail, AUTH_DEFAULTS.role);
+									setOtpPreviewCode(response.code ?? null);
+								} catch (error) {
+									const message = error instanceof Error ? error.message : "Unable to resend code.";
+									setOtpError(message);
+								}
+							}
+						}}
+						isSubmitting={isVerifyingOtp}
+						error={otpError}
+						previewCode={otpPreviewCode}
+					/>
+				</BottomSheetContent>
+			</BottomSheet>
 			</AuthModalContext.Provider>
 		</AuthContext.Provider>
 	);
