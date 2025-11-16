@@ -1,0 +1,19 @@
+{
+  "$schema": "https://react-native-reusables.com/schema.json",
+  "style": "default",
+  "tailwind": {
+    "config": "tailwind.config.js",
+    "css": "global.css",
+    "baseColor": "neutral",
+    "cssVariables": true
+  },
+  "rsc": false,
+  "tsx": true,
+  "aliases": {
+    "components": "@/components",
+    "lib": "@/lib",
+    "ui": "@/components/ui",
+    "utils": "@/lib/utils"
+  }
+}
+
