@@ -5,7 +5,7 @@ import * as DialogPrimitive from "@rn-primitives/dialog";
 import { X } from "lucide-react-native";
 import * as React from "react";
 import { Platform, Text, View, type ViewProps } from "react-native";
-import { FadeIn, FadeOut, SlideInDown, SlideOutDown } from "react-native-reanimated";
+import { FadeIn, FadeOut } from "react-native-reanimated";
 import { FullWindowOverlay as RNFullWindowOverlay } from "react-native-screens";
 
 const Dialog = DialogPrimitive.Root;
@@ -31,7 +31,7 @@ function DialogOverlay({
 		<FullWindowOverlay>
 			<DialogPrimitive.Overlay
 				className={cn(
-					"absolute inset-0 z-50 flex items-end justify-center bg-black/50",
+					"absolute inset-0 z-50 flex items-center justify-center bg-black/50 p-2",
 					Platform.select({
 						web: "animate-in fade-in-0 fixed cursor-default [&>*]:cursor-auto",
 					}),
@@ -45,10 +45,10 @@ function DialogOverlay({
 					exiting={FadeOut.duration(150)}
 				>
 					<NativeOnlyAnimatedView
-						entering={SlideInDown.duration(200)}
-						exiting={SlideOutDown.duration(150)}
+						entering={FadeIn.delay(50)}
+						exiting={FadeOut.duration(150)}
 					>
-						{children}
+						<>{children}</>
 					</NativeOnlyAnimatedView>
 				</NativeOnlyAnimatedView>
 			</DialogPrimitive.Overlay>
@@ -69,9 +69,9 @@ function DialogContent({
 			<DialogOverlay>
 				<DialogPrimitive.Content
 					className={cn(
-						"bg-background border-border z-50 w-full flex flex-col gap-4 rounded-t-3xl border-t border-l border-r p-6 pb-8 shadow-lg shadow-foreground/10 max-w-full",
+						"bg-background border-border z-50 mx-auto flex w-full max-w-[calc(100%-2rem)] flex-col gap-4 rounded-lg border p-6 shadow-lg shadow-foreground/10 sm:max-w-lg",
 						Platform.select({
-							web: "animate-in slide-in-from-bottom duration-200",
+							web: "animate-in fade-in-0 zoom-in-95 duration-200",
 						}),
 						className,
 					)}

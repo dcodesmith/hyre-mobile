@@ -11,13 +11,13 @@ import { Alert } from "react-native";
 
 import { Button } from "@/components/ui/button";
 import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+	BottomSheet,
+	BottomSheetContent,
+	BottomSheetDescription,
+	BottomSheetFooter,
+	BottomSheetHeader,
+	BottomSheetTitle,
+} from "@/components/ui/bottom-sheet";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 import { AuthContext } from "@/context/auth-context";
@@ -363,14 +363,14 @@ const LoginModal = ({
 	accessoryLabel,
 }: LoginModalProps) => {
 	return (
-		<Dialog open={visible} onOpenChange={(open) => !open && onClose()}>
-			<DialogContent className="sm:max-w-md">
-				<DialogHeader>
-					<DialogTitle>{title}</DialogTitle>
+		<BottomSheet open={visible} onOpenChange={(open) => !open && onClose()}>
+			<BottomSheetContent>
+				<BottomSheetHeader>
+					<BottomSheetTitle>{title}</BottomSheetTitle>
 					{!!description && (
-						<DialogDescription>{description}</DialogDescription>
+						<BottomSheetDescription>{description}</BottomSheetDescription>
 					)}
-				</DialogHeader>
+				</BottomSheetHeader>
 
 				<Input
 					value={value}
@@ -388,6 +388,7 @@ const LoginModal = ({
 					}
 					editable={!loading}
 					aria-invalid={!!error}
+					className="w-full"
 				/>
 
 				{!!accessoryLabel && (
@@ -401,7 +402,7 @@ const LoginModal = ({
 					</Text>
 				)}
 
-				<DialogFooter>
+				<BottomSheetFooter>
 					<Button variant="outline" onPress={onClose} disabled={loading}>
 						<Text>Cancel</Text>
 					</Button>
@@ -409,8 +410,8 @@ const LoginModal = ({
 					<Button onPress={onConfirm} disabled={confirmDisabled || loading}>
 						<Text>{loading ? "Loading..." : confirmLabel}</Text>
 					</Button>
-				</DialogFooter>
-			</DialogContent>
-		</Dialog>
+				</BottomSheetFooter>
+			</BottomSheetContent>
+		</BottomSheet>
 	);
 };
