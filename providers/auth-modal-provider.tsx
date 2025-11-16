@@ -7,9 +7,7 @@ import {
 	useMemo,
 	useState,
 } from "react";
-import {
-	Alert,
-} from "react-native";
+import { Alert } from "react-native";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -365,11 +363,13 @@ const LoginModal = ({
 }: LoginModalProps) => {
 	return (
 		<Dialog open={visible} onOpenChange={(open) => !open && onClose()}>
-			<DialogContent className="sm:max-w-md">
+			<DialogContent className="sm:max-w-md bg-white dark:bg-gray-900">
 				<DialogHeader>
-					<DialogTitle>{title}</DialogTitle>
+					<DialogTitle className="text-gray-900 dark:text-white">{title}</DialogTitle>
 					{!!description && (
-						<DialogDescription>{description}</DialogDescription>
+						<DialogDescription className="text-gray-600 dark:text-gray-400">
+							{description}
+						</DialogDescription>
 					)}
 				</DialogHeader>
 
@@ -407,10 +407,7 @@ const LoginModal = ({
 						<Text>Cancel</Text>
 					</Button>
 
-					<Button
-						onPress={onConfirm}
-						disabled={confirmDisabled || loading}
-					>
+					<Button onPress={onConfirm} disabled={confirmDisabled || loading}>
 						<Text>{loading ? "Loading..." : confirmLabel}</Text>
 					</Button>
 				</DialogFooter>

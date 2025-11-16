@@ -36,6 +36,18 @@ function DialogOverlay({
           }),
           className
         )}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 8,
+        }}
         {...props}
         asChild={Platform.OS !== 'web'}>
         <NativeOnlyAnimatedView entering={FadeIn.duration(200)} exiting={FadeOut.duration(150)}>
@@ -67,6 +79,22 @@ function DialogContent({
             }),
             className
           )}
+          style={{
+            backgroundColor: '#fff',
+            borderRadius: 12,
+            padding: 24,
+            ...Platform.select({
+              ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 8,
+              },
+              android: {
+                elevation: 5,
+              },
+            }),
+          }}
           {...props}>
           <>{children}</>
           <DialogPrimitive.Close
