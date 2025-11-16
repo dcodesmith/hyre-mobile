@@ -10,6 +10,8 @@ const RESEND_CODE_INTERVAL_SECONDS = 30;
 const TABULAR_NUMBERS_STYLE: TextStyle = { fontVariant: ["tabular-nums"] };
 
 type VerifyOtpFormProps = {
+	title?: string;
+	description?: string;
 	otpCode: string;
 	onOtpCodeChange: (code: string) => void;
 	onSubmit: () => void;
@@ -21,6 +23,8 @@ type VerifyOtpFormProps = {
 };
 
 export function VerifyOtpForm({
+	title = "Verify your email",
+	description,
 	otpCode,
 	onOtpCodeChange,
 	onSubmit,
@@ -41,8 +45,21 @@ export function VerifyOtpForm({
 
 	return (
 		<View className="gap-6 w-full">
+			<View className="gap-2">
+				<Text variant="h2" className="text-2xl font-bold text-center sm:text-left">
+					{title}
+				</Text>
+				{!!description && (
+					<Text variant="muted" className="text-center sm:text-left">
+						{description}
+					</Text>
+				)}
+			</View>
+			
 			<View className="gap-1.5">
-				<Label htmlFor="code" className="text-base">Verification code</Label>
+				<Label htmlFor="code" className="text-base font-semibold">
+					Verification code
+				</Label>
 				<Input
 					id="code"
 					value={otpCode}
@@ -85,15 +102,15 @@ export function VerifyOtpForm({
 				</Button>
 			</View>
 			<View className="gap-3">
-				<Button 
-					className="w-full" 
+				<Button
+					className="w-full"
 					onPress={onSubmit}
 					disabled={isSubmitting || otpCode.trim().length < 4}
 				>
-					<Text>{isSubmitting ? "Verifying..." : "Verify"}</Text>
+					<Text>{isSubmitting ? "Verifying..." : "Continue"}</Text>
 				</Button>
 				<Button
-					variant="ghost"
+					variant="link"
 					className="mx-auto"
 					onPress={onCancel}
 					disabled={isSubmitting}

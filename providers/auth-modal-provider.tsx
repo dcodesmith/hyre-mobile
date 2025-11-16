@@ -287,39 +287,45 @@ export const AuthModalProvider = ({ children }: PropsWithChildren) => {
 					loading={isRequestingOtp}
 				/>
 
-			<BottomSheet open={isOtpModalVisible} onOpenChange={(open) => !open && closeLoginModal()}>
-				<BottomSheetContent>
-					<BottomSheetHeader>
-						<BottomSheetTitle>Enter your code</BottomSheetTitle>
-						{pendingEmail && (
-							<BottomSheetDescription>
-								We sent a 1-time passcode to {pendingEmail}. Paste it below to finish signing in.
-							</BottomSheetDescription>
-						)}
-					</BottomSheetHeader>
-
-					<VerifyOtpForm
-						otpCode={otpInput}
-						onOtpCodeChange={setOtpInput}
-						onSubmit={handleVerifyOtp}
-						onCancel={closeLoginModal}
-						onResendCode={async () => {
-							if (pendingEmail) {
-								try {
-									const response = await requestOtp(pendingEmail, AUTH_DEFAULTS.role);
-									setOtpPreviewCode(response.code ?? null);
-								} catch (error) {
-									const message = error instanceof Error ? error.message : "Unable to resend code.";
-									setOtpError(message);
-								}
+				<BottomSheet
+					open={isOtpModalVisible}
+					onOpenChange={(open) => !open && closeLoginModal()}
+				>
+					<BottomSheetContent className="px-6 py-8">
+						<VerifyOtpForm
+							title="Enter your code"
+							description={
+								pendingEmail
+									? `Enter the verification code sent to ${pendingEmail}`
+									: undefined
 							}
-						}}
-						isSubmitting={isVerifyingOtp}
-						error={otpError}
-						previewCode={otpPreviewCode}
-					/>
-				</BottomSheetContent>
-			</BottomSheet>
+							otpCode={otpInput}
+							onOtpCodeChange={setOtpInput}
+							onSubmit={handleVerifyOtp}
+							onCancel={closeLoginModal}
+							onResendCode={async () => {
+								if (pendingEmail) {
+									try {
+										const response = await requestOtp(
+											pendingEmail,
+											AUTH_DEFAULTS.role,
+										);
+										setOtpPreviewCode(response.code ?? null);
+									} catch (error) {
+										const message =
+											error instanceof Error
+												? error.message
+												: "Unable to resend code.";
+										setOtpError(message);
+									}
+								}
+							}}
+							isSubmitting={isVerifyingOtp}
+							error={otpError}
+							previewCode={otpPreviewCode}
+						/>
+					</BottomSheetContent>
+				</BottomSheet>
 			</AuthModalContext.Provider>
 		</AuthContext.Provider>
 	);
