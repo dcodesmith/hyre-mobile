@@ -363,11 +363,13 @@ const LoginModal = ({
 }: LoginModalProps) => {
 	return (
 		<Dialog open={visible} onOpenChange={(open) => !open && onClose()}>
-			<DialogContent className="sm:max-w-md bg-white dark:bg-gray-900">
+			<DialogContent className="sm:max-w-md">
 				<DialogHeader>
-					<DialogTitle className="text-gray-900 dark:text-white">{title}</DialogTitle>
+					<DialogTitle>
+						{title}
+					</DialogTitle>
 					{!!description && (
-						<DialogDescription className="text-gray-600 dark:text-gray-400">
+						<DialogDescription>
 							{description}
 						</DialogDescription>
 					)}
