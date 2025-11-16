@@ -1,15 +1,11 @@
-import {
-	BottomSheet,
-	BottomSheetContent,
-} from "@/components/ui/bottom-sheet";
+import { BottomSheet, BottomSheetContent } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Text } from "@/components/ui/text";
 import { VerifyOtpForm } from "@/components/ui/verify-otp-form";
 import { AuthContext } from "@/context/auth-context";
-import Animated, { FadeInRight, FadeOutLeft } from "react-native-reanimated";
-import { View } from "react-native";
+import { useRouter } from "expo-router";
 import {
 	AUTH_DEFAULTS,
 	fetchCurrentUser,
@@ -32,7 +28,8 @@ import {
 	useMemo,
 	useState,
 } from "react";
-import { Alert } from "react-native";
+import { View } from "react-native";
+import Animated, { FadeInRight, FadeOutLeft } from "react-native-reanimated";
 
 type AuthModalContextValue = {
 	openLoginModal: () => void;
@@ -51,6 +48,7 @@ const AuthModalContext = createContext<AuthModalContextValue | undefined>(
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const AuthModalProvider = ({ children }: PropsWithChildren) => {
+	const router = useRouter();
 	const [isEmailModalVisible, setIsEmailModalVisible] = useState(false);
 	const [isOtpModalVisible, setIsOtpModalVisible] = useState(false);
 	const [emailInput, setEmailInput] = useState("");
@@ -187,13 +185,10 @@ export const AuthModalProvider = ({ children }: PropsWithChildren) => {
 			const profile = response.user ?? (await fetchCurrentUser(resolvedToken));
 			setUser(profile);
 			setIsOtpModalVisible(false);
+			setIsEmailModalVisible(false);
 
-			Alert.alert(
-				"Logged in",
-				profile?.name
-					? `Welcome back, ${profile.name}!`
-					: "OTP verification succeeded.",
-			);
+			// Navigate to home page after successful login
+			router.push("/(tabs)");
 		} catch (error) {
 			const message =
 				error instanceof Error
@@ -203,7 +198,7 @@ export const AuthModalProvider = ({ children }: PropsWithChildren) => {
 		} finally {
 			setIsVerifyingOtp(false);
 		}
-	}, [isOtpValid, otpInput, pendingEmail]);
+	}, [isOtpValid, otpInput, pendingEmail, router]);
 
 	const handleLogout = useCallback(async () => {
 		if (isLoggingOut) {
@@ -283,11 +278,15 @@ export const AuthModalProvider = ({ children }: PropsWithChildren) => {
 							>
 								<View className="gap-6 w-full">
 									<View className="gap-2">
-										<Text variant="h2" className="text-2xl font-bold text-center sm:text-left">
+										<Text
+											variant="h2"
+											className="text-2xl font-bold text-center sm:text-left"
+										>
 											Log in
 										</Text>
 										<Text variant="muted" className="text-center sm:text-left">
-											Enter the email associated with your account and we will send you a one-time passcode.
+											Enter the email associated with your account and we will
+											send you a one-time passcode.
 										</Text>
 									</View>
 
@@ -320,7 +319,9 @@ export const AuthModalProvider = ({ children }: PropsWithChildren) => {
 											onPress={handleRequestOtp}
 											disabled={!isEmailValid || isRequestingOtp}
 										>
-											<Text>{isRequestingOtp ? "Sending..." : "Send code"}</Text>
+											<Text>
+												{isRequestingOtp ? "Sending..." : "Send code"}
+											</Text>
 										</Button>
 										<Button
 											variant="link"

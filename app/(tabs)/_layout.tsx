@@ -30,6 +30,29 @@ export default function TabLayout() {
 			/>
 
 			<Tabs.Screen
+				name="enter"
+				options={{
+					title: "Enter",
+					tabBarIcon: ({ color }) => (
+						<IconSymbol size={28} name="house.fill" color={color} />
+					),
+					// This will immediately open the modal route instead of showing "Enter"
+					tabBarButton: (props) => (
+						<HapticTab
+							{...props}
+							onPress={(event) => {
+								event.preventDefault();
+								// Navigate to the modal screen at /modal
+								props.onPress?.(event);
+								// @ts-ignore: expo-router navigation
+								props.navigation?.navigate("modal");
+							}}
+						/>
+					),
+				}}
+			/>
+
+			<Tabs.Screen
 				name="login"
 				options={{
 					title: "Account",

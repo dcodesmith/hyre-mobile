@@ -5,9 +5,12 @@ import { HelloWave } from '@/components/hello-wave';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useAuthContext } from '@/context/auth-context';
 import { Link } from 'expo-router';
 
 export default function HomeScreen() {
+  const { isAuthenticated, userEmail } = useAuthContext();
+
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
@@ -21,6 +24,12 @@ export default function HomeScreen() {
         <ThemedText type="title">Welcome!</ThemedText>
         <HelloWave />
       </ThemedView>
+      {isAuthenticated && userEmail && (
+        <ThemedView style={styles.stepContainer}>
+          <ThemedText type="subtitle">Logged in as</ThemedText>
+          <ThemedText>{userEmail}</ThemedText>
+        </ThemedView>
+      )}
       <ThemedView style={styles.stepContainer}>
         <ThemedText type="subtitle">Step 1: Try it</ThemedText>
         <ThemedText>
