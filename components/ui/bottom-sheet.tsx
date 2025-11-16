@@ -63,7 +63,7 @@ function BottomSheetContent({
 			<BottomSheetOverlay>
 				<DialogPrimitive.Content
 					className={cn(
-						"bg-background z-50 w-full h-full flex flex-col items-center gap-4 rounded-t-3xl p-6 pb-8 shadow-lg shadow-foreground/10",
+						"bg-background z-50 w-full h-full flex flex-col items-center justify-center rounded-t-3xl p-6 pb-8 shadow-lg shadow-foreground/10",
 						Platform.select({
 							web: "animate-in slide-in-from-bottom duration-250",
 						}),
