@@ -14,7 +14,10 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 import { AuthModalProvider } from "@/providers/auth-modal-provider";
 
 // Suppress SafeAreaView deprecation warning from dependencies
-LogBox.ignoreLogs(['SafeAreaView has been deprecated']);
+LogBox.ignoreLogs([
+	'SafeAreaView has been deprecated',
+	/SafeAreaView/,
+]);
 
 export const unstable_settings = {
 	anchor: "(tabs)",
