@@ -9,20 +9,20 @@ import {
 } from "react";
 import {
 	Alert,
-	KeyboardAvoidingView,
-	Modal,
-	Platform,
-	Pressable,
-	View,
 } from "react-native";
 
 import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
-import { cn } from "@/lib/utils";
 import { AuthContext } from "@/context/auth-context";
-import { Colors } from "@/constants/theme";
-import { useColorScheme } from "@/hooks/use-color-scheme";
 import {
 	AUTH_DEFAULTS,
 	fetchCurrentUser,
@@ -363,90 +363,58 @@ const LoginModal = ({
 	loading,
 	accessoryLabel,
 }: LoginModalProps) => {
-	const colorScheme = useColorScheme();
-	const palette = Colors[colorScheme ?? "light"];
-
 	return (
-		<Modal
-			visible={visible}
-			animationType="slide"
-			transparent
-			onRequestClose={onClose}
-		>
-			<Pressable
-				className="flex-1 bg-black/40 justify-end"
-				onPress={onClose}
-			>
-				<Pressable>
-					<KeyboardAvoidingView
-						behavior={Platform.select({ ios: "padding", default: undefined })}
-						className="w-full"
+		<Dialog open={visible} onOpenChange={(open) => !open && onClose()}>
+			<DialogContent className="sm:max-w-md">
+				<DialogHeader>
+					<DialogTitle>{title}</DialogTitle>
+					{!!description && (
+						<DialogDescription>{description}</DialogDescription>
+					)}
+				</DialogHeader>
+
+				<Input
+					value={value}
+					onChangeText={onChangeValue}
+					keyboardType={keyboardType}
+					autoCapitalize={autoCapitalize}
+					placeholder={placeholder}
+					autoComplete={autoComplete}
+					textContentType={
+						autoComplete === "email"
+							? "emailAddress"
+							: autoComplete === "one-time-code"
+								? "oneTimeCode"
+								: "none"
+					}
+					editable={!loading}
+					aria-invalid={!!error}
+				/>
+
+				{!!accessoryLabel && (
+					<Text variant="small" className="text-muted-foreground -mt-2">
+						{accessoryLabel}
+					</Text>
+				)}
+				{!!error && (
+					<Text variant="small" className="text-destructive -mt-2">
+						{error}
+					</Text>
+				)}
+
+				<DialogFooter>
+					<Button variant="outline" onPress={onClose} disabled={loading}>
+						<Text>Cancel</Text>
+					</Button>
+
+					<Button
+						onPress={onConfirm}
+						disabled={confirmDisabled || loading}
 					>
-						<View
-							className="px-6 pt-6 pb-8 rounded-t-3xl gap-4"
-							style={{ backgroundColor: palette.background }}
-						>
-							<View className="flex-row items-center justify-between">
-								<Text variant="h3">{title}</Text>
-								<Pressable onPress={onClose} hitSlop={8}>
-									<Text className="text-primary font-medium">Close</Text>
-								</Pressable>
-							</View>
-
-							{!!description && (
-								<Text variant="muted">{description}</Text>
-							)}
-
-							<Input
-								value={value}
-								onChangeText={onChangeValue}
-								keyboardType={keyboardType}
-								autoCapitalize={autoCapitalize}
-								placeholder={placeholder}
-								autoComplete={autoComplete}
-								textContentType={
-									autoComplete === "email"
-										? "emailAddress"
-										: autoComplete === "one-time-code"
-											? "oneTimeCode"
-											: "none"
-								}
-								editable={!loading}
-								aria-invalid={!!error}
-							/>
-
-							{!!accessoryLabel && (
-								<Text variant="small" className="text-muted-foreground">
-									{accessoryLabel}
-								</Text>
-							)}
-							{!!error && (
-								<Text variant="small" className="text-destructive">
-									{error}
-								</Text>
-							)}
-
-							<View className="flex-row gap-3 items-center justify-end mt-1">
-								<Button
-									variant="ghost"
-									onPress={onClose}
-									disabled={loading}
-								>
-									<Text>Cancel</Text>
-								</Button>
-
-								<Button
-									onPress={onConfirm}
-									disabled={confirmDisabled}
-									className={cn(loading && "opacity-60")}
-								>
-									<Text>{confirmLabel}</Text>
-								</Button>
-							</View>
-						</View>
-					</KeyboardAvoidingView>
-				</Pressable>
-			</Pressable>
-		</Modal>
+						<Text>{loading ? "Loading..." : confirmLabel}</Text>
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
 	);
 };
