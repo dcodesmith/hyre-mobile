@@ -46,7 +46,10 @@ export function VerifyOtpForm({
 	return (
 		<View className="gap-6 w-full">
 			<View className="gap-2">
-				<Text variant="h2" className="text-2xl font-bold text-center sm:text-left">
+				<Text
+					variant="h2"
+					className="text-2xl font-bold text-center sm:text-left"
+				>
 					{title}
 				</Text>
 				{!!description && (
@@ -55,7 +58,7 @@ export function VerifyOtpForm({
 					</Text>
 				)}
 			</View>
-			
+
 			<View className="gap-1.5">
 				<Label htmlFor="code" className="text-base font-semibold">
 					Verification code
