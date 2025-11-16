@@ -6,11 +6,15 @@ import {
 import { PortalHost } from "@rn-primitives/portal";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { LogBox } from "react-native";
 import "react-native-reanimated";
 import "../global.css";
 
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { AuthModalProvider } from "@/providers/auth-modal-provider";
+
+// Suppress SafeAreaView deprecation warning from dependencies
+LogBox.ignoreLogs(['SafeAreaView has been deprecated']);
 
 export const unstable_settings = {
 	anchor: "(tabs)",
