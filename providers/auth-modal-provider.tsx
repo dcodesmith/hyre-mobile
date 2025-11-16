@@ -97,6 +97,7 @@ export const AuthModalProvider = ({ children }: PropsWithChildren) => {
 			isCancelled = true;
 		};
 	}, []);
+
 	const closeLoginModal = useCallback(() => {
 		setIsEmailModalVisible(false);
 		setIsOtpModalVisible(false);
@@ -365,13 +366,9 @@ const LoginModal = ({
 		<Dialog open={visible} onOpenChange={(open) => !open && onClose()}>
 			<DialogContent className="sm:max-w-md">
 				<DialogHeader>
-					<DialogTitle>
-						{title}
-					</DialogTitle>
+					<DialogTitle>{title}</DialogTitle>
 					{!!description && (
-						<DialogDescription>
-							{description}
-						</DialogDescription>
+						<DialogDescription>{description}</DialogDescription>
 					)}
 				</DialogHeader>
 
