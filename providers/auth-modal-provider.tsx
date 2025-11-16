@@ -1,16 +1,15 @@
 import {
 	BottomSheet,
 	BottomSheetContent,
-	BottomSheetDescription,
-	BottomSheetFooter,
-	BottomSheetHeader,
-	BottomSheetTitle,
 } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Text } from "@/components/ui/text";
 import { VerifyOtpForm } from "@/components/ui/verify-otp-form";
 import { AuthContext } from "@/context/auth-context";
+import Animated, { FadeInRight, FadeOutLeft } from "react-native-reanimated";
+import { View } from "react-native";
 import {
 	AUTH_DEFAULTS,
 	fetchCurrentUser,
@@ -264,66 +263,118 @@ export const AuthModalProvider = ({ children }: PropsWithChildren) => {
 		],
 	);
 
+	const isModalVisible = isEmailModalVisible || isOtpModalVisible;
+
 	return (
 		<AuthContext.Provider value={authContextValue}>
 			<AuthModalContext.Provider value={modalContextValue}>
 				{children}
 
-				<LoginModal
-					title="Log in"
-					description="Enter the email associated with your account and we will send you a one-time passcode."
-					visible={isEmailModalVisible}
-					confirmLabel={isRequestingOtp ? "Sending..." : "Send code"}
-					confirmDisabled={!isEmailValid || isRequestingOtp}
-					onConfirm={handleRequestOtp}
-					onClose={closeLoginModal}
-					value={emailInput}
-					onChangeValue={setEmailInput}
-					error={emailError}
-					keyboardType="email-address"
-					autoCapitalize="none"
-					placeholder="name@company.com"
-					autoComplete="email"
-					loading={isRequestingOtp}
-				/>
-
 				<BottomSheet
-					open={isOtpModalVisible}
+					open={isModalVisible}
 					onOpenChange={(open) => !open && closeLoginModal()}
 				>
 					<BottomSheetContent className="px-6 py-8">
-						<VerifyOtpForm
-							title="Enter your code"
-							description={
-								pendingEmail
-									? `Enter the verification code sent to ${pendingEmail}`
-									: undefined
-							}
-							otpCode={otpInput}
-							onOtpCodeChange={setOtpInput}
-							onSubmit={handleVerifyOtp}
-							onCancel={closeLoginModal}
-							onResendCode={async () => {
-								if (pendingEmail) {
-									try {
-										const response = await requestOtp(
-											pendingEmail,
-											AUTH_DEFAULTS.role,
-										);
-										setOtpPreviewCode(response.code ?? null);
-									} catch (error) {
-										const message =
-											error instanceof Error
-												? error.message
-												: "Unable to resend code.";
-										setOtpError(message);
+						{isEmailModalVisible && (
+							<Animated.View
+								entering={FadeInRight.duration(200)}
+								exiting={FadeOutLeft.duration(200)}
+								style={{ width: "100%" }}
+							>
+								<View className="gap-6 w-full">
+									<View className="gap-2">
+										<Text variant="h2" className="text-2xl font-bold text-center sm:text-left">
+											Log in
+										</Text>
+										<Text variant="muted" className="text-center sm:text-left">
+											Enter the email associated with your account and we will send you a one-time passcode.
+										</Text>
+									</View>
+
+									<View className="gap-1.5">
+										<Label htmlFor="email" className="text-base font-semibold">
+											Email address
+										</Label>
+										<Input
+											id="email"
+											value={emailInput}
+											onChangeText={setEmailInput}
+											keyboardType="email-address"
+											autoCapitalize="none"
+											placeholder="name@company.com"
+											autoComplete="email"
+											editable={!isRequestingOtp}
+											aria-invalid={!!emailError}
+											className="w-full"
+										/>
+										{!!emailError && (
+											<Text variant="small" className="text-destructive">
+												{emailError}
+											</Text>
+										)}
+									</View>
+
+									<View className="gap-3">
+										<Button
+											className="w-full"
+											onPress={handleRequestOtp}
+											disabled={!isEmailValid || isRequestingOtp}
+										>
+											<Text>{isRequestingOtp ? "Sending..." : "Send code"}</Text>
+										</Button>
+										<Button
+											variant="link"
+											className="mx-auto"
+											onPress={closeLoginModal}
+											disabled={isRequestingOtp}
+										>
+											<Text>Cancel</Text>
+										</Button>
+									</View>
+								</View>
+							</Animated.View>
+						)}
+
+						{isOtpModalVisible && (
+							<Animated.View
+								entering={FadeInRight.duration(200)}
+								exiting={FadeOutLeft.duration(200)}
+								style={{ width: "100%" }}
+							>
+								<VerifyOtpForm
+									title="Enter your code"
+									description={
+										pendingEmail
+											? `Enter the verification code sent to ${pendingEmail}`
+											: undefined
 									}
-								}
-							}}
-							isSubmitting={isVerifyingOtp}
-							error={otpError}
-							previewCode={otpPreviewCode}
-						/>
+									otpCode={otpInput}
+									onOtpCodeChange={setOtpInput}
+									onSubmit={handleVerifyOtp}
+									onCancel={closeLoginModal}
+									onResendCode={async () => {
+										if (pendingEmail) {
+											try {
+												const response = await requestOtp(
+													pendingEmail,
+													AUTH_DEFAULTS.role,
+												);
+												setOtpPreviewCode(response.code ?? null);
+											} catch (error) {
+												const message =
+													error instanceof Error
+														? error.message
+														: "Unable to resend code.";
+												setOtpError(message);
+											}
+										}
+									}}
+									isSubmitting={isVerifyingOtp}
+									error={otpError}
+									previewCode={otpPreviewCode}
+								/>
+							</Animated.View>
+						)}
 					</BottomSheetContent>
 				</BottomSheet>
 			</AuthModalContext.Provider>
@@ -339,95 +390,4 @@ export const useAuthModal = () => {
 	}
 
 	return context;
-};
-
-type LoginModalProps = {
-	title: string;
-	description: string;
-	visible: boolean;
-	confirmLabel: string;
-	confirmDisabled: boolean;
-	onConfirm: () => void;
-	onClose: () => void;
-	value: string;
-	onChangeValue: (text: string) => void;
-	error: string | null;
-	keyboardType?: "default" | "email-address" | "number-pad";
-	autoCapitalize?: "none" | "sentences" | "words" | "characters";
-	placeholder?: string;
-	autoComplete?: "email" | "off" | "one-time-code";
-	loading: boolean;
-	accessoryLabel?: string;
-};
-
-const LoginModal = ({
-	title,
-	description,
-	visible,
-	confirmLabel,
-	confirmDisabled,
-	onConfirm,
-	onClose,
-	value,
-	onChangeValue,
-	error,
-	keyboardType = "default",
-	autoCapitalize = "none",
-	placeholder,
-	autoComplete = "off",
-	loading,
-	accessoryLabel,
-}: LoginModalProps) => {
-	return (
-		<BottomSheet open={visible} onOpenChange={(open) => !open && onClose()}>
-			<BottomSheetContent>
-				<BottomSheetHeader>
-					<BottomSheetTitle>{title}</BottomSheetTitle>
-					{!!description && (
-						<BottomSheetDescription>{description}</BottomSheetDescription>
-					)}
-				</BottomSheetHeader>
-
-				<Input
-					value={value}
-					onChangeText={onChangeValue}
-					keyboardType={keyboardType}
-					autoCapitalize={autoCapitalize}
-					placeholder={placeholder}
-					autoComplete={autoComplete}
-					textContentType={
-						autoComplete === "email"
-							? "emailAddress"
-							: autoComplete === "one-time-code"
-								? "oneTimeCode"
-								: "none"
-					}
-					editable={!loading}
-					aria-invalid={!!error}
-					className="w-full"
-				/>
-
-				{!!accessoryLabel && (
-					<Text variant="small" className="text-muted-foreground -mt-2">
-						{accessoryLabel}
-					</Text>
-				)}
-				{!!error && (
-					<Text variant="small" className="text-destructive -mt-2">
-						{error}
-					</Text>
-				)}
-
-				<BottomSheetFooter>
-					<Button variant="outline" onPress={onClose} disabled={loading}>
-						<Text>Cancel</Text>
-					</Button>
-
-					<Button onPress={onConfirm} disabled={confirmDisabled || loading}>
-						<Text>{loading ? "Loading..." : confirmLabel}</Text>
-					</Button>
-				</BottomSheetFooter>
-			</BottomSheetContent>
-		</BottomSheet>
-	);
 };
