@@ -8,20 +8,20 @@ import {
 	useState,
 } from "react";
 import {
-	ActivityIndicator,
 	Alert,
 	KeyboardAvoidingView,
 	Modal,
 	Platform,
 	Pressable,
-	StyleSheet,
-	Text,
-	TextInput,
 	View,
 } from "react-native";
 
-import { Colors } from "@/constants/theme";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Text } from "@/components/ui/text";
+import { cn } from "@/lib/utils";
 import { AuthContext } from "@/context/auth-context";
+import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import {
 	AUTH_DEFAULTS,
@@ -54,10 +54,6 @@ const AuthModalContext = createContext<AuthModalContextValue | undefined>(
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const AuthModalProvider = ({ children }: PropsWithChildren) => {
-	const colorScheme = useColorScheme();
-	const palette = Colors[colorScheme ?? "light"];
-	const styles = useMemo(() => createStyles(palette), [palette]);
-
 	const [isEmailModalVisible, setIsEmailModalVisible] = useState(false);
 	const [isOtpModalVisible, setIsOtpModalVisible] = useState(false);
 	const [emailInput, setEmailInput] = useState("");
@@ -289,7 +285,6 @@ export const AuthModalProvider = ({ children }: PropsWithChildren) => {
 					autoCapitalize="none"
 					placeholder="name@company.com"
 					autoComplete="email"
-					styles={styles}
 					loading={isRequestingOtp}
 				/>
 
@@ -311,7 +306,6 @@ export const AuthModalProvider = ({ children }: PropsWithChildren) => {
 					keyboardType="number-pad"
 					placeholder="000000"
 					autoComplete="one-time-code"
-					styles={styles}
 					loading={isVerifyingOtp}
 					accessoryLabel={
 						otpPreviewCode ? `Test code: ${otpPreviewCode}` : undefined
@@ -347,7 +341,6 @@ type LoginModalProps = {
 	autoCapitalize?: "none" | "sentences" | "words" | "characters";
 	placeholder?: string;
 	autoComplete?: "email" | "off" | "one-time-code";
-	styles: ReturnType<typeof createStyles>;
 	loading: boolean;
 	accessoryLabel?: string;
 };
@@ -367,10 +360,12 @@ const LoginModal = ({
 	autoCapitalize = "none",
 	placeholder,
 	autoComplete = "off",
-	styles,
 	loading,
 	accessoryLabel,
 }: LoginModalProps) => {
+	const colorScheme = useColorScheme();
+	const palette = Colors[colorScheme ?? "light"];
+
 	return (
 		<Modal
 			visible={visible}
@@ -378,167 +373,80 @@ const LoginModal = ({
 			transparent
 			onRequestClose={onClose}
 		>
-			<View style={styles.backdrop}>
-				<KeyboardAvoidingView
-					behavior={Platform.select({ ios: "padding", default: undefined })}
-					style={styles.modalWrapper}
-				>
-					<View style={styles.card}>
-						<View style={styles.header}>
-							<Text style={styles.title}>{title}</Text>
-							<Pressable onPress={onClose} hitSlop={8}>
-								<Text style={styles.linkLabel}>Close</Text>
-							</Pressable>
+			<Pressable
+				className="flex-1 bg-black/40 justify-end"
+				onPress={onClose}
+			>
+				<Pressable>
+					<KeyboardAvoidingView
+						behavior={Platform.select({ ios: "padding", default: undefined })}
+						className="w-full"
+					>
+						<View
+							className="px-6 pt-6 pb-8 rounded-t-3xl gap-4"
+							style={{ backgroundColor: palette.background }}
+						>
+							<View className="flex-row items-center justify-between">
+								<Text variant="h3">{title}</Text>
+								<Pressable onPress={onClose} hitSlop={8}>
+									<Text className="text-primary font-medium">Close</Text>
+								</Pressable>
+							</View>
+
+							{!!description && (
+								<Text variant="muted">{description}</Text>
+							)}
+
+							<Input
+								value={value}
+								onChangeText={onChangeValue}
+								keyboardType={keyboardType}
+								autoCapitalize={autoCapitalize}
+								placeholder={placeholder}
+								autoComplete={autoComplete}
+								textContentType={
+									autoComplete === "email"
+										? "emailAddress"
+										: autoComplete === "one-time-code"
+											? "oneTimeCode"
+											: "none"
+								}
+								editable={!loading}
+								aria-invalid={!!error}
+							/>
+
+							{!!accessoryLabel && (
+								<Text variant="small" className="text-muted-foreground">
+									{accessoryLabel}
+								</Text>
+							)}
+							{!!error && (
+								<Text variant="small" className="text-destructive">
+									{error}
+								</Text>
+							)}
+
+							<View className="flex-row gap-3 items-center justify-end mt-1">
+								<Button
+									variant="ghost"
+									onPress={onClose}
+									disabled={loading}
+								>
+									<Text>Cancel</Text>
+								</Button>
+
+								<Button
+									onPress={onConfirm}
+									disabled={confirmDisabled}
+									className={cn(loading && "opacity-60")}
+								>
+									<Text>{confirmLabel}</Text>
+								</Button>
+							</View>
 						</View>
-
-						{!!description && (
-							<Text style={styles.description}>{description}</Text>
-						)}
-
-						<TextInput
-							value={value}
-							onChangeText={onChangeValue}
-							style={styles.input}
-							keyboardType={keyboardType}
-							autoCapitalize={autoCapitalize}
-							placeholder={placeholder}
-							autoComplete={autoComplete}
-							placeholderTextColor={styles.placeholderColor}
-							textContentType={
-								autoComplete === "email"
-									? "emailAddress"
-									: autoComplete === "one-time-code"
-										? "oneTimeCode"
-										: "none"
-							}
-						/>
-
-						{!!accessoryLabel && (
-							<Text style={styles.accessoryLabel}>{accessoryLabel}</Text>
-						)}
-						{!!error && <Text style={styles.errorText}>{error}</Text>}
-
-						<View style={styles.actions}>
-							<Pressable
-								style={styles.secondaryButton}
-								onPress={onClose}
-								disabled={loading}
-							>
-								<Text style={styles.secondaryButtonLabel}>Cancel</Text>
-							</Pressable>
-
-							<Pressable
-								style={[
-									styles.primaryButton,
-									confirmDisabled && styles.primaryButtonDisabled,
-								]}
-								onPress={onConfirm}
-								disabled={confirmDisabled}
-							>
-								{loading ? (
-									<ActivityIndicator color="#fff" />
-								) : (
-									<Text style={styles.primaryButtonLabel}>{confirmLabel}</Text>
-								)}
-							</Pressable>
-						</View>
-					</View>
-				</KeyboardAvoidingView>
-			</View>
+					</KeyboardAvoidingView>
+				</Pressable>
+			</Pressable>
 		</Modal>
 	);
-};
-
-const createStyles = (palette: (typeof Colors)["light"]) => {
-	const placeholderColor = `${palette.icon}cc`;
-
-	return {
-		...StyleSheet.create({
-			backdrop: {
-				flex: 1,
-				backgroundColor: "rgba(0,0,0,0.4)",
-				justifyContent: "flex-end",
-			},
-			modalWrapper: {
-				width: "100%",
-			},
-			card: {
-				backgroundColor: palette.background,
-				paddingHorizontal: 24,
-				paddingTop: 24,
-				paddingBottom: 32,
-				borderTopLeftRadius: 20,
-				borderTopRightRadius: 20,
-				gap: 16,
-			},
-			header: {
-				flexDirection: "row",
-				alignItems: "center",
-				justifyContent: "space-between",
-			},
-			title: {
-				fontSize: 20,
-				fontWeight: "600",
-				color: palette.text,
-			},
-			description: {
-				fontSize: 15,
-				color: palette.icon,
-			},
-			input: {
-				borderWidth: 1,
-				borderColor: palette.icon,
-				borderRadius: 10,
-				paddingHorizontal: 14,
-				paddingVertical: 12,
-				fontSize: 16,
-				color: palette.text,
-			},
-			accessoryLabel: {
-				fontSize: 13,
-				color: palette.icon,
-			},
-			errorText: {
-				fontSize: 13,
-				color: "#d13438",
-			},
-			actions: {
-				flexDirection: "row",
-				gap: 12,
-				alignItems: "center",
-				justifyContent: "flex-end",
-				marginTop: 4,
-			},
-			primaryButton: {
-				flexDirection: "row",
-				alignItems: "center",
-				justifyContent: "center",
-				backgroundColor: palette.tint,
-				paddingHorizontal: 20,
-				paddingVertical: 12,
-				borderRadius: 999,
-				minWidth: 110,
-			},
-			primaryButtonDisabled: {
-				opacity: 0.5,
-			},
-			primaryButtonLabel: {
-				color: "#fff",
-				fontWeight: "600",
-			},
-			secondaryButton: {
-				paddingHorizontal: 16,
-				paddingVertical: 12,
-			},
-			secondaryButtonLabel: {
-				color: palette.icon,
-				fontWeight: "500",
-			},
-			linkLabel: {
-				color: palette.tint,
-				fontWeight: "500",
-			},
-		}),
-		placeholderColor,
-	};
 };
