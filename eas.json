@@ -1,0 +1,37 @@
+{
+  "cli": {
+    "version": ">= 16.0.1",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "autoIncrement": true
+    },
+    "preview": {
+      "distribution": "internal",
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://hyre-worker-nestjs.fly.dev",
+        "EXPO_PUBLIC_TRUSTED_ORIGIN": "https://hyre-worker-nestjs.fly.dev"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "ios": {
+        "resourceClass": "m-medium"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://hyre-worker-nestjs.fly.dev",
+        "EXPO_PUBLIC_TRUSTED_ORIGIN": "https://hyre-worker-nestjs.fly.dev"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {},
+      "android": {}
+    }
+  }
+}

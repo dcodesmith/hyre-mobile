@@ -15,124 +15,124 @@ const BottomSheetPortal = DialogPrimitive.Portal;
 const BottomSheetClose = DialogPrimitive.Close;
 
 const FullWindowOverlay =
-	Platform.OS === "ios" ? RNFullWindowOverlay : React.Fragment;
+  Platform.OS === "ios" ? RNFullWindowOverlay : React.Fragment;
 
 function BottomSheetOverlay({
-	className,
-	children,
-	...props
+  className,
+  children,
+  ...props
 }: Omit<DialogPrimitive.OverlayProps, "asChild"> &
-	React.RefAttributes<DialogPrimitive.OverlayRef> & {
-		children?: React.ReactNode;
-	}) {
-	return (
-		<FullWindowOverlay>
-			<DialogPrimitive.Overlay
-				className={cn(
-					"absolute inset-0 z-50 flex items-end justify-center bg-black/50",
-					Platform.select({
-						web: "animate-in fade-in-0 fixed cursor-default",
-					}),
-					className,
-				)}
-				{...props}
-				asChild={Platform.OS !== "web"}
-			>
-				<NativeOnlyAnimatedView
-					entering={SlideInDown.duration(250)}
-					exiting={SlideOutDown.duration(200)}
-				>
-					{children}
-				</NativeOnlyAnimatedView>
-			</DialogPrimitive.Overlay>
-		</FullWindowOverlay>
-	);
+  React.RefAttributes<DialogPrimitive.OverlayRef> & {
+    children?: React.ReactNode;
+  }) {
+  return (
+    <FullWindowOverlay>
+      <DialogPrimitive.Overlay
+        className={cn(
+          "absolute inset-0 z-50 flex items-end justify-center bg-black/50",
+          Platform.select({
+            web: "animate-in fade-in-0 fixed cursor-default",
+          }),
+          className,
+        )}
+        {...props}
+        asChild={Platform.OS !== "web"}
+      >
+        <NativeOnlyAnimatedView
+          entering={SlideInDown.duration(250)}
+          exiting={SlideOutDown.duration(200)}
+        >
+          {children}
+        </NativeOnlyAnimatedView>
+      </DialogPrimitive.Overlay>
+    </FullWindowOverlay>
+  );
 }
 
 function BottomSheetContent({
-	className,
-	portalHost,
-	children,
-	...props
+  className,
+  portalHost,
+  children,
+  ...props
 }: DialogPrimitive.ContentProps &
-	React.RefAttributes<DialogPrimitive.ContentRef> & {
-		portalHost?: string;
-	}) {
-	return (
-		<BottomSheetPortal hostName={portalHost}>
-			<BottomSheetOverlay>
-				<DialogPrimitive.Content
-					className={cn(
-						"bg-background z-50 w-full h-full flex flex-col items-center justify-center rounded-t-3xl p-6 pb-8 shadow-lg shadow-foreground/10",
-						Platform.select({
-							web: "animate-in slide-in-from-bottom duration-250",
-						}),
-						className,
-					)}
-					{...props}
-				>
-					<View className="w-full max-w-md">
-						{children}
-					</View>
-				</DialogPrimitive.Content>
-			</BottomSheetOverlay>
-		</BottomSheetPortal>
-	);
+  React.RefAttributes<DialogPrimitive.ContentRef> & {
+    portalHost?: string;
+  }) {
+  return (
+    <BottomSheetPortal hostName={portalHost}>
+      <BottomSheetOverlay>
+        <DialogPrimitive.Content
+          className={cn(
+            "bg-background z-50 w-full h-full flex flex-col items-center justify-center rounded-t-3xl p-6 pb-8 shadow-lg shadow-foreground/10",
+            Platform.select({
+              web: "animate-in slide-in-from-bottom duration-250",
+            }),
+            className,
+          )}
+          {...props}
+        >
+          <View className="w-full max-w-md">
+            {children}
+          </View>
+        </DialogPrimitive.Content>
+      </BottomSheetOverlay>
+    </BottomSheetPortal>
+  );
 }
 
 function BottomSheetHeader({ className, ...props }: React.ComponentProps<typeof View>) {
-	return (
-		<View
-			className={cn("flex flex-col gap-2", className)}
-			{...props}
-		/>
-	);
+  return (
+    <View
+      className={cn("flex flex-col gap-2", className)}
+      {...props}
+    />
+  );
 }
 
 function BottomSheetFooter({ className, ...props }: React.ComponentProps<typeof View>) {
-	return (
-		<View
-			className={cn("flex flex-col-reverse gap-2 sm:flex-row sm:justify-end mt-auto", className)}
-			{...props}
-		/>
-	);
+  return (
+    <View
+      className={cn("flex flex-col-reverse gap-2 sm:flex-row sm:justify-end mt-auto", className)}
+      {...props}
+    />
+  );
 }
 
 function BottomSheetTitle({
-	className,
-	...props
+  className,
+  ...props
 }: DialogPrimitive.TitleProps & React.RefAttributes<DialogPrimitive.TitleRef>) {
-	return (
-		<DialogPrimitive.Title
-			className={cn("text-foreground text-2xl font-semibold leading-none", className)}
-			{...props}
-		/>
-	);
+  return (
+    <DialogPrimitive.Title
+      className={cn("text-foreground text-2xl font-semibold leading-none", className)}
+      {...props}
+    />
+  );
 }
 
 function BottomSheetDescription({
-	className,
-	...props
+  className,
+  ...props
 }: DialogPrimitive.DescriptionProps &
-	React.RefAttributes<DialogPrimitive.DescriptionRef>) {
-	return (
-		<DialogPrimitive.Description
-			className={cn("text-muted-foreground text-sm", className)}
-			{...props}
-		/>
-	);
+  React.RefAttributes<DialogPrimitive.DescriptionRef>) {
+  return (
+    <DialogPrimitive.Description
+      className={cn("text-muted-foreground text-sm", className)}
+      {...props}
+    />
+  );
 }
 
 export {
-	BottomSheet,
-	BottomSheetClose,
-	BottomSheetContent,
-	BottomSheetDescription,
-	BottomSheetFooter,
-	BottomSheetHeader,
-	BottomSheetOverlay,
-	BottomSheetPortal,
-	BottomSheetTitle,
-	BottomSheetTrigger,
+  BottomSheet,
+  BottomSheetClose,
+  BottomSheetContent,
+  BottomSheetDescription,
+  BottomSheetFooter,
+  BottomSheetHeader,
+  BottomSheetOverlay,
+  BottomSheetPortal,
+  BottomSheetTitle,
+  BottomSheetTrigger,
 };
 
