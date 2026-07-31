@@ -1,6 +1,9 @@
 {
   "name": "hyre-mobile",
   "packageManager": "pnpm@10.20.0",
+  "engines": {
+    "node": ">=22.6.0"
+  },
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {

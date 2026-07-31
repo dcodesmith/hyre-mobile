@@ -4,7 +4,10 @@ import {
   TRUSTED_REQUEST_ORIGIN,
 } from "@/constants/config";
 import { invalidateAuthSession } from "@/lib/auth-session-events";
-import { deleteSavedAuthToken, getSavedAuthToken } from "@/storage/auth-token";
+import {
+  deleteSavedAuthTokenIfMatches,
+  getSavedAuthToken,
+} from "@/storage/auth-token";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -192,7 +195,7 @@ const getAuthHeaders = async (
   const headers = new Headers(init?.headers);
   headers.set("Authorization", `Bearer ${token}`);
 
-  return headers;
+  return { headers, token };
 };
 
 /** Authenticated request: requires a stored (or overridden) token or throws before fetch. */
@@ -201,16 +204,21 @@ export const apiRequestWithAuth = async <T>(
   init: RequestInit | undefined = undefined,
   config?: AuthRequestConfig,
 ) => {
+  let requestToken: string | null = null;
   try {
-    const headers = await getAuthHeaders(init, config);
+    const auth = await getAuthHeaders(init, config);
+    requestToken = auth.token;
     return await apiRequest<T>(
       path,
-      { ...init, headers },
+      { ...init, headers: auth.headers },
       { timeout: config?.timeout },
     );
   } catch (error) {
-    if (error instanceof ApiError && error.status === 401) {
-      await invalidateAuthSession("unauthorized", deleteSavedAuthToken);
+    if (error instanceof ApiError && error.status === 401 && requestToken) {
+      const failedToken = requestToken;
+      await invalidateAuthSession(failedToken, () =>
+        deleteSavedAuthTokenIfMatches(failedToken),
+      );
     }
     throw error;
   }

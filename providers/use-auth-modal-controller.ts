@@ -7,7 +7,7 @@ import {
   emailFormSchema,
   otpFormSchema,
 } from "@/lib/validations/auth";
-import { subscribeToAuthSessionInvalidation } from "@/lib/auth-session-events";
+import { setAuthSessionInvalidationHandler } from "@/lib/auth-session-events";
 import type { AuthModalContextValue } from "@/providers/auth-modal-context";
 import {
   type AuthModalUiState,
@@ -35,7 +35,7 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useReducer } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 import { useForm } from "react-hook-form";
 
 type EmailOnlyFormValues = Pick<EmailFormValues, "email">;
@@ -43,6 +43,8 @@ type EmailOnlyFormValues = Pick<EmailFormValues, "email">;
 export function useAuthModalController() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const logoutInFlightRef = useRef(false);
+  const authTokenRef = useRef<string | null>(null);
   const [uiState, dispatchUiState] = useReducer(
     authModalUiReducer,
     initialAuthModalUiState,
@@ -179,6 +181,7 @@ export function useAuthModalController() {
 
   const setAuthToken = useCallback(
     (value: string | null) => {
+      authTokenRef.current = value;
       patchSessionState({ authToken: value });
     },
     [patchSessionState],
@@ -192,7 +195,6 @@ export function useAuthModalController() {
   );
 
   const clearInMemoryAuthSession = useCallback(() => {
-    setIsLoggingOut(false);
     setAuthToken(null);
     setUser(null);
     setEnablePushRegistrationLogs(false);
@@ -212,7 +214,6 @@ export function useAuthModalController() {
     setEmailError,
     setEnablePushRegistrationLogs,
     setIsEmailModalVisible,
-    setIsLoggingOut,
     setIsOtpModalVisible,
     setOtpError,
     setPendingEmail,
@@ -227,9 +228,20 @@ export function useAuthModalController() {
   });
 
   useEffect(() => {
-    return subscribeToAuthSessionInvalidation(() => {
+    return setAuthSessionInvalidationHandler((failedToken) => {
+      if (logoutInFlightRef.current) {
+        return;
+      }
+
+      const activeToken = authTokenRef.current;
+      if (activeToken && activeToken !== failedToken) {
+        return;
+      }
+
       clearInMemoryAuthSession();
-      router.replace("/");
+      if (activeToken) {
+        router.replace("/");
+      }
     });
   }, [clearInMemoryAuthSession, router]);
 
@@ -247,7 +259,6 @@ export function useAuthModalController() {
           }
         }
       } catch (error) {
-        await deleteSavedAuthToken();
         if (error instanceof Error) {
           console.warn("Failed to hydrate auth state", error.message);
         }
@@ -412,10 +423,11 @@ export function useAuthModalController() {
   );
 
   const handleLogout = useCallback(async () => {
-    if (isLoggingOut) {
+    if (logoutInFlightRef.current) {
       return;
     }
 
+    logoutInFlightRef.current = true;
     setIsLoggingOut(true);
     try {
       if (authToken) {
@@ -437,13 +449,21 @@ export function useAuthModalController() {
       }
     } finally {
       clearInMemoryAuthSession();
-      await deleteSavedAuthToken();
+      try {
+        await deleteSavedAuthToken();
+      } catch (error) {
+        console.warn(
+          "Failed to delete saved auth token",
+          error instanceof Error ? error.message : "Unknown storage error",
+        );
+      }
+      logoutInFlightRef.current = false;
+      setIsLoggingOut(false);
       router.replace("/");
     }
   }, [
     authToken,
     clearInMemoryAuthSession,
-    isLoggingOut,
     revokeRegisteredPushToken,
     router,
     setIsLoggingOut,

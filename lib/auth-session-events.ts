@@ -1,53 +1,38 @@
-export type AuthSessionInvalidationReason = "unauthorized";
-
-type AuthSessionInvalidationListener = (
-  reason: AuthSessionInvalidationReason,
+type AuthSessionInvalidationHandler = (
+  failedToken: string,
 ) => void | Promise<void>;
 
-const listeners = new Set<AuthSessionInvalidationListener>();
-let invalidationInFlight: Promise<void> | null = null;
+let invalidationHandler: AuthSessionInvalidationHandler | null = null;
 
-const runBestEffort = async (task: () => void | Promise<void>) => {
-  try {
-    await task();
-  } catch {
-    // Session invalidation must continue even if one cleanup step fails.
-  }
-};
-
-export function subscribeToAuthSessionInvalidation(
-  listener: AuthSessionInvalidationListener,
+export function setAuthSessionInvalidationHandler(
+  handler: AuthSessionInvalidationHandler,
 ) {
-  listeners.add(listener);
+  invalidationHandler = handler;
   return () => {
-    listeners.delete(listener);
+    if (invalidationHandler === handler) {
+      invalidationHandler = null;
+    }
   };
 }
 
-export function invalidateAuthSession(
-  reason: AuthSessionInvalidationReason,
-  clearPersistedSession: () => void | Promise<void>,
+export async function invalidateAuthSession(
+  failedToken: string,
+  clearPersistedSession: () => boolean | Promise<boolean>,
 ): Promise<void> {
-  if (invalidationInFlight !== null) {
-    return invalidationInFlight;
+  let shouldInvalidate = true;
+  try {
+    shouldInvalidate = await clearPersistedSession();
+  } catch {
+    // Clear the in-memory session when persisted cleanup cannot be confirmed.
   }
 
-  invalidationInFlight = (async () => {
-    await runBestEffort(clearPersistedSession);
-    const activeListeners = Array.from(listeners);
-    await Promise.all(
-      activeListeners.map((listener) =>
-        runBestEffort(() => listener(reason)),
-      ),
-    );
-  })();
+  if (!shouldInvalidate || !invalidationHandler) {
+    return;
+  }
 
-  const currentInvalidation = invalidationInFlight;
-  void currentInvalidation.finally(() => {
-    if (invalidationInFlight === currentInvalidation) {
-      invalidationInFlight = null;
-    }
-  });
-
-  return currentInvalidation;
+  try {
+    await invalidationHandler(failedToken);
+  } catch {
+    // The original unauthorized error remains the request's source of truth.
+  }
 }
