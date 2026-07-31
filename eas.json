@@ -13,7 +13,7 @@
       "distribution": "store",
       "autoIncrement": true,
       "ios": {
-        "resourceClass": "m-medium"
+        "resourceClass": "medium"
       },
       "env": {
         "EXPO_PUBLIC_API_BASE_URL": "https://hyre-worker-nestjs.fly.dev",
@@ -23,7 +23,7 @@
     "production": {
       "autoIncrement": true,
       "ios": {
-        "resourceClass": "m-medium"
+        "resourceClass": "medium"
       },
       "env": {
         "EXPO_PUBLIC_API_BASE_URL": "https://hyre-worker-nestjs.fly.dev",
