@@ -17,6 +17,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.tripdly.app",
+      googleServicesFile: "./GoogleService-Info.plist",
       config: {
         usesNonExemptEncryption: false,
       },
@@ -38,6 +39,7 @@ export default {
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
       package: "com.tripdly.app",
+      googleServicesFile: "./google-services.json",
     },
     web: {
       output: "static",
@@ -62,6 +64,7 @@ export default {
         },
       ],
       "expo-secure-store",
+      "expo-notifications",
       "expo-font",
       "expo-image",
       "expo-web-browser",
