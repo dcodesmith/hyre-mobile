@@ -22,7 +22,8 @@ export async function invalidateAuthSession(
   let shouldInvalidate = true;
   try {
     shouldInvalidate = await clearPersistedSession();
-  } catch {
+  } catch (error) {
+    console.warn("Failed to clear persisted auth session", error);
     // Clear the in-memory session when persisted cleanup cannot be confirmed.
   }
 
@@ -32,7 +33,8 @@ export async function invalidateAuthSession(
 
   try {
     await invalidationHandler(failedToken);
-  } catch {
+  } catch (error) {
+    console.warn("Auth session invalidation handler failed", error);
     // The original unauthorized error remains the request's source of truth.
   }
 }
