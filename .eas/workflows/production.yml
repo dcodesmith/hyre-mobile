@@ -1,0 +1,22 @@
+name: Production native builds
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch: {}
+
+jobs:
+  build_android:
+    name: Android production
+    type: build
+    params:
+      platform: android
+      profile: production
+
+  build_ios:
+    name: iOS production
+    type: build
+    params:
+      platform: ios
+      profile: production
