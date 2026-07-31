@@ -1,113 +1,108 @@
-import { Image } from "expo-image";
-import { Link } from "expo-router";
-import { Platform, StyleSheet } from "react-native";
-import { HelloWave } from "@/components/hello-wave";
-import ParallaxScrollView from "@/components/parallax-scroll-view";
-import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
-import { useAuthContext } from "@/context/auth-context";
+import {
+  CompactSearchBar,
+  SearchSheet,
+  useBookingSearchDraft,
+} from "@/components/booking-search";
+import HomeBookingHero from "@/components/home/booking-hero";
+import { useTabBarVisibility } from "@/context/tab-bar-visibility-context";
+import { useFocusEffect } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { useCallback, useRef, useState } from "react";
+import {
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  Pressable,
+  ScrollView,
+  View,
+} from "react-native";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+
+const SCROLL_COLLAPSE_THRESHOLD = 100;
 
 export default function HomeScreen() {
-	const { isAuthenticated, userEmail } = useAuthContext();
+  const { onScroll } = useTabBarVisibility();
+  const { reset: resetSearchDraft } = useBookingSearchDraft();
+  const insets = useSafeAreaInsets();
+  const [hasScrolledPastHero, setHasScrolledPastHero] = useState(false);
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const hasUserScrolled = useRef(false);
 
-	return (
-		<ParallaxScrollView
-			headerBackgroundColor={{ light: "#A1CEDC", dark: "#1D3D47" }}
-			headerImage={
-				<Image
-					source={require("@/assets/images/partial-react-logo.png")}
-					style={styles.reactLogo}
-				/>
-			}
-		>
-			<ThemedView style={styles.titleContainer}>
-				<ThemedText type="title">Welcome!</ThemedText>
-				<HelloWave />
-			</ThemedView>
-			{isAuthenticated && userEmail && (
-				<ThemedView style={styles.stepContainer}>
-					<ThemedText type="subtitle">Logged in as</ThemedText>
-					<ThemedText>{userEmail}</ThemedText>
-				</ThemedView>
-			)}
-			<ThemedView style={styles.stepContainer}>
-				<ThemedText type="subtitle">Step 1: Try it</ThemedText>
-				<ThemedText>
-					Edit{" "}
-					<ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText>{" "}
-					to see changes. Press{" "}
-					<ThemedText type="defaultSemiBold">
-						{Platform.select({
-							ios: "cmd + d",
-							android: "cmd + m",
-							web: "F12",
-						})}
-					</ThemedText>{" "}
-					to open developer tools.
-				</ThemedText>
-			</ThemedView>
-			<ThemedView style={styles.stepContainer}>
-				<Link href="/modal">
-					<Link.Trigger>
-						<ThemedText type="subtitle">Step 2: Explore</ThemedText>
-					</Link.Trigger>
-					<Link.Preview />
-					<Link.Menu>
-						<Link.MenuAction
-							title="Action"
-							icon="cube"
-							onPress={() => alert("Action pressed")}
-						/>
-						<Link.MenuAction
-							title="Share"
-							icon="square.and.arrow.up"
-							onPress={() => alert("Share pressed")}
-						/>
-						<Link.Menu title="More" icon="ellipsis">
-							<Link.MenuAction
-								title="Delete"
-								icon="trash"
-								destructive
-								onPress={() => alert("Delete pressed")}
-							/>
-						</Link.Menu>
-					</Link.Menu>
-				</Link>
+  // Reset search state when returning to home screen
+  useFocusEffect(
+    useCallback(() => {
+      resetSearchDraft();
+    }, [resetSearchDraft]),
+  );
 
-				<ThemedText>
-					{`Tap the Explore tab to learn more about what's included in this starter app.`}
-				</ThemedText>
-			</ThemedView>
-			<ThemedView style={styles.stepContainer}>
-				<ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-				<ThemedText>
-					{`When you're ready, run `}
-					<ThemedText type="defaultSemiBold">npm run reset-project</ThemedText>{" "}
-					to get a fresh <ThemedText type="defaultSemiBold">app</ThemedText>{" "}
-					directory. This will move the current{" "}
-					<ThemedText type="defaultSemiBold">app</ThemedText> to{" "}
-					<ThemedText type="defaultSemiBold">app-example</ThemedText>.
-				</ThemedText>
-			</ThemedView>
-		</ParallaxScrollView>
-	);
+  const handleScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const offsetY = event.nativeEvent.contentOffset.y;
+      onScroll(offsetY);
+      setHasScrolledPastHero(
+        hasUserScrolled.current && offsetY > SCROLL_COLLAPSE_THRESHOLD,
+      );
+    },
+    [onScroll],
+  );
+
+  const handleScrollBeginDrag = useCallback(() => {
+    hasUserScrolled.current = true;
+  }, []);
+
+  const statusBarStyle = hasScrolledPastHero ? "dark" : "light";
+  const topStatusAreaHeight = Math.max(insets.top, 24);
+
+  return (
+    <SafeAreaView
+      className="flex-1 bg-white"
+      edges={["left", "right", "bottom"]}
+    >
+      <StatusBar key={statusBarStyle} style={statusBarStyle} animated />
+      <View className="flex-1">
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          onScroll={handleScroll}
+          onScrollBeginDrag={handleScrollBeginDrag}
+          scrollEventThrottle={16}
+          contentInsetAdjustmentBehavior="automatic"
+          style={{ backgroundColor: "#FFFFFF" }}
+          contentContainerStyle={{ backgroundColor: "#FFFFFF" }}
+        >
+          <View className="pb-0">
+            <HomeBookingHero />
+          </View>
+        </ScrollView>
+
+        {/* Sticky compact search bar - rendered after ScrollView with pointerEvents to ensure touch works */}
+        {hasScrolledPastHero && (
+          <View
+            className="absolute left-0 right-0 top-0 z-[999]"
+            pointerEvents="box-none"
+          >
+            <View
+              pointerEvents="none"
+              style={{ height: topStatusAreaHeight, backgroundColor: "#FFFFFF" }}
+            />
+            <Pressable
+              onPress={() => setIsSearchModalOpen(true)}
+              className="border-b border-gray-200 bg-white px-4 py-3 shadow-md"
+            >
+              <CompactSearchBar
+                asChild
+                onPress={() => setIsSearchModalOpen(true)}
+              />
+            </Pressable>
+          </View>
+        )}
+
+        <SearchSheet
+          open={isSearchModalOpen}
+          onOpenChange={setIsSearchModalOpen}
+        />
+      </View>
+    </SafeAreaView>
+  );
 }
-
-const styles = StyleSheet.create({
-	titleContainer: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 8,
-	},
-	stepContainer: {
-		gap: 8,
-		marginBottom: 8,
-	},
-	reactLogo: {
-		height: 178,
-		width: 290,
-		bottom: 0,
-		left: 0,
-		position: "absolute",
-	},
-});
