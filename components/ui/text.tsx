@@ -6,7 +6,7 @@ import { Platform, Text as RNText, type Role } from 'react-native';
 
 const textVariants = cva(
   cn(
-    'text-foreground text-base',
+    'font-jakarta text-foreground text-base',
     Platform.select({
       web: 'select-text',
     })
@@ -70,8 +70,7 @@ function Text({
   variant = 'default',
   ...props
 }: React.ComponentProps<typeof RNText> &
-  TextVariantProps &
-  React.RefAttributes<RNText> & {
+  TextVariantProps & {
     asChild?: boolean;
   }) {
   const textClass = React.useContext(TextClassContext);

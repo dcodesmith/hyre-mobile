@@ -9,7 +9,7 @@ import { useAuthContext } from "@/context/auth-context";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
 export default function TabLayout() {
-	const colorScheme = useColorScheme();
+	const { colorScheme } = useColorScheme();
 
 	return (
 		<Tabs

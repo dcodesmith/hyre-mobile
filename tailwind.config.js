@@ -1,14 +1,19 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: "class",
-  content: [
-    "./app/**/*.{js,jsx,ts,tsx}",
-    "./components/**/*.{js,jsx,ts,tsx}",
-  ],
+  content: ["./app/**/*.{js,jsx,ts,tsx}", "./components/**/*.{js,jsx,ts,tsx}"],
   presets: [require("nativewind/preset")],
   theme: {
     extend: {
       colors: {
+        neutral: {
+          50: "#fafafa",
+          200: "#e5e5e5",
+          400: "#a3a3a3",
+          800: "#262626",
+          900: "#171717",
+          950: "#0a0a0a",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -48,8 +53,13 @@ module.exports = {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      fontFamily: {
+        // Must match `useFonts` keys in app/_layout.tsx (iOS PostScript names).
+        sans: ["PlusJakartaSans-Regular", "sans-serif"],
+        nunito: ["NunitoSans-Regular", "system-ui", "sans-serif"],
+        jakarta: ["PlusJakartaSans-Regular", "system-ui", "sans-serif"],
+      },
     },
   },
   plugins: [require("tailwindcss-animate")],
-}
-
+};
