@@ -1,0 +1,146 @@
+import { ApiError, getJsonWithAuth, patchJsonWithAuth } from "@/lib/api-client";
+import type { BookingType } from "@/lib/booking-types";
+
+const BOOKINGS_ENDPOINT = "/api/bookings";
+
+export const BOOKING_STATUSES = [
+  "ACTIVE",
+  "CONFIRMED",
+  "COMPLETED",
+  "CANCELLED",
+] as const;
+export type BookingStatus = (typeof BOOKING_STATUSES)[number];
+
+export type BookingCarImage = {
+  id?: string;
+  url: string;
+};
+
+export type BookingCarSummary = {
+  id: string;
+  make: string;
+  model: string;
+  year: number;
+  images: BookingCarImage[];
+};
+
+export type BookingSummary = {
+  id: string;
+  bookingReference: string;
+  status: BookingStatus;
+  paymentStatus: string;
+  startDate: string;
+  endDate: string;
+  type: BookingType;
+  totalAmount: number;
+  pickupLocation: string;
+  returnLocation: string;
+  car: BookingCarSummary;
+  review?: unknown;
+};
+
+export type BookingsByStatusResponse = Partial<
+  Record<BookingStatus, BookingSummary[]>
+>;
+
+export type BookingLeg = {
+  id: string;
+  legDate: string;
+  legStartTime: string;
+  legEndTime: string;
+  totalDailyPrice?: number;
+  extensions?: Array<{ id: string; extendedDurationHours?: number | null }>;
+};
+
+export type BookingDetail = BookingSummary & {
+  paymentId?: string | null;
+  platformCustomerServiceFeeAmount?: number | null;
+  platformCustomerServiceFeeRatePercent?: number | null;
+  vatAmount?: number | null;
+  vatRatePercent?: number | null;
+  securityDetailCost?: number | null;
+  fuelUpgradeCost?: number | null;
+  referralDiscountAmount?: number | null;
+  referralCreditsUsed?: number | null;
+  referralCreditsReserved?: number | null;
+  netTotal?: number | null;
+  chauffeur?: {
+    id: string;
+    name?: string | null;
+    phoneNumber?: string | null;
+  } | null;
+  flight?: {
+    id: string;
+    flightNumber?: string | null;
+    status?: string | null;
+    originName?: string | null;
+    originCode?: string | null;
+    destinationName?: string | null;
+    destinationCode?: string | null;
+    scheduledArrival?: string | null;
+    estimatedArrival?: string | null;
+  } | null;
+  legs: BookingLeg[];
+};
+
+export type UpdateBookingPayload = {
+  pickupTime?: string;
+  pickupAddress?: string;
+  sameLocation?: boolean;
+  dropOffAddress?: string;
+};
+
+type CancelBookingPayload = {
+  reason?: string;
+};
+
+export async function fetchBookingsByStatus(
+  init?: RequestInit,
+): Promise<BookingsByStatusResponse> {
+  return getJsonWithAuth<BookingsByStatusResponse>(BOOKINGS_ENDPOINT, init);
+}
+
+export async function fetchBookingById(
+  bookingId: string,
+  init?: RequestInit,
+): Promise<BookingDetail> {
+  return getJsonWithAuth<BookingDetail>(
+    `${BOOKINGS_ENDPOINT}/${bookingId}`,
+    init,
+  );
+}
+
+export async function updateBooking(
+  bookingId: string,
+  payload: UpdateBookingPayload,
+): Promise<BookingDetail> {
+  return patchJsonWithAuth<BookingDetail, UpdateBookingPayload>(
+    `${BOOKINGS_ENDPOINT}/${encodeURIComponent(bookingId)}`,
+    payload,
+  );
+}
+
+export async function cancelBooking(
+  bookingId: string,
+  reason = "User requested cancellation",
+): Promise<BookingDetail> {
+  return patchJsonWithAuth<BookingDetail, CancelBookingPayload>(
+    `${BOOKINGS_ENDPOINT}/${encodeURIComponent(bookingId)}/cancel`,
+    { reason },
+  );
+}
+
+export const getBookingActionErrorMessage = (
+  error: unknown,
+  fallback = "Something went wrong. Please try again.",
+): string => {
+  if (error instanceof ApiError) {
+    return error.message;
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return fallback;
+};

@@ -212,6 +212,10 @@ export default function RootLayout() {
                   options={{ headerShown: false, title: "Car Details" }}
                 />
                 <Stack.Screen
+                  name="bookings/[id]"
+                  options={{ headerShown: false, title: "Booking Details" }}
+                />
+                <Stack.Screen
                   name="payment-status"
                   options={{ headerShown: false, title: "Payment Status" }}
                 />
