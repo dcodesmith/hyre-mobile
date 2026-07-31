@@ -23,7 +23,7 @@
     "ios:simulator": "expo run:ios --device",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test": "node --experimental-strip-types --test lib/*.test.mjs",
+    "test": "node --import ./scripts/register-ts-resolve.mjs --experimental-strip-types --test \"lib/**/*.test.mjs\"",
     "typecheck": "tsc --noEmit",
     "check": "pnpm typecheck && pnpm lint && expo install --check",
     "start:simulator": "pnpm start:simulators",
