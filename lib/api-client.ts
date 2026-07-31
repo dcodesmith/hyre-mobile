@@ -3,6 +3,7 @@ import {
   API_TIMEOUT_MS,
   TRUSTED_REQUEST_ORIGIN,
 } from "@/constants/config";
+import { invalidateAuthSession } from "@/lib/auth-session-events";
 import { deleteSavedAuthToken, getSavedAuthToken } from "@/storage/auth-token";
 
 export class ApiError extends Error {
@@ -161,24 +162,15 @@ export const postJson = async <TResponse, TBody = unknown>(
   init?: RequestInit,
   config?: { timeout?: number },
 ) => {
-  try {
-    const response = await apiRequest<TResponse>(
-      path,
-      {
-        ...init,
-        method: "POST",
-        body: JSON.stringify(body),
-      },
-      config,
-    );
-    return response;
-  } catch (error) {
-    console.error("Error in postJson", error);
-    if (error instanceof ApiError && error.status === 401) {
-      await deleteSavedAuthToken();
-    }
-    throw error;
-  }
+  return apiRequest<TResponse>(
+    path,
+    {
+      ...init,
+      method: "POST",
+      body: JSON.stringify(body),
+    },
+    config,
+  );
 };
 
 type AuthRequestConfig = {
@@ -209,8 +201,8 @@ export const apiRequestWithAuth = async <T>(
   init: RequestInit | undefined = undefined,
   config?: AuthRequestConfig,
 ) => {
-  const headers = await getAuthHeaders(init, config);
   try {
+    const headers = await getAuthHeaders(init, config);
     return await apiRequest<T>(
       path,
       { ...init, headers },
@@ -218,7 +210,7 @@ export const apiRequestWithAuth = async <T>(
     );
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) {
-      await deleteSavedAuthToken();
+      await invalidateAuthSession("unauthorized", deleteSavedAuthToken);
     }
     throw error;
   }

@@ -1,5 +1,10 @@
 import { API_ENDPOINTS } from "@/constants/config";
-import { ApiError, getJson, postJson } from "@/lib/api-client";
+import {
+  ApiError,
+  getJsonWithAuth,
+  postJson,
+  postJsonWithAuth,
+} from "@/lib/api-client";
 
 /** Maps backend error codes to user-friendly messages. Falls back to error.message. */
 export const getAuthErrorMessage = (
@@ -95,23 +100,20 @@ type SessionResponse = {
 };
 
 export const fetchCurrentUser = async (token: string) => {
-  const { user } = await getJson<SessionResponse>(API_ENDPOINTS.session, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  const { user } = await getJsonWithAuth<SessionResponse>(
+    API_ENDPOINTS.session,
+    undefined,
+    { token },
+  );
 
   return user;
 };
 
 export const logout = (token: string) => {
-  return postJson<{ success: boolean }, Record<string, never>>(
+  return postJsonWithAuth<{ success: boolean }, Record<string, never>>(
     API_ENDPOINTS.logout,
     {},
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
+    undefined,
+    { token },
   );
 };
