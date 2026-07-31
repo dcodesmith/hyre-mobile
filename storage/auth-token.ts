@@ -1,18 +1,18 @@
-import * as SecureStore from 'expo-secure-store';
-import { Platform } from 'react-native';
+import { isExpoNative } from "@/lib/expo-platform";
+import * as SecureStore from "expo-secure-store";
 
-const TOKEN_KEY = 'access-token';
+const TOKEN_KEY = "access-token";
 
-const isSecureStoreAvailable = () => Platform.OS !== 'web';
+const isSecureStoreAvailable = () => isExpoNative;
 
 const getBrowserStorage = () => {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     return null;
   }
   try {
     return window.localStorage;
   } catch (error) {
-    console.warn('Unable to access localStorage', error);
+    console.warn("Unable to access localStorage", error);
     return null;
   }
 };
@@ -42,4 +42,3 @@ export const deleteSavedAuthToken = async () => {
 
   getBrowserStorage()?.removeItem(TOKEN_KEY);
 };
-
