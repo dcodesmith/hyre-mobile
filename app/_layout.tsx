@@ -13,6 +13,7 @@ import {
 } from "@expo-google-fonts/plus-jakarta-sans";
 import NetInfo from "@react-native-community/netinfo";
 import { ThemeProvider } from "@react-navigation/native";
+import { AutocompletePortalHostProvider } from "@/providers/autocomplete-portal-host-provider";
 import {
   onlineManager,
   QueryClient,
@@ -28,6 +29,7 @@ import { LogBox, StyleSheet, Text, TextInput } from "react-native";
 import "react-native-reanimated";
 import "../global.css";
 
+import { BookingSearchDraftProvider } from "@/components/booking-search";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { NAV_THEME } from "@/lib/theme";
 import { AuthModalProvider } from "@/providers/auth-modal-provider";
@@ -197,14 +199,26 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider value={NAV_THEME[colorScheme ?? "light"]}>
         <AuthModalProvider>
-          <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen
-              name="modal"
-              options={{ presentation: "modal", title: "Modal" }}
-            />
-          </Stack>
-          <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
+          <BookingSearchDraftProvider>
+            <AutocompletePortalHostProvider>
+              <Stack>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="search"
+                  options={{ headerShown: false, title: "Search" }}
+                />
+                <Stack.Screen
+                  name="cars/[id]"
+                  options={{ headerShown: false, title: "Car Details" }}
+                />
+                <Stack.Screen
+                  name="modal"
+                  options={{ presentation: "modal", title: "Modal" }}
+                />
+              </Stack>
+              <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
+            </AutocompletePortalHostProvider>
+          </BookingSearchDraftProvider>
         </AuthModalProvider>
       </ThemeProvider>
     </QueryClientProvider>
