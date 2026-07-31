@@ -1,94 +1,117 @@
 import { API_ENDPOINTS } from "@/constants/config";
-import { getJson, postJson } from "@/lib/api-client";
+import { ApiError, getJson, postJson } from "@/lib/api-client";
+
+/** Maps backend error codes to user-friendly messages. Falls back to error.message. */
+export const getAuthErrorMessage = (
+  error: unknown,
+  fallback = "Something went wrong. Please try again.",
+): string => {
+  if (error instanceof ApiError) {
+    if (error.code === "INVALID_OTP") {
+      return "Invalid or expired code. Please try again.";
+    }
+
+    return error.message;
+  }
+
+  if (error instanceof Error) {
+    if (error.message === "Network request failed") {
+      return "Unable to connect. Ensure the backend is running. If using a simulator, try setting EXPO_PUBLIC_API_BASE_URL to your machine's IP (e.g. http://192.168.1.x:3000) in .env.";
+    }
+
+    return error.message;
+  }
+
+  return fallback;
+};
 
 export const AUTH_DEFAULTS = {
-	role: "customer",
+  role: "user",
+  otpType: "sign-in",
 } as const;
 
 export type RequestOtpResponse = {
-	code?: string;
-	expiresInSeconds?: number;
-	message?: string;
-	success?: boolean;
-};
-
-export type TokenPair = {
-	accessToken: string;
-	refreshToken?: string;
-	expiresAt: number;
+  success: boolean;
 };
 
 export type AuthUser = {
-	id: string;
-	email: string;
-	phoneNumber: string;
-	name?: string;
-	roles: string[];
-	approvalStatus: string;
-	hasOnboarded: boolean;
+  id: string;
+  email: string;
+  name?: string;
+  roles: string[];
 };
 
-export type LoginResponse = {
-	success: boolean;
-	user?: AuthUser;
-	tokens?: TokenPair;
-	message: string;
+export type VerifyOtpResponse = {
+  user?: AuthUser;
+  token?: string;
 };
 
 export const requestOtp = (
-	email: string,
-	role: string = AUTH_DEFAULTS.role,
+  email: string,
+  role: string = AUTH_DEFAULTS.role,
 ) => {
-	return postJson<RequestOtpResponse, { email: string; role: string }>(
-		API_ENDPOINTS.requestOtp,
-		{ email, role },
-	);
+  return postJson<
+    RequestOtpResponse,
+    { email: string; type: string; role: string }
+  >(API_ENDPOINTS.requestOtp, { email, type: AUTH_DEFAULTS.otpType, role });
 };
 
 export type VerifyOtpPayload = {
-	email: string;
-	otpCode: string;
-	role?: string;
+  email: string;
+  otpCode: string;
+  role?: string;
 };
 
 export const verifyOtp = ({
-	email,
-	otpCode,
-	role = AUTH_DEFAULTS.role,
+  email,
+  otpCode,
+  role = AUTH_DEFAULTS.role,
 }: VerifyOtpPayload) => {
-	return postJson<
-		LoginResponse,
-		{ email: string; otpCode: string; role: string }
-	>(API_ENDPOINTS.verifyOtp, {
-		email,
-		otpCode,
-		role,
-	});
+  return postJson<
+    VerifyOtpResponse,
+    { email: string; otp: string; role: string }
+  >(API_ENDPOINTS.verifyOtp, {
+    email,
+    otp: otpCode,
+    role,
+  });
 };
 
 export type UserProfile = {
-	id?: string;
-	email?: string;
-	name?: string;
-	[key: string]: unknown;
+  id?: string;
+  email?: string;
+  name?: string;
+  [key: string]: unknown;
 };
 
-export const fetchCurrentUser = (token: string) => {
-	return getJson<UserProfile>(API_ENDPOINTS.currentUser, {
-		headers: {
-			Authorization: `Bearer ${token}`,
-		},
-	});
+type SessionResponse = {
+  user: UserProfile;
+  session: {
+    id: string;
+    userId: string;
+    expiresAt: string;
+    [key: string]: unknown;
+  };
+};
+
+export const fetchCurrentUser = async (token: string) => {
+  const { user } = await getJson<SessionResponse>(API_ENDPOINTS.session, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return user;
 };
 
 export const logout = (token: string) => {
-	return postJson<{ success: boolean; message?: string }, undefined>(
-		API_ENDPOINTS.logout,
-		undefined,
-		{
-			headers: {
-				Authorization: `Bearer ${token}`,
-			},
-		},
-	);
+  return postJson<{ success: boolean }, Record<string, never>>(
+    API_ENDPOINTS.logout,
+    {},
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
 };
