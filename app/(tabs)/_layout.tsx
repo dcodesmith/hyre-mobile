@@ -9,7 +9,7 @@ import { THEME } from "@/lib/theme";
 import { twStyle } from "@/lib/tw-style";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { Tabs, useSegments } from "expo-router";
-import { Home, LogIn, LogOut, User } from "lucide-react-native";
+import { Calendar, Home, LogIn, LogOut, User } from "lucide-react-native";
 import { useCallback, useEffect } from "react";
 import { View } from "react-native";
 
@@ -51,6 +51,7 @@ function createTabLabel(label: string) {
 }
 
 const HOME_TAB_LABEL = createTabLabel("Tripdly");
+const BOOKINGS_TAB_LABEL = createTabLabel("Bookings");
 const PROFILE_TAB_LABEL = createTabLabel("Profile");
 const LOGOUT_TAB_LABEL = createTabLabel("Logout");
 
@@ -139,6 +140,16 @@ function TabLayoutContent() {
           tabBarIcon: ({ color, focused }) => TabIcon(Home, color, focused),
           tabBarItemStyle: HREF_TAB_ITEM_STYLE,
           tabBarLabel: HOME_TAB_LABEL,
+        }}
+      />
+      <Tabs.Screen
+        name="bookings"
+        options={{
+          title: "Bookings",
+          tabBarIcon: ({ color, focused }) => TabIcon(Calendar, color, focused),
+          tabBarLabel: BOOKINGS_TAB_LABEL,
+          tabBarItemStyle: HREF_TAB_ITEM_STYLE,
+          href: isAuthenticated ? "/bookings" : null,
         }}
       />
       <Tabs.Screen
