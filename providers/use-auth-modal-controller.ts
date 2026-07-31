@@ -1,5 +1,6 @@
 import type { AuthModalSheetProps } from "@/components/auth/auth-modal-sheet";
 import type { AuthContextValue } from "@/context/auth-context";
+import { usePushNotifications } from "@/hooks/use-push-notifications";
 import {
   type EmailFormValues,
   type OtpFormValues,
@@ -65,6 +66,7 @@ export function useAuthModalController() {
     otpError,
     isLoggingOut,
     isHydrating,
+    enablePushRegistrationLogs,
   } = uiState;
   const { authToken, user } = sessionState;
 
@@ -165,6 +167,13 @@ export function useAuthModalController() {
     [patchUiState],
   );
 
+  const setEnablePushRegistrationLogs = useCallback(
+    (value: boolean) => {
+      patchUiState({ enablePushRegistrationLogs: value });
+    },
+    [patchUiState],
+  );
+
   const setAuthToken = useCallback(
     (value: string | null) => {
       patchSessionState({ authToken: value });
@@ -178,6 +187,13 @@ export function useAuthModalController() {
     },
     [patchSessionState],
   );
+
+  const { revokeRegisteredPushToken } = usePushNotifications({
+    isAuthenticated: Boolean(authToken),
+    isHydrating,
+    userId: user?.id ?? null,
+    enableDebugLogs: enablePushRegistrationLogs,
+  });
 
   useEffect(() => {
     let isCancelled = false;
@@ -329,6 +345,7 @@ export function useAuthModalController() {
 
   const completeLogin = useCallback(
     async (token: string, profile: UserProfile) => {
+      setEnablePushRegistrationLogs(true);
       await saveAuthToken(token);
       setAuthToken(token);
       setUser(profile);
@@ -347,6 +364,7 @@ export function useAuthModalController() {
       resetOtpForm,
       setAuthToken,
       setEmailError,
+      setEnablePushRegistrationLogs,
       setIsEmailModalVisible,
       setIsOtpModalVisible,
       setOtpError,
@@ -363,6 +381,16 @@ export function useAuthModalController() {
     setIsLoggingOut(true);
     try {
       if (authToken) {
+        try {
+          await revokeRegisteredPushToken();
+        } catch (error) {
+          if (error instanceof Error) {
+            console.warn(
+              "Failed to persist push token revocation",
+              error.message,
+            );
+          }
+        }
         await logoutRequest(authToken);
       }
     } catch (error) {
@@ -373,6 +401,7 @@ export function useAuthModalController() {
       setIsLoggingOut(false);
       setAuthToken(null);
       setUser(null);
+      setEnablePushRegistrationLogs(false);
       setPendingEmail(null);
       resetEmailForm({ email: "" });
       resetOtpForm({ otpCode: "" });
@@ -388,9 +417,11 @@ export function useAuthModalController() {
     isLoggingOut,
     resetEmailForm,
     resetOtpForm,
+    revokeRegisteredPushToken,
     router,
     setAuthToken,
     setEmailError,
+    setEnablePushRegistrationLogs,
     setIsEmailModalVisible,
     setIsLoggingOut,
     setIsOtpModalVisible,

@@ -10,6 +10,7 @@ export type AuthModalUiState = {
   otpError: string | null;
   isLoggingOut: boolean;
   isHydrating: boolean;
+  enablePushRegistrationLogs: boolean;
 };
 
 export type AuthModalUiAction = {
@@ -27,6 +28,7 @@ export const initialAuthModalUiState: AuthModalUiState = {
   otpError: null,
   isLoggingOut: false,
   isHydrating: true,
+  enablePushRegistrationLogs: false,
 };
 
 export type AuthSessionState = {

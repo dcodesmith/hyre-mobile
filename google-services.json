@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "550471570727",
+    "project_id": "tripdly-223e8",
+    "storage_bucket": "tripdly-223e8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:550471570727:android:347bd398c6f7e668568502",
+        "android_client_info": {
+          "package_name": "com.anonymous.hyremobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBVFyYxzmURREV2O2n9iRqFgv3-RHXZBec"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:550471570727:android:95567eade8cf15aa568502",
+        "android_client_info": {
+          "package_name": "com.tripdly.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBVFyYxzmURREV2O2n9iRqFgv3-RHXZBec"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
