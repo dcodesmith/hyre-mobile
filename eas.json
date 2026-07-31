@@ -10,8 +10,11 @@
       "autoIncrement": true
     },
     "preview": {
-      "distribution": "internal",
+      "distribution": "store",
       "autoIncrement": true,
+      "ios": {
+        "resourceClass": "m-medium"
+      },
       "env": {
         "EXPO_PUBLIC_API_BASE_URL": "https://hyre-worker-nestjs.fly.dev",
         "EXPO_PUBLIC_TRUSTED_ORIGIN": "https://hyre-worker-nestjs.fly.dev"
@@ -29,9 +32,18 @@
     }
   },
   "submit": {
+    "preview": {
+      "ios": {},
+      "android": {
+        "track": "internal",
+        "releaseStatus": "draft"
+      }
+    },
     "production": {
       "ios": {},
-      "android": {}
+      "android": {
+        "track": "internal"
+      }
     }
   }
 }
