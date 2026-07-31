@@ -7,6 +7,7 @@ import {
   emailFormSchema,
   otpFormSchema,
 } from "@/lib/validations/auth";
+import { setAuthSessionInvalidationHandler } from "@/lib/auth-session-events";
 import type { AuthModalContextValue } from "@/providers/auth-modal-context";
 import {
   type AuthModalUiState,
@@ -32,14 +33,18 @@ import {
   saveAuthToken,
 } from "@/storage/auth-token";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useReducer } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 import { useForm } from "react-hook-form";
 
 type EmailOnlyFormValues = Pick<EmailFormValues, "email">;
 
 export function useAuthModalController() {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const logoutInFlightRef = useRef(false);
+  const authTokenRef = useRef<string | null>(null);
   const [uiState, dispatchUiState] = useReducer(
     authModalUiReducer,
     initialAuthModalUiState,
@@ -176,6 +181,7 @@ export function useAuthModalController() {
 
   const setAuthToken = useCallback(
     (value: string | null) => {
+      authTokenRef.current = value;
       patchSessionState({ authToken: value });
     },
     [patchSessionState],
@@ -188,12 +194,56 @@ export function useAuthModalController() {
     [patchSessionState],
   );
 
+  const clearInMemoryAuthSession = useCallback(() => {
+    setAuthToken(null);
+    setUser(null);
+    setEnablePushRegistrationLogs(false);
+    setPendingEmail(null);
+    resetEmailForm({ email: "" });
+    resetOtpForm({ otpCode: "" });
+    setEmailError(null);
+    setOtpError(null);
+    setIsEmailModalVisible(false);
+    setIsOtpModalVisible(false);
+    queryClient.clear();
+  }, [
+    queryClient,
+    resetEmailForm,
+    resetOtpForm,
+    setAuthToken,
+    setEmailError,
+    setEnablePushRegistrationLogs,
+    setIsEmailModalVisible,
+    setIsOtpModalVisible,
+    setOtpError,
+    setPendingEmail,
+    setUser,
+  ]);
+
   const { revokeRegisteredPushToken } = usePushNotifications({
     isAuthenticated: Boolean(authToken),
     isHydrating,
     userId: user?.id ?? null,
     enableDebugLogs: enablePushRegistrationLogs,
   });
+
+  useEffect(() => {
+    return setAuthSessionInvalidationHandler((failedToken) => {
+      if (logoutInFlightRef.current) {
+        return;
+      }
+
+      const activeToken = authTokenRef.current;
+      if (activeToken && activeToken !== failedToken) {
+        return;
+      }
+
+      clearInMemoryAuthSession();
+      if (activeToken) {
+        router.replace("/");
+      }
+    });
+  }, [clearInMemoryAuthSession, router]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -209,7 +259,6 @@ export function useAuthModalController() {
           }
         }
       } catch (error) {
-        await deleteSavedAuthToken();
         if (error instanceof Error) {
           console.warn("Failed to hydrate auth state", error.message);
         }
@@ -374,10 +423,11 @@ export function useAuthModalController() {
   );
 
   const handleLogout = useCallback(async () => {
-    if (isLoggingOut) {
+    if (logoutInFlightRef.current) {
       return;
     }
 
+    logoutInFlightRef.current = true;
     setIsLoggingOut(true);
     try {
       if (authToken) {
@@ -398,36 +448,25 @@ export function useAuthModalController() {
         console.warn("Failed to logout", error.message);
       }
     } finally {
+      clearInMemoryAuthSession();
+      try {
+        await deleteSavedAuthToken();
+      } catch (error) {
+        console.warn(
+          "Failed to delete saved auth token",
+          error instanceof Error ? error.message : "Unknown storage error",
+        );
+      }
+      logoutInFlightRef.current = false;
       setIsLoggingOut(false);
-      setAuthToken(null);
-      setUser(null);
-      setEnablePushRegistrationLogs(false);
-      setPendingEmail(null);
-      resetEmailForm({ email: "" });
-      resetOtpForm({ otpCode: "" });
-      setEmailError(null);
-      setOtpError(null);
-      setIsEmailModalVisible(false);
-      setIsOtpModalVisible(false);
-      await deleteSavedAuthToken();
       router.replace("/");
     }
   }, [
     authToken,
-    isLoggingOut,
-    resetEmailForm,
-    resetOtpForm,
+    clearInMemoryAuthSession,
     revokeRegisteredPushToken,
     router,
-    setAuthToken,
-    setEmailError,
-    setEnablePushRegistrationLogs,
-    setIsEmailModalVisible,
     setIsLoggingOut,
-    setIsOtpModalVisible,
-    setOtpError,
-    setPendingEmail,
-    setUser,
   ]);
 
   const handleResendCode = useCallback(async () => {

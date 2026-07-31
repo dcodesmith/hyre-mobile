@@ -17,7 +17,19 @@ const getBrowserStorage = () => {
   }
 };
 
-export const saveAuthToken = async (token: string) => {
+// Keep compare-and-delete atomic relative to login token writes.
+let tokenOperationQueue = Promise.resolve();
+
+const enqueueTokenOperation = <T>(operation: () => Promise<T>): Promise<T> => {
+  const result = tokenOperationQueue.then(operation, operation);
+  tokenOperationQueue = result.then(
+    () => undefined,
+    () => undefined,
+  );
+  return result;
+};
+
+const writeAuthToken = async (token: string) => {
   if (isSecureStoreAvailable()) {
     await SecureStore.setItemAsync(TOKEN_KEY, token);
     return;
@@ -26,7 +38,7 @@ export const saveAuthToken = async (token: string) => {
   getBrowserStorage()?.setItem(TOKEN_KEY, token);
 };
 
-export const getSavedAuthToken = async () => {
+const readAuthToken = async () => {
   if (isSecureStoreAvailable()) {
     return SecureStore.getItemAsync(TOKEN_KEY);
   }
@@ -34,7 +46,7 @@ export const getSavedAuthToken = async () => {
   return getBrowserStorage()?.getItem(TOKEN_KEY) ?? null;
 };
 
-export const deleteSavedAuthToken = async () => {
+const removeAuthToken = async () => {
   if (isSecureStoreAvailable()) {
     await SecureStore.deleteItemAsync(TOKEN_KEY);
     return;
@@ -42,3 +54,21 @@ export const deleteSavedAuthToken = async () => {
 
   getBrowserStorage()?.removeItem(TOKEN_KEY);
 };
+
+export const saveAuthToken = (token: string) =>
+  enqueueTokenOperation(() => writeAuthToken(token));
+
+export const getSavedAuthToken = () => enqueueTokenOperation(readAuthToken);
+
+export const deleteSavedAuthToken = () =>
+  enqueueTokenOperation(removeAuthToken);
+
+export const deleteSavedAuthTokenIfMatches = (expectedToken: string) =>
+  enqueueTokenOperation(async () => {
+    if ((await readAuthToken()) !== expectedToken) {
+      return false;
+    }
+
+    await removeAuthToken();
+    return true;
+  });

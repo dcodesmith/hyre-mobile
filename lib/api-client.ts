@@ -3,7 +3,11 @@ import {
   API_TIMEOUT_MS,
   TRUSTED_REQUEST_ORIGIN,
 } from "@/constants/config";
-import { deleteSavedAuthToken, getSavedAuthToken } from "@/storage/auth-token";
+import { invalidateAuthSession } from "@/lib/auth-session-events";
+import {
+  deleteSavedAuthTokenIfMatches,
+  getSavedAuthToken,
+} from "@/storage/auth-token";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -161,24 +165,15 @@ export const postJson = async <TResponse, TBody = unknown>(
   init?: RequestInit,
   config?: { timeout?: number },
 ) => {
-  try {
-    const response = await apiRequest<TResponse>(
-      path,
-      {
-        ...init,
-        method: "POST",
-        body: JSON.stringify(body),
-      },
-      config,
-    );
-    return response;
-  } catch (error) {
-    console.error("Error in postJson", error);
-    if (error instanceof ApiError && error.status === 401) {
-      await deleteSavedAuthToken();
-    }
-    throw error;
-  }
+  return apiRequest<TResponse>(
+    path,
+    {
+      ...init,
+      method: "POST",
+      body: JSON.stringify(body),
+    },
+    config,
+  );
 };
 
 type AuthRequestConfig = {
@@ -200,7 +195,7 @@ const getAuthHeaders = async (
   const headers = new Headers(init?.headers);
   headers.set("Authorization", `Bearer ${token}`);
 
-  return headers;
+  return { headers, token };
 };
 
 /** Authenticated request: requires a stored (or overridden) token or throws before fetch. */
@@ -209,16 +204,21 @@ export const apiRequestWithAuth = async <T>(
   init: RequestInit | undefined = undefined,
   config?: AuthRequestConfig,
 ) => {
-  const headers = await getAuthHeaders(init, config);
+  let requestToken: string | null = null;
   try {
+    const auth = await getAuthHeaders(init, config);
+    requestToken = auth.token;
     return await apiRequest<T>(
       path,
-      { ...init, headers },
+      { ...init, headers: auth.headers },
       { timeout: config?.timeout },
     );
   } catch (error) {
-    if (error instanceof ApiError && error.status === 401) {
-      await deleteSavedAuthToken();
+    if (error instanceof ApiError && error.status === 401 && requestToken) {
+      const failedToken = requestToken;
+      await invalidateAuthSession(failedToken, () =>
+        deleteSavedAuthTokenIfMatches(failedToken),
+      );
     }
     throw error;
   }
