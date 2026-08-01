@@ -33,14 +33,20 @@
   },
   "submit": {
     "preview": {
-      "ios": {},
+      "ios": {
+        "ascAppId": "6792344648",
+        "appleTeamId": "TXUSKCNY9P"
+      },
       "android": {
         "track": "internal",
         "releaseStatus": "draft"
       }
     },
     "production": {
-      "ios": {},
+      "ios": {
+        "ascAppId": "6792344648",
+        "appleTeamId": "TXUSKCNY9P"
+      },
       "android": {
         "track": "internal"
       }
