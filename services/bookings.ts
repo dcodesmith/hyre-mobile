@@ -34,7 +34,6 @@ export type BookingSummary = {
   canEdit: boolean;
   canCancel: boolean;
   modificationCutoffAt: string;
-  policyHoursBeforeStart: number;
   type: BookingType;
   totalAmount: number;
   pickupLocation: string;

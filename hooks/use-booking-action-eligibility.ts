@@ -3,14 +3,11 @@ import { useEffect, useState } from "react";
 
 const MAX_TIMEOUT_MS = 2_147_483_647;
 
-const isBeforeCutoff = (cutoffAt: number) =>
-	Number.isFinite(cutoffAt) && Date.now() < cutoffAt;
-
 type BookingActionEligibilityInput = Pick<
 	BookingSummary,
 	"canEdit" | "canCancel"
 > & {
-	modificationCutoffAt: BookingSummary["modificationCutoffAt"] | undefined;
+	modificationCutoffAt?: BookingSummary["modificationCutoffAt"];
 	isRefreshing: boolean;
 };
 
@@ -20,35 +17,24 @@ export function useBookingActionEligibility({
 	modificationCutoffAt,
 	isRefreshing,
 }: BookingActionEligibilityInput) {
-	const cutoffAt = modificationCutoffAt
-		? new Date(modificationCutoffAt).getTime()
-		: Number.NaN;
-	const [isOpen, setIsOpen] = useState(() => isBeforeCutoff(cutoffAt));
+	const cutoffAt = new Date(modificationCutoffAt ?? "").getTime();
+	const [clock, setClock] = useState(Date.now);
 
 	useEffect(() => {
-		let timeout: ReturnType<typeof setTimeout> | undefined;
+		const remainingMs = cutoffAt - Math.max(clock, Date.now());
+		if (!Number.isFinite(cutoffAt) || remainingMs <= 0) return;
 
-		const updateWindowState = () => {
-			const remainingMs = cutoffAt - Date.now();
-			const nextIsOpen = Number.isFinite(cutoffAt) && remainingMs > 0;
-			setIsOpen(nextIsOpen);
+		const timeout = setTimeout(
+			() => setClock(Date.now()),
+			Math.min(remainingMs + 1, MAX_TIMEOUT_MS),
+		);
+		return () => clearTimeout(timeout);
+	}, [clock, cutoffAt]);
 
-			if (nextIsOpen) {
-				timeout = setTimeout(
-					updateWindowState,
-					Math.min(remainingMs + 1, MAX_TIMEOUT_MS),
-				);
-			}
-		};
-
-		updateWindowState();
-
-		return () => {
-			if (timeout) clearTimeout(timeout);
-		};
-	}, [cutoffAt]);
-
-	const actionsAreCurrent = !isRefreshing && isOpen;
+	const actionsAreCurrent =
+		!isRefreshing &&
+		Number.isFinite(cutoffAt) &&
+		Date.now() < cutoffAt;
 
 	return {
 		canEdit: actionsAreCurrent && isEditEligible,
