@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/use-auth";
+import { useBookingActionEligibility } from "@/hooks/use-booking-action-eligibility";
 import { useBookingActions } from "@/hooks/use-booking-actions";
 import { useBookingDetail } from "@/hooks/use-booking-detail";
 import {
@@ -95,12 +96,6 @@ const bookingTypeDescription = (type: BookingType) => {
     return "Each airport pickup booking is for a one-way trip from the airport.";
   }
   return "Each full day booking is for a 24-hour duration ending 24 hours after the pickup time.";
-};
-
-const BOOKING_EDIT_WINDOW_MS = 6 * 60 * 60 * 1000;
-
-const isBookingEditable = (startDate: string) => {
-  return new Date(startDate).getTime() - Date.now() >= BOOKING_EDIT_WINDOW_MS;
 };
 
 type BookingActionFeedback = {
@@ -674,6 +669,12 @@ export default function BookingDetailScreen() {
   const bookingId = Array.isArray(params.id) ? params.id[0] : params.id;
 
   const bookingQuery = useBookingDetail(bookingId, isAuthenticated);
+	const { canEdit, canCancel } = useBookingActionEligibility({
+		canEdit: bookingQuery.data?.canEdit ?? false,
+		canCancel: bookingQuery.data?.canCancel ?? false,
+		modificationCutoffAt: bookingQuery.data?.modificationCutoffAt,
+		isRefreshing: bookingQuery.isFetching,
+	});
   const {
     updateBooking: updateBookingAction,
     cancelBooking: cancelBookingAction,
@@ -757,8 +758,6 @@ export default function BookingDetailScreen() {
   }
 
   const booking = bookingQuery.data;
-  const canBeModified =
-    booking.status === "CONFIRMED" && isBookingEditable(booking.startDate);
 
   const openModifyDialog = () => {
     setPickupTime(format(toLagosTime(booking.startDate), "h:mm a"));
@@ -1056,7 +1055,7 @@ export default function BookingDetailScreen() {
 
             <PaymentSummaryCard booking={booking} />
 
-            {canBeModified ? (
+						{canEdit || canCancel ? (
               <Card className="rounded-xl py-4">
                 <CardHeader className="px-4">
                   <SectionTitleRow
@@ -1066,29 +1065,33 @@ export default function BookingDetailScreen() {
                 </CardHeader>
                 <CardContent className="px-4 pt-0">
                   <View className="gap-2">
-                    <Button
-                      variant="outline"
-                      onPress={openModifyDialog}
-                      disabled={isUpdatingBooking || isCancellingBooking}
-                    >
-                      <Text className="text-sm font-medium">
-                        Modify Booking
-                      </Text>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onPress={() => {
-                        setActionFeedback(null);
-                        setIsCancelDialogOpen(true);
-                      }}
-                      disabled={isUpdatingBooking || isCancellingBooking}
-                    >
-                      <Text className="text-sm font-medium text-red-600">
-                        {isCancellingBooking
-                          ? "Cancelling..."
-                          : "Cancel Booking"}
-                      </Text>
-                    </Button>
+										{canEdit ? (
+                      <Button
+                        variant="outline"
+                        onPress={openModifyDialog}
+                        disabled={isUpdatingBooking || isCancellingBooking}
+                      >
+                        <Text className="text-sm font-medium">
+                          Modify Booking
+                        </Text>
+                      </Button>
+                    ) : null}
+										{canCancel ? (
+                      <Button
+                        variant="outline"
+                        onPress={() => {
+                          setActionFeedback(null);
+                          setIsCancelDialogOpen(true);
+                        }}
+                        disabled={isUpdatingBooking || isCancellingBooking}
+                      >
+                        <Text className="text-sm font-medium text-red-600">
+                          {isCancellingBooking
+                            ? "Cancelling..."
+                            : "Cancel Booking"}
+                        </Text>
+                      </Button>
+                    ) : null}
                   </View>
                 </CardContent>
               </Card>

@@ -13,16 +13,17 @@ import {
 import { Text } from "@/components/ui/text";
 import { useTabBarVisibility } from "@/context/tab-bar-visibility-context";
 import { useAuth } from "@/hooks/use-auth";
+import { useBookingActionEligibility } from "@/hooks/use-booking-action-eligibility";
 import { useBookingActions } from "@/hooks/use-booking-actions";
 import { useBookings } from "@/hooks/use-bookings";
 import { DAY_BOOKING_TYPE } from "@/lib/booking-types";
 import { formatCurrency } from "@/lib/currency";
 import {
   BOOKING_STATUSES,
-  getBookingActionErrorMessage,
+	type BookingsByStatusResponse,
   type BookingStatus,
   type BookingSummary,
-  type BookingsByStatusResponse,
+	getBookingActionErrorMessage,
   type UpdateBookingPayload,
 } from "@/services/bookings";
 import { format, toZonedTime } from "date-fns-tz";
@@ -41,14 +42,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const LAGOS_TIMEZONE = "Africa/Lagos";
-const BOOKING_EDIT_WINDOW_MS = 12 * 60 * 60 * 1000;
 
 const formatDateTime = (value: string) => {
   return format(toZonedTime(new Date(value), LAGOS_TIMEZONE), "PPPp");
-};
-
-const isBookingEditable = (startDate: string) => {
-  return new Date(startDate).getTime() - Date.now() >= BOOKING_EDIT_WINDOW_MS;
 };
 
 function countBookingsByStatus(
@@ -268,7 +264,12 @@ function CancelBookingDialog({
 function BookingListItem({
   booking,
   isLast,
-}: Readonly<{ booking: BookingSummary; isLast: boolean }>) {
+	isRefreshing,
+}: Readonly<{
+	booking: BookingSummary;
+	isLast: boolean;
+	isRefreshing: boolean;
+}>) {
   const router = useRouter();
   const {
     updateBooking,
@@ -290,12 +291,13 @@ function BookingListItem({
     dropOffAddress,
   } = state;
 
-  const canBeModified =
-    booking.status === "CONFIRMED" && isBookingEditable(booking.startDate);
-  const canBeCancelled =
-    ["PENDING", "CONFIRMED"].includes(booking.status) &&
-    isBookingEditable(booking.startDate);
   const bookingImageUrl = booking.car.images[0]?.url;
+	const { canEdit, canCancel } = useBookingActionEligibility({
+		canEdit: booking.canEdit,
+		canCancel: booking.canCancel,
+		modificationCutoffAt: booking.modificationCutoffAt,
+		isRefreshing,
+	});
 
   const openModifyDialog = () => {
     const hasSameLocation = booking.pickupLocation === booking.returnLocation;
@@ -467,9 +469,9 @@ function BookingListItem({
         {/* <ChevronRight size={16} color="#6B7280" /> */}
       </Pressable>
 
-      {canBeModified || canBeCancelled ? (
+			{canEdit || canCancel ? (
         <View className="mt-3 flex-row items-center gap-2">
-          {canBeModified ? (
+					{canEdit ? (
             <Button
               className="flex-1"
               variant="outline"
@@ -479,7 +481,7 @@ function BookingListItem({
               <Text className="text-sm font-medium">Modify Booking</Text>
             </Button>
           ) : null}
-          {canBeCancelled ? (
+					{canCancel ? (
             <Button
               className="flex-1"
               variant="destructive"
@@ -713,6 +715,7 @@ export default function BookingsScreen() {
                   key={booking.id}
                   booking={booking}
                   isLast={index === bookingsForStatus.length - 1}
+									isRefreshing={bookingsQuery.isFetching}
                 />
               ))
             )}

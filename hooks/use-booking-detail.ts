@@ -12,6 +12,7 @@ export function useBookingDetail(
     enabled: enabled && Boolean(bookingId),
     staleTime: 30 * 1000,
     refetchOnMount: "always",
+    refetchOnWindowFocus: "always",
     refetchOnReconnect: true,
   });
 }
