@@ -13,17 +13,17 @@ import {
 import { Text } from "@/components/ui/text";
 import { useTabBarVisibility } from "@/context/tab-bar-visibility-context";
 import { useAuth } from "@/hooks/use-auth";
+import { useBookingActionEligibility } from "@/hooks/use-booking-action-eligibility";
 import { useBookingActions } from "@/hooks/use-booking-actions";
 import { useBookings } from "@/hooks/use-bookings";
-import { getBookingActionVisibility } from "@/lib/booking-action-policy";
 import { DAY_BOOKING_TYPE } from "@/lib/booking-types";
 import { formatCurrency } from "@/lib/currency";
 import {
   BOOKING_STATUSES,
-  getBookingActionErrorMessage,
+	type BookingsByStatusResponse,
   type BookingStatus,
   type BookingSummary,
-  type BookingsByStatusResponse,
+	getBookingActionErrorMessage,
   type UpdateBookingPayload,
 } from "@/services/bookings";
 import { format, toZonedTime } from "date-fns-tz";
@@ -264,7 +264,12 @@ function CancelBookingDialog({
 function BookingListItem({
   booking,
   isLast,
-}: Readonly<{ booking: BookingSummary; isLast: boolean }>) {
+	isRefreshing,
+}: Readonly<{
+	booking: BookingSummary;
+	isLast: boolean;
+	isRefreshing: boolean;
+}>) {
   const router = useRouter();
   const {
     updateBooking,
@@ -287,8 +292,12 @@ function BookingListItem({
   } = state;
 
   const bookingImageUrl = booking.car.images[0]?.url;
-  const { showActions, showEdit, showCancel } =
-    getBookingActionVisibility(booking);
+	const { canEdit, canCancel } = useBookingActionEligibility({
+		canEdit: booking.canEdit,
+		canCancel: booking.canCancel,
+		modificationCutoffAt: booking.modificationCutoffAt,
+		isRefreshing,
+	});
 
   const openModifyDialog = () => {
     const hasSameLocation = booking.pickupLocation === booking.returnLocation;
@@ -460,9 +469,9 @@ function BookingListItem({
         {/* <ChevronRight size={16} color="#6B7280" /> */}
       </Pressable>
 
-      {showActions ? (
+			{canEdit || canCancel ? (
         <View className="mt-3 flex-row items-center gap-2">
-          {showEdit ? (
+					{canEdit ? (
             <Button
               className="flex-1"
               variant="outline"
@@ -472,7 +481,7 @@ function BookingListItem({
               <Text className="text-sm font-medium">Modify Booking</Text>
             </Button>
           ) : null}
-          {showCancel ? (
+					{canCancel ? (
             <Button
               className="flex-1"
               variant="destructive"
@@ -706,6 +715,7 @@ export default function BookingsScreen() {
                   key={booking.id}
                   booking={booking}
                   isLast={index === bookingsForStatus.length - 1}
+									isRefreshing={bookingsQuery.isFetching}
                 />
               ))
             )}

@@ -12,9 +12,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/use-auth";
+import { useBookingActionEligibility } from "@/hooks/use-booking-action-eligibility";
 import { useBookingActions } from "@/hooks/use-booking-actions";
 import { useBookingDetail } from "@/hooks/use-booking-detail";
-import { getBookingActionVisibility } from "@/lib/booking-action-policy";
 import {
   AIRPORT_PICKUP_BOOKING_TYPE,
   type BookingType,
@@ -669,6 +669,12 @@ export default function BookingDetailScreen() {
   const bookingId = Array.isArray(params.id) ? params.id[0] : params.id;
 
   const bookingQuery = useBookingDetail(bookingId, isAuthenticated);
+	const { canEdit, canCancel } = useBookingActionEligibility({
+		canEdit: bookingQuery.data?.canEdit ?? false,
+		canCancel: bookingQuery.data?.canCancel ?? false,
+		modificationCutoffAt: bookingQuery.data?.modificationCutoffAt,
+		isRefreshing: bookingQuery.isFetching,
+	});
   const {
     updateBooking: updateBookingAction,
     cancelBooking: cancelBookingAction,
@@ -752,8 +758,6 @@ export default function BookingDetailScreen() {
   }
 
   const booking = bookingQuery.data;
-  const { showActions, showEdit, showCancel } =
-    getBookingActionVisibility(booking);
 
   const openModifyDialog = () => {
     setPickupTime(format(toLagosTime(booking.startDate), "h:mm a"));
@@ -1051,7 +1055,7 @@ export default function BookingDetailScreen() {
 
             <PaymentSummaryCard booking={booking} />
 
-            {showActions ? (
+						{canEdit || canCancel ? (
               <Card className="rounded-xl py-4">
                 <CardHeader className="px-4">
                   <SectionTitleRow
@@ -1061,7 +1065,7 @@ export default function BookingDetailScreen() {
                 </CardHeader>
                 <CardContent className="px-4 pt-0">
                   <View className="gap-2">
-                    {showEdit ? (
+										{canEdit ? (
                       <Button
                         variant="outline"
                         onPress={openModifyDialog}
@@ -1072,7 +1076,7 @@ export default function BookingDetailScreen() {
                         </Text>
                       </Button>
                     ) : null}
-                    {showCancel ? (
+										{canCancel ? (
                       <Button
                         variant="outline"
                         onPress={() => {

@@ -9,6 +9,7 @@ export function useBookings(enabled: boolean) {
     enabled,
     staleTime: 30 * 1000,
     refetchOnMount: "always",
+    refetchOnWindowFocus: "always",
     refetchOnReconnect: true,
   });
 }

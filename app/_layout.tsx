@@ -15,6 +15,7 @@ import NetInfo from "@react-native-community/netinfo";
 import { ThemeProvider } from "@react-navigation/native";
 import { AutocompletePortalHostProvider } from "@/providers/autocomplete-portal-host-provider";
 import {
+  focusManager,
   onlineManager,
   QueryClient,
   QueryClientProvider,
@@ -25,7 +26,7 @@ import { StatusBar } from "expo-status-bar";
 import * as WebBrowser from "expo-web-browser";
 import { useEffect } from "react";
 import type { TextStyle } from "react-native";
-import { LogBox, StyleSheet, Text, TextInput } from "react-native";
+import { AppState, LogBox, StyleSheet, Text, TextInput } from "react-native";
 import "react-native-reanimated";
 import "../global.css";
 
@@ -157,6 +158,15 @@ onlineManager.setEventListener((setOnline) => {
   return NetInfo.addEventListener((state) => {
     setOnline(state.isConnected ?? true);
   });
+});
+
+// Keep React Query focus state in sync with native foreground/background state.
+focusManager.setEventListener((setFocused) => {
+  const subscription = AppState.addEventListener("change", (state) => {
+    setFocused(state === "active");
+  });
+
+  return () => subscription.remove();
 });
 
 export const unstable_settings = {
