@@ -31,6 +31,10 @@ export type BookingSummary = {
   paymentStatus: string;
   startDate: string;
   endDate: string;
+  canEdit: boolean;
+  canCancel: boolean;
+  modificationCutoffAt: string;
+  policyHoursBeforeStart: number;
   type: BookingType;
   totalAmount: number;
   pickupLocation: string;

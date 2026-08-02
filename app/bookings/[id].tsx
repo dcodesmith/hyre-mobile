@@ -97,12 +97,6 @@ const bookingTypeDescription = (type: BookingType) => {
   return "Each full day booking is for a 24-hour duration ending 24 hours after the pickup time.";
 };
 
-const BOOKING_EDIT_WINDOW_MS = 6 * 60 * 60 * 1000;
-
-const isBookingEditable = (startDate: string) => {
-  return new Date(startDate).getTime() - Date.now() >= BOOKING_EDIT_WINDOW_MS;
-};
-
 type BookingActionFeedback = {
   type: "success" | "error";
   message: string;
@@ -757,8 +751,6 @@ export default function BookingDetailScreen() {
   }
 
   const booking = bookingQuery.data;
-  const canBeModified =
-    booking.status === "CONFIRMED" && isBookingEditable(booking.startDate);
 
   const openModifyDialog = () => {
     setPickupTime(format(toLagosTime(booking.startDate), "h:mm a"));
@@ -1056,7 +1048,7 @@ export default function BookingDetailScreen() {
 
             <PaymentSummaryCard booking={booking} />
 
-            {canBeModified ? (
+            {booking.canEdit || booking.canCancel ? (
               <Card className="rounded-xl py-4">
                 <CardHeader className="px-4">
                   <SectionTitleRow
@@ -1066,29 +1058,33 @@ export default function BookingDetailScreen() {
                 </CardHeader>
                 <CardContent className="px-4 pt-0">
                   <View className="gap-2">
-                    <Button
-                      variant="outline"
-                      onPress={openModifyDialog}
-                      disabled={isUpdatingBooking || isCancellingBooking}
-                    >
-                      <Text className="text-sm font-medium">
-                        Modify Booking
-                      </Text>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onPress={() => {
-                        setActionFeedback(null);
-                        setIsCancelDialogOpen(true);
-                      }}
-                      disabled={isUpdatingBooking || isCancellingBooking}
-                    >
-                      <Text className="text-sm font-medium text-red-600">
-                        {isCancellingBooking
-                          ? "Cancelling..."
-                          : "Cancel Booking"}
-                      </Text>
-                    </Button>
+                    {booking.canEdit ? (
+                      <Button
+                        variant="outline"
+                        onPress={openModifyDialog}
+                        disabled={isUpdatingBooking || isCancellingBooking}
+                      >
+                        <Text className="text-sm font-medium">
+                          Modify Booking
+                        </Text>
+                      </Button>
+                    ) : null}
+                    {booking.canCancel ? (
+                      <Button
+                        variant="outline"
+                        onPress={() => {
+                          setActionFeedback(null);
+                          setIsCancelDialogOpen(true);
+                        }}
+                        disabled={isUpdatingBooking || isCancellingBooking}
+                      >
+                        <Text className="text-sm font-medium text-red-600">
+                          {isCancellingBooking
+                            ? "Cancelling..."
+                            : "Cancel Booking"}
+                        </Text>
+                      </Button>
+                    ) : null}
                   </View>
                 </CardContent>
               </Card>

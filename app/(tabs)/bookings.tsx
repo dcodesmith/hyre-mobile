@@ -41,14 +41,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const LAGOS_TIMEZONE = "Africa/Lagos";
-const BOOKING_EDIT_WINDOW_MS = 12 * 60 * 60 * 1000;
 
 const formatDateTime = (value: string) => {
   return format(toZonedTime(new Date(value), LAGOS_TIMEZONE), "PPPp");
-};
-
-const isBookingEditable = (startDate: string) => {
-  return new Date(startDate).getTime() - Date.now() >= BOOKING_EDIT_WINDOW_MS;
 };
 
 function countBookingsByStatus(
@@ -290,11 +285,6 @@ function BookingListItem({
     dropOffAddress,
   } = state;
 
-  const canBeModified =
-    booking.status === "CONFIRMED" && isBookingEditable(booking.startDate);
-  const canBeCancelled =
-    ["PENDING", "CONFIRMED"].includes(booking.status) &&
-    isBookingEditable(booking.startDate);
   const bookingImageUrl = booking.car.images[0]?.url;
 
   const openModifyDialog = () => {
@@ -467,9 +457,9 @@ function BookingListItem({
         {/* <ChevronRight size={16} color="#6B7280" /> */}
       </Pressable>
 
-      {canBeModified || canBeCancelled ? (
+      {booking.canEdit || booking.canCancel ? (
         <View className="mt-3 flex-row items-center gap-2">
-          {canBeModified ? (
+          {booking.canEdit ? (
             <Button
               className="flex-1"
               variant="outline"
@@ -479,7 +469,7 @@ function BookingListItem({
               <Text className="text-sm font-medium">Modify Booking</Text>
             </Button>
           ) : null}
-          {canBeCancelled ? (
+          {booking.canCancel ? (
             <Button
               className="flex-1"
               variant="destructive"
