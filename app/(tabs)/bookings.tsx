@@ -15,6 +15,7 @@ import { useTabBarVisibility } from "@/context/tab-bar-visibility-context";
 import { useAuth } from "@/hooks/use-auth";
 import { useBookingActions } from "@/hooks/use-booking-actions";
 import { useBookings } from "@/hooks/use-bookings";
+import { getBookingActionVisibility } from "@/lib/booking-action-policy";
 import { DAY_BOOKING_TYPE } from "@/lib/booking-types";
 import { formatCurrency } from "@/lib/currency";
 import {
@@ -286,6 +287,8 @@ function BookingListItem({
   } = state;
 
   const bookingImageUrl = booking.car.images[0]?.url;
+  const { showActions, showEdit, showCancel } =
+    getBookingActionVisibility(booking);
 
   const openModifyDialog = () => {
     const hasSameLocation = booking.pickupLocation === booking.returnLocation;
@@ -457,9 +460,9 @@ function BookingListItem({
         {/* <ChevronRight size={16} color="#6B7280" /> */}
       </Pressable>
 
-      {booking.canEdit || booking.canCancel ? (
+      {showActions ? (
         <View className="mt-3 flex-row items-center gap-2">
-          {booking.canEdit ? (
+          {showEdit ? (
             <Button
               className="flex-1"
               variant="outline"
@@ -469,7 +472,7 @@ function BookingListItem({
               <Text className="text-sm font-medium">Modify Booking</Text>
             </Button>
           ) : null}
-          {booking.canCancel ? (
+          {showCancel ? (
             <Button
               className="flex-1"
               variant="destructive"

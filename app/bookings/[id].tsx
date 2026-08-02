@@ -14,6 +14,7 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { useBookingActions } from "@/hooks/use-booking-actions";
 import { useBookingDetail } from "@/hooks/use-booking-detail";
+import { getBookingActionVisibility } from "@/lib/booking-action-policy";
 import {
   AIRPORT_PICKUP_BOOKING_TYPE,
   type BookingType,
@@ -751,6 +752,8 @@ export default function BookingDetailScreen() {
   }
 
   const booking = bookingQuery.data;
+  const { showActions, showEdit, showCancel } =
+    getBookingActionVisibility(booking);
 
   const openModifyDialog = () => {
     setPickupTime(format(toLagosTime(booking.startDate), "h:mm a"));
@@ -1048,7 +1051,7 @@ export default function BookingDetailScreen() {
 
             <PaymentSummaryCard booking={booking} />
 
-            {booking.canEdit || booking.canCancel ? (
+            {showActions ? (
               <Card className="rounded-xl py-4">
                 <CardHeader className="px-4">
                   <SectionTitleRow
@@ -1058,7 +1061,7 @@ export default function BookingDetailScreen() {
                 </CardHeader>
                 <CardContent className="px-4 pt-0">
                   <View className="gap-2">
-                    {booking.canEdit ? (
+                    {showEdit ? (
                       <Button
                         variant="outline"
                         onPress={openModifyDialog}
@@ -1069,7 +1072,7 @@ export default function BookingDetailScreen() {
                         </Text>
                       </Button>
                     ) : null}
-                    {booking.canCancel ? (
+                    {showCancel ? (
                       <Button
                         variant="outline"
                         onPress={() => {
