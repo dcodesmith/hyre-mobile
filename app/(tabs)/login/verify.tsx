@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
+import { pickRedirectToParam } from "@/lib/sign-in-redirect";
 import { otpFormSchema } from "@/lib/validations/auth";
 import { useAuthModal } from "@/providers/auth-modal-provider";
 import {
@@ -11,7 +12,7 @@ import {
   type UserProfile,
 } from "@/services/auth";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { ScrollView, View } from "react-native";
@@ -22,6 +23,10 @@ import type { OtpFormValues } from "@/lib/validations/auth";
 
 export default function VerifyScreen() {
   const router = useRouter();
+  const { redirectTo: redirectToParam } = useLocalSearchParams<{
+    redirectTo?: string | string[];
+  }>();
+  const redirectTo = pickRedirectToParam(redirectToParam);
   const { completeLogin, pendingEmail, isAuthenticated } = useAuthModal();
   const [sessionEmail] = useState<string | null>(pendingEmail);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -36,14 +41,16 @@ export default function VerifyScreen() {
   // sign-in + logout), bounce them back to the email-entry screen.
   // Skip this when the user has just authenticated — the verify screen will
   // be unmounted by the tab remount, but in the brief overlap window we
-  // would otherwise flash `/login` between OTP success and the navigation
-  // to home.
+  // would otherwise flash `/login` between OTP success and continuation.
   useFocusEffect(
     useCallback(() => {
       if (!pendingEmail && !isAuthenticated) {
-        router.replace("/login");
+        router.replace({
+          pathname: "/login",
+          params: redirectTo ? { redirectTo } : {},
+        });
       }
-    }, [pendingEmail, isAuthenticated, router]),
+    }, [pendingEmail, isAuthenticated, redirectTo, router]),
   );
 
   const {
@@ -75,14 +82,14 @@ export default function VerifyScreen() {
           throw new Error("The server did not return a valid access token.");
         }
         const profile: UserProfile = response.user ?? { email };
-        await completeLogin(token, profile);
+        await completeLogin(token, profile, redirectTo);
       } catch (err) {
         setOtpError(getAuthErrorMessage(err, "We could not verify that code."));
       } finally {
         setIsSubmitting(false);
       }
     },
-    [email, completeLogin],
+    [email, completeLogin, redirectTo],
   );
 
   const onCancel = useCallback(() => {

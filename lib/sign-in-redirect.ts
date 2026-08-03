@@ -1,8 +1,8 @@
+import dayjs from "dayjs";
 import {
   AIRPORT_PICKUP_BOOKING_TYPE,
   type BookingType,
-} from "@/lib/booking-types";
-import dayjs from "dayjs";
+} from "./booking-types";
 
 export type CarSignInRedirectValues = {
   bookingType: BookingType;
@@ -17,12 +17,19 @@ export type CarSignInRedirectValues = {
 
 /** Typed as a template literal so it satisfies expo-router's typed path union. */
 export type CarSignInRedirectPath =
-  `/(tabs)/login?redirectTo=/cars/${string}?${string}`;
+  `/(tabs)/login?redirectTo=${string}`;
+
+function firstSearchParam(value: unknown): string | null {
+  if (typeof value === "string" && value.length > 0) return value;
+  if (Array.isArray(value) && typeof value[0] === "string" && value[0]) {
+    return value[0];
+  }
+  return null;
+}
 
 /**
- * Builds the `/(tabs)/login?redirectTo=/cars/<id>?...` path that preserves the
- * user's in-progress booking selection across the sign-in round trip. Airport
- * bookings always force `sameLocation=false` (separate drop-off required).
+ * Builds the login path that preserves the in-progress car booking across
+ * sign-in. The destination is URI-encoded so nested query params survive.
  */
 export function buildCarSignInRedirectPath(
   carId: string,
@@ -62,5 +69,45 @@ export function buildCarSignInRedirectPath(
     redirectParams.set("dropOffAddress", dropOffAddressValue);
   }
 
-  return `/(tabs)/login?redirectTo=/cars/${carId}?${redirectParams.toString()}`;
+  const destination = `/cars/${carId}?${redirectParams.toString()}`;
+  return `/(tabs)/login?redirectTo=${encodeURIComponent(destination)}`;
+}
+
+/**
+ * Only allow returning to car checkout deep links we create. Anything else
+ * falls back to home so login cannot be used as an open redirect.
+ */
+export function resolvePostLoginHref(redirectTo: unknown): "/" | `/cars/${string}` {
+  const raw = firstSearchParam(redirectTo);
+  if (!raw) return "/";
+
+  try {
+    // Search params are already decoded by Expo Router. Decode only when this
+    // helper receives the fully encoded value produced by the path builder.
+    const value = raw.startsWith("/") ? raw : decodeURIComponent(raw);
+    const pathname = value.split(/[?#]/, 1)[0];
+    const [root, route, encodedCarId, ...extraSegments] = pathname.split("/");
+    const carId = decodeURIComponent(encodedCarId ?? "");
+
+    if (
+      root !== "" ||
+      route !== "cars" ||
+      extraSegments.length > 0 ||
+      !carId ||
+      carId === "." ||
+      carId === ".." ||
+      carId.includes("/") ||
+      carId.includes("\\")
+    ) {
+      return "/";
+    }
+
+    return value as `/cars/${string}`;
+  } catch {
+    return "/";
+  }
+}
+
+export function pickRedirectToParam(redirectTo: unknown): string | undefined {
+  return firstSearchParam(redirectTo) ?? undefined;
 }

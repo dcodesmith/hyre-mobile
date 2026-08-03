@@ -3,11 +3,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 import { API_BASE_URL } from "@/constants/config";
+import { pickRedirectToParam } from "@/lib/sign-in-redirect";
 import { emailFormSchema } from "@/lib/validations/auth";
 import { useAuthModal } from "@/providers/auth-modal-provider";
 import { AUTH_DEFAULTS, getAuthErrorMessage, requestOtp } from "@/services/auth";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Linking, Pressable, ScrollView, View } from "react-native";
@@ -18,6 +19,10 @@ import type { EmailFormValues } from "@/lib/validations/auth";
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { redirectTo: redirectToParam } = useLocalSearchParams<{
+    redirectTo?: string | string[];
+  }>();
+  const redirectTo = pickRedirectToParam(redirectToParam);
   const { setPendingEmail } = useAuthModal();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
@@ -49,7 +54,10 @@ export default function LoginScreen() {
         setPendingEmail(data.email);
         router.push({
           pathname: "/login/verify",
-          params: { email: data.email },
+          params: {
+            email: data.email,
+            ...(redirectTo ? { redirectTo } : {}),
+          },
         });
       } catch (err) {
         setApiError(
@@ -59,7 +67,7 @@ export default function LoginScreen() {
         setIsSubmitting(false);
       }
     },
-    [router, setPendingEmail],
+    [redirectTo, router, setPendingEmail],
   );
 
   const openTerms = () => Linking.openURL(`${API_BASE_URL}/terms`);

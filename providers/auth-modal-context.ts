@@ -4,7 +4,11 @@ import { createContext, useContext } from "react";
 export type AuthModalContextValue = {
   openLoginModal: () => void;
   closeLoginModal: () => void;
-  completeLogin: (token: string, profile: UserProfile) => Promise<void>;
+  completeLogin: (
+    token: string,
+    profile: UserProfile,
+    redirectTo?: string,
+  ) => Promise<void>;
   isEmailModalVisible: boolean;
   isOtpModalVisible: boolean;
   isAuthenticated: boolean;
