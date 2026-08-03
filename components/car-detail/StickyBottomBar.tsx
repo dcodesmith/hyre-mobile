@@ -13,6 +13,7 @@ interface StickyBottomBarProps {
   /** Savings amount; renders the green “You save …” line when > 0. */
   readonly savingsAmount?: number;
   readonly isSubmitting?: boolean;
+  readonly disabled?: boolean;
   readonly onPayNow: () => void;
   readonly onSignIn: () => void;
   readonly error?: string | null;
@@ -25,6 +26,7 @@ export function StickyBottomBar({
   originalTotal,
   savingsAmount,
   isSubmitting = false,
+  disabled = false,
   onPayNow,
   onSignIn,
   error,
@@ -91,7 +93,7 @@ export function StickyBottomBar({
         <Button
           className="h-10 w-full rounded-full bg-neutral-900"
           onPress={onPayNow}
-          disabled={isSubmitting}
+          disabled={disabled || isSubmitting}
         >
           {isSubmitting ? (
             <Loader2

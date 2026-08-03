@@ -4,6 +4,7 @@ export const DAY_BOOKING_TYPE = "DAY" as const;
 export const NIGHT_BOOKING_TYPE = "NIGHT" as const;
 export const FULL_DAY_BOOKING_TYPE = "FULL_DAY" as const;
 export const AIRPORT_PICKUP_BOOKING_TYPE = "AIRPORT_PICKUP" as const;
+export const NIGHT_PICKUP_TIME = "11 PM";
 
 export const BOOKING_TYPE_OPTIONS = [
   DAY_BOOKING_TYPE,

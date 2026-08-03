@@ -17,18 +17,25 @@ import {
   DEFAULT_VAT_RATE,
   useBookingPricing,
 } from "@/hooks/use-booking-pricing";
-import { useBookingPricingPreview } from "@/hooks/use-booking-pricing-preview";
+import {
+  bookingPricingPreviewQueryKey,
+  useBookingPricingPreview,
+} from "@/hooks/use-booking-pricing-preview";
 import { useCarBookingForm } from "@/hooks/use-car-booking-form";
 import { useCarDetail } from "@/hooks/use-car-detail";
 import { useGuestCheckoutForm } from "@/hooks/use-guest-checkout-form";
 import { useRates } from "@/hooks/use-rates";
-import type { BookingPricingPreviewRequest } from "@/lib/booking-pricing-preview-types";
+import type {
+  BookingPricingPreviewRequest,
+  BookingPricingPreviewResponse,
+} from "@/lib/booking-pricing-preview-types";
 import {
   AIRPORT_PICKUP_BOOKING_TYPE,
   type BookingType,
   DAY_BOOKING_TYPE,
   FULL_DAY_BOOKING_TYPE,
   NIGHT_BOOKING_TYPE,
+  NIGHT_PICKUP_TIME,
 } from "@/lib/booking-types";
 import {
   calculateBookingUnits,
@@ -38,6 +45,8 @@ import { isExpoIos } from "@/lib/expo-platform";
 import { hasActivePromotion } from "@/lib/promotion-utils";
 import { buildCarSignInRedirectPath } from "@/lib/sign-in-redirect";
 import { cn } from "@/lib/utils";
+import { getBookingPricingPreviewErrorMessage } from "@/services/booking-pricing-preview";
+import { useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -254,9 +263,11 @@ export default function CarDetailScreen() {
         return null;
       }
 
-      const isAirport =
-        booking.values.bookingType === AIRPORT_PICKUP_BOOKING_TYPE;
-      if (isAirport && !booking.values.pickupTime?.trim()) {
+      const pickupTime =
+        booking.values.bookingType === NIGHT_BOOKING_TYPE
+          ? NIGHT_PICKUP_TIME
+          : booking.values.pickupTime;
+      if (!pickupTime?.trim()) {
         return null;
       }
 
@@ -265,7 +276,7 @@ export default function CarDetailScreen() {
         bookingType: booking.values.bookingType,
         startDate: previewWindow.startDate.toISOString(),
         endDate: previewWindow.endDate.toISOString(),
-        pickupTime: booking.values.pickupTime || undefined,
+        pickupTime,
         includeSecurityDetail: false,
         requiresFullTank:
           booking.values.bookingType === DAY_BOOKING_TYPE
@@ -280,9 +291,30 @@ export default function CarDetailScreen() {
       requiresFullTank,
     ]);
 
-  const { data: pricingPreview } = useBookingPricingPreview(
+  const pricingPreviewQuery = useBookingPricingPreview(
     pricingPreviewRequest,
     isAuthenticated,
+  );
+  const queryClient = useQueryClient();
+  const { data: pricingPreview } = pricingPreviewQuery;
+  const pricingIsAuthoritative =
+    pricingPreviewRequest !== null &&
+    pricingPreview !== undefined &&
+    !pricingPreviewQuery.isFetching &&
+    !pricingPreviewQuery.isError;
+  const pricingPreviewError = pricingPreviewQuery.isError
+    ? getBookingPricingPreviewErrorMessage(pricingPreviewQuery.error)
+    : null;
+
+  const handlePriceChanged = useCallback(
+    (currentPricing: BookingPricingPreviewResponse) => {
+      if (!pricingPreviewRequest) return;
+      queryClient.setQueryData(
+        bookingPricingPreviewQueryKey(pricingPreviewRequest, isAuthenticated),
+        currentPricing,
+      );
+    },
+    [isAuthenticated, pricingPreviewRequest, queryClient],
   );
 
   const effectivePricing = useMemo(() => {
@@ -368,10 +400,13 @@ export default function CarDetailScreen() {
     carId,
     isAuthenticated,
     requiresFullTank,
-    finalTotal: effectivePricing.finalTotal,
+    authoritativeTotal: pricingIsAuthoritative
+      ? (pricingPreview?.totalAmount ?? null)
+      : null,
     validate,
     getBookingValues: booking.form.getValues,
     getGuestValues: guest.form.getValues,
+    onPriceChanged: handlePriceChanged,
   });
 
   const handleSignIn = useCallback(() => {
@@ -560,9 +595,12 @@ export default function CarDetailScreen() {
             airportPickup.isValidatingFlight ||
             airportPickup.isCalculatingDuration
           }
+          disabled={!pricingIsAuthoritative}
           onPayNow={submit}
           onSignIn={handleSignIn}
-          error={paymentError ?? airportPickup.flightError}
+          error={
+            paymentError ?? airportPickup.flightError ?? pricingPreviewError
+          }
           isAuthenticated={isAuthenticated}
         />
       </KeyboardAvoidingView>

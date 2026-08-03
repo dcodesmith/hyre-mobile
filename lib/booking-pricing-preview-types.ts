@@ -50,7 +50,7 @@ export interface BookingPricingPreviewRequest {
   readonly bookingType: "DAY" | "NIGHT" | "FULL_DAY" | "AIRPORT_PICKUP";
   readonly startDate: string;
   readonly endDate: string;
-  readonly pickupTime?: string;
+  readonly pickupTime: string;
   readonly includeSecurityDetail: boolean;
   readonly requiresFullTank: boolean;
 }
