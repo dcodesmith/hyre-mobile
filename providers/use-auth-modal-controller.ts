@@ -18,6 +18,7 @@ import {
   initialAuthSessionState,
   patchState,
 } from "@/providers/auth-modal-state";
+import { resolvePostLoginHref } from "@/lib/sign-in-redirect";
 import {
   AUTH_DEFAULTS,
   type UserProfile,
@@ -393,7 +394,7 @@ export function useAuthModalController() {
   );
 
   const completeLogin = useCallback(
-    async (token: string, profile: UserProfile) => {
+    async (token: string, profile: UserProfile, redirectTo?: string) => {
       setEnablePushRegistrationLogs(true);
       await saveAuthToken(token);
       setAuthToken(token);
@@ -405,7 +406,7 @@ export function useAuthModalController() {
       setOtpError(null);
       setIsEmailModalVisible(false);
       setIsOtpModalVisible(false);
-      router.replace("/");
+      router.replace(resolvePostLoginHref(redirectTo));
     },
     [
       router,
