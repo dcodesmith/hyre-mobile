@@ -28,7 +28,7 @@ import { randomUUID } from "expo-crypto";
 import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { CarBookingFormValues } from "./use-car-booking-form";
 
 type GuestPayload = Pick<
@@ -126,6 +126,37 @@ function getBrowserFailureMessage(type: string): string {
   return "We could not verify payment completion. Please check your booking status.";
 }
 
+async function createCheckoutWithRetry(
+  payload: CreateBookingCheckoutPayload,
+  isAuthenticated: boolean,
+  idempotencyKey: string,
+  isActive: () => boolean,
+): Promise<CreateBookingCheckoutResponse | null> {
+  try {
+    return await createBookingCheckout(
+      payload,
+      isAuthenticated,
+      idempotencyKey,
+    );
+  } catch (error) {
+    const retryAfterMs = getBookingRetryAfterMs(error);
+    if (retryAfterMs === null) throw error;
+
+    await new Promise((resolve) => setTimeout(resolve, retryAfterMs));
+    if (!isActive()) return null;
+
+    return createBookingCheckout(payload, isAuthenticated, idempotencyKey);
+  }
+}
+
+function handleBookingPriceChange(
+  error: unknown,
+  onPriceChanged: (pricing: BookingPricingPreviewResponse) => void,
+) {
+  const currentPricing = getBookingPriceChange(error);
+  if (currentPricing) onPriceChanged(currentPricing);
+}
+
 export type UseBookingCheckoutArgs = {
   carId: string;
   isAuthenticated: boolean;
@@ -156,6 +187,14 @@ export function useBookingCheckout(
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const checkoutAttempt = useRef<BookingCheckoutAttempt | null>(null);
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   const {
     carId,
@@ -196,7 +235,7 @@ export function useBookingCheckout(
       setPaymentError("Wait for the booking price to finish loading.");
       return;
     }
-    if (!(await validate())) return;
+    if (!(await validate()) || !isMounted.current) return;
 
     setIsSubmitting(true);
     setPaymentError(null);
@@ -235,29 +274,19 @@ export function useBookingCheckout(
       );
       checkoutAttempt.current = attempt;
 
-      let checkout: CreateBookingCheckoutResponse;
-      try {
-        checkout = await createBookingCheckout(
-          payload,
-          isAuthenticated,
-          attempt.idempotencyKey,
-        );
-      } catch (error) {
-        const retryAfterMs = getBookingRetryAfterMs(error);
-        if (retryAfterMs === null) throw error;
-
-        await new Promise((resolve) => setTimeout(resolve, retryAfterMs));
-        checkout = await createBookingCheckout(
-          payload,
-          isAuthenticated,
-          attempt.idempotencyKey,
-        );
-      }
+      const checkout = await createCheckoutWithRetry(
+        payload,
+        isAuthenticated,
+        attempt.idempotencyKey,
+        () => isMounted.current,
+      );
+      if (!checkout || !isMounted.current) return;
       const browserResult = await WebBrowser.openAuthSessionAsync(
         checkout.checkoutUrl,
         callbackUrl,
       );
 
+      if (!isMounted.current) return;
       if (browserResult.type !== "success" || !browserResult.url) {
         setPaymentError(getBrowserFailureMessage(browserResult.type));
         return;
@@ -273,16 +302,16 @@ export function useBookingCheckout(
 
       navigateToPaymentStatus(checkout, callback, guestEmail);
     } catch (error) {
-      const currentPricing = getBookingPriceChange(error);
-      if (currentPricing) {
-        onPriceChanged(currentPricing);
-      }
+      if (!isMounted.current) return;
+      handleBookingPriceChange(error, onPriceChanged);
       if (isIdempotencyKeyReused(error)) {
         checkoutAttempt.current = null;
       }
       setPaymentError(getBookingPaymentErrorMessage(error));
     } finally {
-      setIsSubmitting(false);
+      if (isMounted.current) {
+        setIsSubmitting(false);
+      }
     }
   }, [
     validate,
