@@ -5,6 +5,7 @@ import {
   postJson,
   postJsonWithAuth,
 } from "@/lib/api-client";
+import type { BookingPricingPreviewResponse } from "@/lib/booking-pricing-preview-types";
 
 const BOOKINGS_ENDPOINT = "/api/bookings";
 
@@ -16,13 +17,13 @@ export type CreateBookingCheckoutPayload = {
   bookingType: "DAY" | "NIGHT" | "FULL_DAY" | "AIRPORT_PICKUP";
   sameLocation: boolean;
   dropOffAddress?: string;
-  pickupTime?: string;
+  pickupTime: string;
   flightNumber?: string;
   includeSecurityDetail?: boolean;
   requiresFullTank?: boolean;
   specialRequests?: string;
   useCredits?: number;
-  clientTotalAmount?: string;
+  expectedTotalAmount: string;
   callbackUrl?: string;
   guestEmail?: string;
   guestName?: string;
@@ -32,6 +33,10 @@ export type CreateBookingCheckoutPayload = {
 export type CreateBookingCheckoutResponse = {
   bookingId: string;
   checkoutUrl: string;
+  totalAmount: number;
+  currency: "NGN";
+  bookingStatus: string;
+  reservationExpiresAt: string;
 };
 
 export type BookingPaymentStatusResponse = {
@@ -43,6 +48,7 @@ export type BookingPaymentStatusResponse = {
   paymentId: string | null;
   totalAmount: number;
   isConfirmed: boolean;
+  reservationExpiresAt: string | null;
 };
 
 type BookingPaymentStatusRequest = {
@@ -55,18 +61,61 @@ type BookingPaymentStatusRequest = {
 export async function createBookingCheckout(
   payload: CreateBookingCheckoutPayload,
   isAuthenticated: boolean,
+  idempotencyKey: string,
 ): Promise<CreateBookingCheckoutResponse> {
+  const init = { headers: { "Idempotency-Key": idempotencyKey } };
+
   if (isAuthenticated) {
     return postJsonWithAuth<
       CreateBookingCheckoutResponse,
       CreateBookingCheckoutPayload
-    >(BOOKINGS_ENDPOINT, payload);
+    >(BOOKINGS_ENDPOINT, payload, init);
   }
 
   return postJson<CreateBookingCheckoutResponse, CreateBookingCheckoutPayload>(
     BOOKINGS_ENDPOINT,
     payload,
+    init,
   );
+}
+
+type BookingErrorDetails = {
+  currentPricing?: BookingPricingPreviewResponse;
+  retryAfterSeconds?: number;
+};
+
+function getBookingErrorDetails(error: ApiError): BookingErrorDetails | null {
+  if (typeof error.data !== "object" || error.data === null) return null;
+  const details = (error.data as { details?: unknown }).details;
+  return typeof details === "object" && details !== null
+    ? (details as BookingErrorDetails)
+    : null;
+}
+
+export function getBookingPriceChange(
+  error: unknown,
+): BookingPricingPreviewResponse | null {
+  if (!(error instanceof ApiError) || error.code !== "BOOKING_PRICE_CHANGED") {
+    return null;
+  }
+  return getBookingErrorDetails(error)?.currentPricing ?? null;
+}
+
+export function getBookingRetryAfterMs(error: unknown): number | null {
+  if (
+    !(error instanceof ApiError) ||
+    error.code !== "BOOKING_REQUEST_IN_PROGRESS"
+  ) {
+    return null;
+  }
+  const seconds = getBookingErrorDetails(error)?.retryAfterSeconds;
+  return typeof seconds === "number" && Number.isFinite(seconds) && seconds > 0
+    ? seconds * 1000
+    : 5000;
+}
+
+export function isIdempotencyKeyReused(error: unknown): boolean {
+  return error instanceof ApiError && error.code === "IDEMPOTENCY_KEY_REUSED";
 }
 
 export async function fetchBookingPaymentStatus(

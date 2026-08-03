@@ -1,7 +1,14 @@
 import {
   AIRPORT_PICKUP_BOOKING_TYPE,
   DAY_BOOKING_TYPE,
+  NIGHT_BOOKING_TYPE,
+  NIGHT_PICKUP_TIME,
 } from "@/lib/booking-types";
+import {
+  type BookingCheckoutAttempt,
+  getBookingCheckoutAttempt,
+} from "@/lib/booking-checkout-attempt";
+import type { BookingPricingPreviewResponse } from "@/lib/booking-pricing-preview-types";
 import { normalizeBookingTimeWindow } from "@/lib/booking-utils";
 import {
   type BookingCheckoutDetailsValues,
@@ -13,11 +20,15 @@ import {
   type CreateBookingCheckoutResponse,
   createBookingCheckout,
   getBookingPaymentErrorMessage,
+  getBookingPriceChange,
+  getBookingRetryAfterMs,
+  isIdempotencyKeyReused,
 } from "@/services/booking-payment";
+import { randomUUID } from "expo-crypto";
 import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { CarBookingFormValues } from "./use-car-booking-form";
 
 type GuestPayload = Pick<
@@ -30,22 +41,29 @@ type BuildPayloadArgs = {
   booking: BookingCheckoutDetailsValues;
   callbackUrl: string;
   requiresFullTank: boolean;
-  clientTotalAmount: string;
+  expectedTotalAmount: string;
   guest: GuestPayload | null;
 };
 
 function buildCheckoutPayload(
   args: BuildPayloadArgs,
 ): CreateBookingCheckoutPayload {
-  const { carId, booking, callbackUrl, requiresFullTank, clientTotalAmount } =
+  const { carId, booking, callbackUrl, requiresFullTank, expectedTotalAmount } =
     args;
   const isAirport = booking.bookingType === AIRPORT_PICKUP_BOOKING_TYPE;
   const sameLocation = isAirport ? false : booking.sameLocation;
+  const pickupTime =
+    booking.bookingType === NIGHT_BOOKING_TYPE
+      ? NIGHT_PICKUP_TIME
+      : booking.pickupTime;
+  if (!pickupTime) {
+    throw new Error("Pickup time is required to create a booking.");
+  }
   const window = normalizeBookingTimeWindow({
     bookingType: booking.bookingType,
     startDate: booking.from as Date,
     endDate: booking.to as Date,
-    pickupTime: booking.pickupTime,
+    pickupTime,
   });
 
   const payload: CreateBookingCheckoutPayload = {
@@ -55,19 +73,16 @@ function buildCheckoutPayload(
     endDate: window.endDate.toISOString(),
     pickupAddress: booking.pickupAddress,
     sameLocation,
+    pickupTime,
     includeSecurityDetail: false,
     requiresFullTank:
       booking.bookingType === DAY_BOOKING_TYPE ? requiresFullTank : false,
-    clientTotalAmount,
+    expectedTotalAmount,
     callbackUrl,
   };
 
   if (!sameLocation) {
     payload.dropOffAddress = booking.dropOffAddress ?? "";
-  }
-
-  if (booking.pickupTime) {
-    payload.pickupTime = booking.pickupTime;
   }
 
   if (isAirport && booking.flightNumber) {
@@ -111,14 +126,46 @@ function getBrowserFailureMessage(type: string): string {
   return "We could not verify payment completion. Please check your booking status.";
 }
 
+async function createCheckoutWithRetry(
+  payload: CreateBookingCheckoutPayload,
+  isAuthenticated: boolean,
+  idempotencyKey: string,
+  isActive: () => boolean,
+): Promise<CreateBookingCheckoutResponse | null> {
+  try {
+    return await createBookingCheckout(
+      payload,
+      isAuthenticated,
+      idempotencyKey,
+    );
+  } catch (error) {
+    const retryAfterMs = getBookingRetryAfterMs(error);
+    if (retryAfterMs === null) throw error;
+
+    await new Promise((resolve) => setTimeout(resolve, retryAfterMs));
+    if (!isActive()) return null;
+
+    return createBookingCheckout(payload, isAuthenticated, idempotencyKey);
+  }
+}
+
+function handleBookingPriceChange(
+  error: unknown,
+  onPriceChanged: (pricing: BookingPricingPreviewResponse) => void,
+) {
+  const currentPricing = getBookingPriceChange(error);
+  if (currentPricing) onPriceChanged(currentPricing);
+}
+
 export type UseBookingCheckoutArgs = {
   carId: string;
   isAuthenticated: boolean;
   requiresFullTank: boolean;
-  finalTotal: number;
+  authoritativeTotal: number | null;
   validate: () => Promise<boolean>;
   getBookingValues: () => CarBookingFormValues;
   getGuestValues: () => GuestCheckoutFormValues;
+  onPriceChanged: (pricing: BookingPricingPreviewResponse) => void;
 };
 
 export type UseBookingCheckoutReturn = {
@@ -139,15 +186,25 @@ export function useBookingCheckout(
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const checkoutAttempt = useRef<BookingCheckoutAttempt | null>(null);
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   const {
     carId,
     isAuthenticated,
     requiresFullTank,
-    finalTotal,
+    authoritativeTotal,
     validate,
     getBookingValues,
     getGuestValues,
+    onPriceChanged,
   } = args;
 
   const navigateToPaymentStatus = useCallback(
@@ -174,7 +231,11 @@ export function useBookingCheckout(
   );
 
   const submit = useCallback(async () => {
-    if (!(await validate())) return;
+    if (authoritativeTotal === null) {
+      setPaymentError("Wait for the booking price to finish loading.");
+      return;
+    }
+    if (!(await validate()) || !isMounted.current) return;
 
     setIsSubmitting(true);
     setPaymentError(null);
@@ -202,16 +263,30 @@ export function useBookingCheckout(
         booking,
         callbackUrl,
         requiresFullTank,
-        clientTotalAmount: finalTotal.toFixed(2),
+        expectedTotalAmount: authoritativeTotal.toFixed(2),
         guest: guestPayload,
       });
 
-      const checkout = await createBookingCheckout(payload, isAuthenticated);
+      const attempt = getBookingCheckoutAttempt(
+        checkoutAttempt.current,
+        payload,
+        randomUUID,
+      );
+      checkoutAttempt.current = attempt;
+
+      const checkout = await createCheckoutWithRetry(
+        payload,
+        isAuthenticated,
+        attempt.idempotencyKey,
+        () => isMounted.current,
+      );
+      if (!checkout || !isMounted.current) return;
       const browserResult = await WebBrowser.openAuthSessionAsync(
         checkout.checkoutUrl,
         callbackUrl,
       );
 
+      if (!isMounted.current) return;
       if (browserResult.type !== "success" || !browserResult.url) {
         setPaymentError(getBrowserFailureMessage(browserResult.type));
         return;
@@ -227,19 +302,27 @@ export function useBookingCheckout(
 
       navigateToPaymentStatus(checkout, callback, guestEmail);
     } catch (error) {
+      if (!isMounted.current) return;
+      handleBookingPriceChange(error, onPriceChanged);
+      if (isIdempotencyKeyReused(error)) {
+        checkoutAttempt.current = null;
+      }
       setPaymentError(getBookingPaymentErrorMessage(error));
     } finally {
-      setIsSubmitting(false);
+      if (isMounted.current) {
+        setIsSubmitting(false);
+      }
     }
   }, [
     validate,
     carId,
     isAuthenticated,
     requiresFullTank,
-    finalTotal,
+    authoritativeTotal,
     getBookingValues,
     getGuestValues,
     navigateToPaymentStatus,
+    onPriceChanged,
   ]);
 
   return { submit, isSubmitting, paymentError };
