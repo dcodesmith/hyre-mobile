@@ -1,207 +1,352 @@
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useRef, useState } from "react";
+import { Text, View } from "react-native";
+import { PaymentStatusMessage } from "@/components/payment-status-message";
 import { useAuth } from "@/hooks/use-auth";
 import { formatCurrency } from "@/lib/currency";
+import { getPaymentStatusPollingInterval } from "@/lib/payment-status-polling";
 import {
+  confirmBookingPayment,
   fetchBookingPaymentStatus,
   getBookingPaymentErrorMessage,
 } from "@/services/booking-payment";
-import { useQuery } from "@tanstack/react-query";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect } from "react";
-import { ActivityIndicator, Pressable, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  deletePaymentStatusToken,
+  getPaymentStatusToken,
+} from "@/storage/payment-status-token";
 
-const POLLING_INTERVAL_MS = 3000;
+const POLLING_BUDGET_MS = 90_000;
+const TERMINAL_PAYMENT_MESSAGES = {
+  FAILED: {
+    title: "Payment Failed",
+    message:
+      "The payment could not be completed. If you were charged, contact support with reference",
+    tone: "red",
+  },
+  EXPIRED: {
+    title: "Payment Session Expired",
+    message:
+      "The booking reservation expired before payment was confirmed. If you were charged, contact support with reference",
+    tone: "orange",
+  },
+} as const;
 
 const readParam = (value: string | string[] | undefined) =>
   Array.isArray(value) ? value[0] : value;
 
+function useStoredPaymentStatusToken(
+  bookingId: string | undefined,
+  isAuthenticated: boolean,
+) {
+  const [token, setToken] = useState<string | null>(null);
+  const [isHydrating, setIsHydrating] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    setIsHydrating(true);
+    setToken(null);
+    if (!bookingId || isAuthenticated) {
+      setIsHydrating(false);
+      return;
+    }
+
+    void getPaymentStatusToken(bookingId)
+      .then((storedToken) => {
+        if (active) setToken(storedToken);
+      })
+      .catch(() => {
+        if (active) setToken(null);
+      })
+      .finally(() => {
+        if (active) setIsHydrating(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [bookingId, isAuthenticated]);
+
+  return {
+    paymentStatusToken: isAuthenticated ? null : token,
+    isTokenHydrating: isAuthenticated ? false : isHydrating,
+  };
+}
+
+function getSetupErrorMessage(
+  txRef: string | undefined,
+  bookingId: string | undefined,
+  isCredentialHydrating: boolean,
+  canPollStatus: boolean,
+): string | undefined {
+  if (!txRef || !bookingId) {
+    return "Missing transaction details from Flutterwave callback. Please contact support if you were charged.";
+  }
+  if (!isCredentialHydrating && !canPollStatus) {
+    return "Payment verification credentials are missing. Please contact support if you were charged.";
+  }
+  return undefined;
+}
+
 export default function PaymentStatusScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { isAuthenticated, isHydrating } = useAuth();
+  const confirmationAttemptedFor = useRef<string | null>(null);
+  const [pollingBudgetExpired, setPollingBudgetExpired] = useState(false);
+  const pollingStartedAt = useRef<number | null>(null);
   const params = useLocalSearchParams<{
     tx_ref?: string;
-    status?: string;
     transaction_id?: string;
     bookingId?: string;
-    guestEmail?: string;
-    transactionType?: string;
   }>();
 
   const txRef = readParam(params.tx_ref);
-  const fwStatus = readParam(params.status);
   const bookingId = readParam(params.bookingId);
-  const guestEmail = readParam(params.guestEmail);
   const transactionId = readParam(params.transaction_id);
+  const { paymentStatusToken, isTokenHydrating } =
+    useStoredPaymentStatusToken(bookingId, isAuthenticated);
+  const callbackConfirmationKey =
+    txRef && transactionId ? `${txRef}:${transactionId}` : null;
+  const hasGuestAccess = Boolean(paymentStatusToken);
+  const useAuthenticatedAccess = isAuthenticated;
 
-  const terminalFlutterwaveState = fwStatus === "cancelled" || fwStatus === "failed";
   const canPollStatus =
-    !isHydrating &&
-    !terminalFlutterwaveState &&
     Boolean(txRef) &&
     Boolean(bookingId) &&
-    (isAuthenticated || Boolean(guestEmail));
+    !isTokenHydrating &&
+    !isHydrating &&
+    (hasGuestAccess || useAuthenticatedAccess);
 
   const paymentStatusQuery = useQuery({
-    queryKey: ["booking-payment-status", txRef, bookingId, guestEmail, isAuthenticated],
-    enabled: canPollStatus,
-    queryFn: ({ signal }) => {
-      if (!txRef || !bookingId) {
-        throw new Error("Missing transaction details for payment verification.");
+    queryKey: [
+      "booking-payment-status",
+      txRef,
+      bookingId,
+      useAuthenticatedAccess,
+    ],
+    enabled: canPollStatus && !pollingBudgetExpired,
+    queryFn: async ({ signal }) => {
+      const shouldConfirm = Boolean(
+        transactionId &&
+          confirmationAttemptedFor.current !== callbackConfirmationKey,
+      );
+      const request = {
+        txRef: txRef ?? "",
+        bookingId: bookingId ?? "",
+        isAuthenticated: useAuthenticatedAccess,
+        paymentStatusToken: paymentStatusToken ?? undefined,
+      };
+      const result =
+        transactionId && shouldConfirm
+          ? await confirmBookingPayment(
+              { ...request, transactionId },
+              { signal },
+            )
+          : await fetchBookingPaymentStatus(request, { signal });
+      if (shouldConfirm) {
+        confirmationAttemptedFor.current = callbackConfirmationKey;
       }
-      return fetchBookingPaymentStatus({
-        txRef,
-        bookingId,
-        isAuthenticated,
-        guestEmail: isAuthenticated ? undefined : guestEmail,
-      }, { signal });
+      return result;
     },
-    refetchInterval: (query) => {
-      if (query.state.data?.isConfirmed) {
-        return false;
-      }
-      return POLLING_INTERVAL_MS;
-    },
-    refetchIntervalInBackground: true,
+    refetchInterval: (query) =>
+      getPaymentStatusPollingInterval(query.state.data, query.state.error),
+    refetchIntervalInBackground: false,
     retry: 1,
     staleTime: 0,
   });
 
+  const lifecycleState = paymentStatusQuery.data?.lifecycleState;
+
   useEffect(() => {
-    if (!paymentStatusQuery.data?.isConfirmed) {
+    if (!bookingId || !txRef) return;
+    confirmationAttemptedFor.current = null;
+    pollingStartedAt.current = null;
+    setPollingBudgetExpired(false);
+  }, [bookingId, txRef]);
+
+  useEffect(() => {
+    if (
+      pollingBudgetExpired ||
+      !canPollStatus ||
+      lifecycleState === "CONFIRMED" ||
+      lifecycleState === "FAILED" ||
+      lifecycleState === "EXPIRED" ||
+      paymentStatusQuery.error
+    ) {
       return;
     }
 
+    const startedAt = pollingStartedAt.current ?? Date.now();
+    pollingStartedAt.current = startedAt;
+    const remainingBudget = Math.max(
+      0,
+      POLLING_BUDGET_MS - (Date.now() - startedAt),
+    );
+    const timeout = setTimeout(
+      () => setPollingBudgetExpired(true),
+      remainingBudget,
+    );
+    return () => clearTimeout(timeout);
+  }, [
+    canPollStatus,
+    lifecycleState,
+    paymentStatusQuery.error,
+    pollingBudgetExpired,
+  ]);
+
+  useEffect(() => {
+    if (
+      !bookingId ||
+      !paymentStatusToken ||
+      lifecycleState === undefined ||
+      lifecycleState === "PENDING"
+    ) {
+      return;
+    }
+    void deletePaymentStatusToken(bookingId).catch(() => undefined);
+  }, [bookingId, lifecycleState, paymentStatusToken]);
+
+  useEffect(() => {
+    if (paymentStatusQuery.data?.lifecycleState !== "CONFIRMED") {
+      return;
+    }
+
+    void Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["bookings"] }),
+      queryClient.invalidateQueries({
+        queryKey: ["booking", paymentStatusQuery.data.bookingId],
+      }),
+    ]);
+
+    const destination = useAuthenticatedAccess
+      ? (`/bookings/${paymentStatusQuery.data.bookingId}` as never)
+      : "/";
     const timeout = setTimeout(() => {
-      if (isAuthenticated && paymentStatusQuery.data?.bookingId) {
-        router.replace((`/bookings/${paymentStatusQuery.data.bookingId}` as never));
-        return;
-      }
-      router.replace("/");
+      router.replace(destination);
     }, 1500);
 
     return () => clearTimeout(timeout);
-  }, [isAuthenticated, paymentStatusQuery.data?.bookingId, paymentStatusQuery.data?.isConfirmed, router]);
+  }, [
+    useAuthenticatedAccess,
+    paymentStatusQuery.data?.bookingId,
+    paymentStatusQuery.data?.lifecycleState,
+    queryClient,
+    router,
+  ]);
 
-  if (!txRef || !bookingId) {
+  const retryVerification = () => {
+    confirmationAttemptedFor.current = null;
+    pollingStartedAt.current = Date.now();
+    setPollingBudgetExpired(false);
+    void paymentStatusQuery.refetch();
+  };
+  const terminalMessage =
+    TERMINAL_PAYMENT_MESSAGES[
+      lifecycleState as keyof typeof TERMINAL_PAYMENT_MESSAGES
+    ];
+  const setupErrorMessage = getSetupErrorMessage(
+    txRef,
+    bookingId,
+    isHydrating || isTokenHydrating,
+    canPollStatus,
+  );
+
+  if (setupErrorMessage) {
     return (
-      <SafeAreaView className="flex-1 bg-white" edges={["top", "left", "right", "bottom"]}>
-        <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-xl font-semibold text-red-700">Payment Status Error</Text>
-          <Text className="mt-3 text-sm text-center text-red-600">
-            Missing transaction details from Flutterwave callback. Please contact support if you
-            were charged.
-          </Text>
-          <Pressable
-            className="mt-6 h-11 min-w-[160px] items-center justify-center rounded-md bg-black px-5"
-            onPress={() => router.replace("/")}
-          >
-            <Text className="text-sm font-semibold text-white">Back to Home</Text>
-          </Pressable>
-        </View>
-      </SafeAreaView>
+      <PaymentStatusMessage
+        title="Payment Status Error"
+        message={setupErrorMessage}
+        tone="red"
+        primaryAction={{
+          label: "Back to Home",
+          onPress: () => router.replace("/"),
+        }}
+      />
     );
   }
 
-  if (fwStatus === "cancelled") {
+  if (paymentStatusQuery.data?.lifecycleState === "CONFIRMED") {
     return (
-      <SafeAreaView className="flex-1 bg-white" edges={["top", "left", "right", "bottom"]}>
-        <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-xl font-semibold text-orange-700">Payment Cancelled</Text>
-          <Text className="mt-3 text-sm text-center text-orange-600">
-            You cancelled the payment process. No charge was made.
+      <PaymentStatusMessage
+        title="Payment Successful"
+        message="Your booking is confirmed. Redirecting you to bookings..."
+        tone="emerald"
+        primaryAction={{
+          label: useAuthenticatedAccess ? "View Booking" : "Back to Home",
+          onPress: () =>
+            useAuthenticatedAccess && paymentStatusQuery.data?.bookingId
+              ? router.replace(
+                  `/bookings/${paymentStatusQuery.data.bookingId}` as never,
+                )
+              : router.replace("/"),
+        }}
+      >
+        <View className="mt-5 w-full rounded-md border border-emerald-200 bg-emerald-50 p-4">
+          <Text selectable className="text-sm text-emerald-800">
+            Amount Paid: {formatCurrency(paymentStatusQuery.data.totalAmount)}
           </Text>
-          <Pressable
-            className="mt-6 h-11 min-w-[180px] items-center justify-center rounded-md bg-black px-5"
-            onPress={() => router.replace("/")}
-          >
-            <Text className="text-sm font-semibold text-white">Back to Home</Text>
-          </Pressable>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (fwStatus === "failed") {
-    return (
-      <SafeAreaView className="flex-1 bg-white" edges={["top", "left", "right", "bottom"]}>
-        <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-xl font-semibold text-red-700">Payment Failed</Text>
-          <Text className="mt-3 text-sm text-center text-red-600">
-            Flutterwave reported this payment attempt as failed. Please try again.
+          <Text selectable className="mt-1 text-sm text-emerald-800">
+            Reference: {txRef}
           </Text>
-          <Pressable
-            className="mt-6 h-11 min-w-[180px] items-center justify-center rounded-md bg-black px-5"
-            onPress={() => router.replace("/")}
-          >
-            <Text className="text-sm font-semibold text-white">Back to Home</Text>
-          </Pressable>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (paymentStatusQuery.data?.isConfirmed) {
-    return (
-      <SafeAreaView className="flex-1 bg-white" edges={["top", "left", "right", "bottom"]}>
-        <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-2xl font-semibold text-emerald-700">Payment Successful</Text>
-          <Text className="mt-3 text-sm text-center text-emerald-700">
-            Your booking is confirmed. Redirecting you to bookings...
-          </Text>
-          <View className="mt-5 w-full rounded-md border border-emerald-200 bg-emerald-50 p-4">
-            <Text className="text-sm text-emerald-800">
-              Amount Paid: {formatCurrency(paymentStatusQuery.data.totalAmount)}
+          {transactionId ? (
+            <Text selectable className="mt-1 text-sm text-emerald-800">
+              Transaction ID: {transactionId}
             </Text>
-            <Text className="mt-1 text-sm text-emerald-800">Reference: {txRef}</Text>
-            {transactionId ? (
-              <Text className="mt-1 text-sm text-emerald-800">Transaction ID: {transactionId}</Text>
-            ) : null}
-          </View>
-          <Pressable
-            className="mt-6 h-11 min-w-[180px] items-center justify-center rounded-md bg-black px-5"
-            onPress={() =>
-              isAuthenticated && paymentStatusQuery.data?.bookingId
-                ? router.replace((`/bookings/${paymentStatusQuery.data.bookingId}` as never))
-                : router.replace("/")
-            }
-          >
-            <Text className="text-sm font-semibold text-white">
-              {isAuthenticated ? "View Booking" : "Back to Home"}
-            </Text>
-          </Pressable>
+          ) : null}
         </View>
-      </SafeAreaView>
+      </PaymentStatusMessage>
+    );
+  }
+
+  if (terminalMessage) {
+    return (
+      <PaymentStatusMessage
+        title={terminalMessage.title}
+        message={`${terminalMessage.message} ${txRef}.`}
+        tone={terminalMessage.tone}
+        primaryAction={{
+          label: "Back to Home",
+          onPress: () => router.replace("/"),
+        }}
+      />
+    );
+  }
+
+  if (pollingBudgetExpired) {
+    return (
+      <PaymentStatusMessage
+        title="Payment Still Processing"
+        message="Confirmation is taking longer than usual. We will keep reconciling it safely in the background."
+        tone="blue"
+        primaryAction={{
+          label: "Check Again",
+          onPress: retryVerification,
+        }}
+        secondaryAction={{
+          label: "Back to Home",
+          onPress: () => router.replace("/"),
+        }}
+      />
     );
   }
 
   if (paymentStatusQuery.error) {
     return (
-      <SafeAreaView className="flex-1 bg-white" edges={["top", "left", "right", "bottom"]}>
-        <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-xl font-semibold text-red-700">Verification Error</Text>
-          <Text className="mt-3 text-sm text-center text-red-600">
-            {getBookingPaymentErrorMessage(paymentStatusQuery.error)}
-          </Text>
-          <Pressable
-            className="mt-6 h-11 min-w-[160px] items-center justify-center rounded-md bg-black px-5"
-            onPress={() => void paymentStatusQuery.refetch()}
-          >
-            <Text className="text-sm font-semibold text-white">Retry</Text>
-          </Pressable>
-        </View>
-      </SafeAreaView>
+      <PaymentStatusMessage
+        title="Verification Error"
+        message={getBookingPaymentErrorMessage(paymentStatusQuery.error)}
+        tone="red"
+        primaryAction={{ label: "Retry", onPress: retryVerification }}
+      />
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={["top", "left", "right", "bottom"]}>
-      <View className="flex-1 items-center justify-center px-6">
-        <ActivityIndicator size="large" color="#2563EB" />
-        <Text className="mt-4 text-xl font-semibold text-blue-700">Verifying Payment...</Text>
-        <Text className="mt-2 text-sm text-center text-blue-700">
-          Please wait while we confirm your booking payment. Reference: {txRef}
-        </Text>
-      </View>
-    </SafeAreaView>
+    <PaymentStatusMessage
+      title="Verifying Payment..."
+      message={`Please wait while we confirm your booking payment. Reference: ${txRef}`}
+      tone="blue"
+      loading
+    />
   );
 }

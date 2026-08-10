@@ -33,6 +33,7 @@ import {
   getSavedAuthToken,
   saveAuthToken,
 } from "@/storage/auth-token";
+import { deleteAllPaymentStatusTokens } from "@/storage/payment-status-token";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
@@ -229,7 +230,7 @@ export function useAuthModalController() {
   });
 
   useEffect(() => {
-    return setAuthSessionInvalidationHandler((failedToken) => {
+    return setAuthSessionInvalidationHandler(async (failedToken) => {
       if (logoutInFlightRef.current) {
         return;
       }
@@ -240,6 +241,7 @@ export function useAuthModalController() {
       }
 
       clearInMemoryAuthSession();
+      await deleteAllPaymentStatusTokens();
       if (activeToken) {
         router.replace("/");
       }
@@ -254,6 +256,7 @@ export function useAuthModalController() {
         const storedToken = await getSavedAuthToken();
         if (storedToken && !isCancelled) {
           const profile = await fetchCurrentUser(storedToken);
+          await deleteAllPaymentStatusTokens();
           if (!isCancelled) {
             setAuthToken(storedToken);
             setUser(profile);
@@ -361,6 +364,7 @@ export function useAuthModalController() {
           throw new Error("The server did not return a valid access token.");
         }
 
+        await deleteAllPaymentStatusTokens();
         await saveAuthToken(resolvedToken);
         setAuthToken(resolvedToken);
 
@@ -396,6 +400,7 @@ export function useAuthModalController() {
   const completeLogin = useCallback(
     async (token: string, profile: UserProfile, redirectTo?: string) => {
       setEnablePushRegistrationLogs(true);
+      await deleteAllPaymentStatusTokens();
       await saveAuthToken(token);
       setAuthToken(token);
       setUser(profile);
@@ -451,10 +456,13 @@ export function useAuthModalController() {
     } finally {
       clearInMemoryAuthSession();
       try {
-        await deleteSavedAuthToken();
+        await Promise.all([
+          deleteSavedAuthToken(),
+          deleteAllPaymentStatusTokens(),
+        ]);
       } catch (error) {
         console.warn(
-          "Failed to delete saved auth token",
+          "Failed to delete persisted session data",
           error instanceof Error ? error.message : "Unknown storage error",
         );
       }
