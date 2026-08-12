@@ -25,6 +25,8 @@ import { useCarBookingForm } from "@/hooks/use-car-booking-form";
 import { useCarDetail } from "@/hooks/use-car-detail";
 import { useGuestCheckoutForm } from "@/hooks/use-guest-checkout-form";
 import { useRates } from "@/hooks/use-rates";
+import { useReferralSummary } from "@/hooks/use-referrals";
+import { getBookingCreditsToUse } from "@/lib/booking-credits";
 import type {
   BookingPricingPreviewRequest,
   BookingPricingPreviewResponse,
@@ -172,6 +174,7 @@ export default function CarDetailScreen() {
     error,
   } = useCarDetail(carId, { from: fromForApi });
   const { data: ratesResponse } = useRates();
+  const { data: referralSummary } = useReferralSummary(isAuthenticated);
   const platformFeeRate = resolvePlatformFeeRate(
     ratesResponse?.platformCustomerServiceFeeRatePercent,
   );
@@ -191,6 +194,19 @@ export default function CarDetailScreen() {
   const guest = useGuestCheckoutForm();
 
   const [requiresFullTank, setRequiresFullTank] = useState(false);
+  const [applyCredits, setApplyCredits] = useState(false);
+  const creditLimit = getBookingCreditsToUse(
+    isAuthenticated,
+    referralSummary?.stats.availableCredits ?? 0,
+    referralSummary?.stats.maxCreditsPerBooking ?? 0,
+  );
+  const useCredits = applyCredits ? creditLimit : 0;
+
+  useEffect(() => {
+    if (!isAuthenticated || creditLimit <= 0) {
+      setApplyCredits(false);
+    }
+  }, [creditLimit, isAuthenticated]);
 
   const bookingTypeRef = useRef(booking.values.bookingType);
   useEffect(() => {
@@ -282,6 +298,7 @@ export default function CarDetailScreen() {
           booking.values.bookingType === DAY_BOOKING_TYPE
             ? requiresFullTank
             : false,
+        useCredits,
       };
     }, [
       booking.values.bookingType,
@@ -289,6 +306,7 @@ export default function CarDetailScreen() {
       car,
       previewWindow,
       requiresFullTank,
+      useCredits,
     ]);
 
   const pricingPreviewQuery = useBookingPricingPreview(
@@ -400,6 +418,7 @@ export default function CarDetailScreen() {
     carId,
     isAuthenticated,
     requiresFullTank,
+    useCredits,
     authoritativeTotal: pricingIsAuthoritative
       ? (pricingPreview?.totalAmount ?? null)
       : null,
@@ -506,6 +525,9 @@ export default function CarDetailScreen() {
               totalDays={totalDays}
               requiresFullTank={requiresFullTank}
               onRequiresFullTankChange={setRequiresFullTank}
+              creditsToUse={creditLimit}
+              applyCredits={applyCredits}
+              onApplyCreditsChange={setApplyCredits}
               flightError={airportPickup.flightError}
               isValidatingFlight={airportPickup.isValidatingFlight}
               onDropOffAddressSelected={(address) => {

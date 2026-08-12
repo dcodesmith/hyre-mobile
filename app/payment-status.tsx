@@ -193,15 +193,27 @@ export default function PaymentStatusScreen() {
 
   useEffect(() => {
     if (
-      !bookingId ||
-      !paymentStatusToken ||
       lifecycleState === undefined ||
       lifecycleState === "PENDING"
     ) {
       return;
     }
-    void deletePaymentStatusToken(bookingId).catch(() => undefined);
-  }, [bookingId, lifecycleState, paymentStatusToken]);
+
+    if (bookingId && paymentStatusToken) {
+      void deletePaymentStatusToken(bookingId).catch(() => undefined);
+    }
+    if (hasAuthenticatedAccess) {
+      void queryClient.invalidateQueries({
+        queryKey: ["referrals", "summary"],
+      });
+    }
+  }, [
+    bookingId,
+    hasAuthenticatedAccess,
+    lifecycleState,
+    paymentStatusToken,
+    queryClient,
+  ]);
 
   useEffect(() => {
     if (paymentStatusQuery.data?.lifecycleState !== "CONFIRMED") {

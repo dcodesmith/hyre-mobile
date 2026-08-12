@@ -53,4 +53,5 @@ export interface BookingPricingPreviewRequest {
   readonly pickupTime: string;
   readonly includeSecurityDetail: boolean;
   readonly requiresFullTank: boolean;
+  readonly useCredits: number;
 }
