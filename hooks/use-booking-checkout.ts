@@ -1,19 +1,24 @@
+import { randomUUID } from "expo-crypto";
+import * as Linking from "expo-linking";
+import { useRouter } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  type BookingCheckoutAttempt,
+  getBookingCheckoutAttempt,
+} from "@/lib/booking-checkout-attempt";
+import type { BookingPricingPreviewResponse } from "@/lib/booking-pricing-preview-types";
 import {
   AIRPORT_PICKUP_BOOKING_TYPE,
   DAY_BOOKING_TYPE,
   NIGHT_BOOKING_TYPE,
   NIGHT_PICKUP_TIME,
 } from "@/lib/booking-types";
-import {
-  type BookingCheckoutAttempt,
-  getBookingCheckoutAttempt,
-} from "@/lib/booking-checkout-attempt";
-import type { BookingPricingPreviewResponse } from "@/lib/booking-pricing-preview-types";
 import { normalizeBookingTimeWindow } from "@/lib/booking-utils";
 import {
   type BookingCheckoutDetailsValues,
-  type GuestCheckoutFormValues,
   bookingCheckoutDetailsSchema,
+  type GuestCheckoutFormValues,
 } from "@/lib/validations/booking";
 import {
   type CreateBookingCheckoutPayload,
@@ -24,11 +29,7 @@ import {
   getBookingRetryAfterMs,
   isIdempotencyKeyReused,
 } from "@/services/booking-payment";
-import { randomUUID } from "expo-crypto";
-import * as Linking from "expo-linking";
-import { useRouter } from "expo-router";
-import * as WebBrowser from "expo-web-browser";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { savePaymentStatusToken } from "@/storage/payment-status-token";
 import type { CarBookingFormValues } from "./use-car-booking-form";
 
 type GuestPayload = Pick<
@@ -149,6 +150,21 @@ async function createCheckoutWithRetry(
   }
 }
 
+async function persistPaymentStatusToken(
+  checkout: CreateBookingCheckoutResponse,
+  isAuthenticated: boolean,
+): Promise<void> {
+  if (!checkout.paymentStatusToken) {
+    if (!isAuthenticated) {
+      throw new Error(
+        "Payment verification credentials are missing. Please try again.",
+      );
+    }
+    return;
+  }
+  await savePaymentStatusToken(checkout.bookingId, checkout.paymentStatusToken);
+}
+
 function handleBookingPriceChange(
   error: unknown,
   onPriceChanged: (pricing: BookingPricingPreviewResponse) => void,
@@ -208,11 +224,7 @@ export function useBookingCheckout(
   } = args;
 
   const navigateToPaymentStatus = useCallback(
-    (
-      checkout: CreateBookingCheckoutResponse,
-      callback: PaymentCallback,
-      guestEmail: string,
-    ) => {
+    (checkout: CreateBookingCheckoutResponse, callback: PaymentCallback) => {
       router.push({
         pathname: "/payment-status" as never,
         params: {
@@ -223,11 +235,10 @@ export function useBookingCheckout(
           ...(callback.transactionId
             ? { transaction_id: callback.transactionId }
             : {}),
-          ...(isAuthenticated ? {} : { guestEmail }),
         },
       } as never);
     },
-    [router, isAuthenticated],
+    [router],
   );
 
   const submit = useCallback(async () => {
@@ -281,6 +292,7 @@ export function useBookingCheckout(
         () => isMounted.current,
       );
       if (!checkout || !isMounted.current) return;
+      await persistPaymentStatusToken(checkout, isAuthenticated);
       const browserResult = await WebBrowser.openAuthSessionAsync(
         checkout.checkoutUrl,
         callbackUrl,
@@ -300,7 +312,7 @@ export function useBookingCheckout(
         return;
       }
 
-      navigateToPaymentStatus(checkout, callback, guestEmail);
+      navigateToPaymentStatus(checkout, callback);
     } catch (error) {
       if (!isMounted.current) return;
       handleBookingPriceChange(error, onPriceChanged);

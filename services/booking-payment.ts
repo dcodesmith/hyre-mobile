@@ -37,7 +37,14 @@ export type CreateBookingCheckoutResponse = {
   currency: "NGN";
   bookingStatus: string;
   reservationExpiresAt: string;
+  paymentStatusToken?: string;
 };
+
+export type BookingPaymentLifecycleState =
+  | "PENDING"
+  | "CONFIRMED"
+  | "FAILED"
+  | "EXPIRED";
 
 export type BookingPaymentStatusResponse = {
   bookingId: string;
@@ -47,16 +54,32 @@ export type BookingPaymentStatusResponse = {
   paymentStatus: string;
   paymentId: string | null;
   totalAmount: number;
-  isConfirmed: boolean;
   reservationExpiresAt: string | null;
+  lifecycleState: BookingPaymentLifecycleState;
 };
 
 type BookingPaymentStatusRequest = {
   txRef: string;
   bookingId: string;
   isAuthenticated: boolean;
-  guestEmail?: string;
+  paymentStatusToken?: string;
 };
+
+type ConfirmBookingPaymentRequest = BookingPaymentStatusRequest & {
+  transactionId: string;
+};
+
+function withPaymentStatusToken(
+  init: RequestInit | undefined,
+  paymentStatusToken: string | undefined,
+): RequestInit {
+  const headers = new Headers(init?.headers);
+  if (paymentStatusToken) {
+    headers.set("X-Payment-Status-Token", paymentStatusToken);
+    return { ...init, credentials: "omit", headers };
+  }
+  return { ...init, headers };
+}
 
 export async function createBookingCheckout(
   payload: CreateBookingCheckoutPayload,
@@ -122,15 +145,11 @@ export async function fetchBookingPaymentStatus(
   request: BookingPaymentStatusRequest,
   init?: RequestInit,
 ): Promise<BookingPaymentStatusResponse> {
-  const { txRef, bookingId, isAuthenticated, guestEmail } = request;
+  const { txRef, bookingId, isAuthenticated, paymentStatusToken } = request;
   const searchParams = new URLSearchParams({ txRef, bookingId });
 
-  if (!isAuthenticated) {
-    if (!guestEmail) {
-      throw new Error("Guest email is required to verify payment status.");
-    }
-
-    searchParams.set("guestEmail", guestEmail);
+  if (!isAuthenticated && !paymentStatusToken) {
+    throw new Error("Payment status token is required.");
   }
 
   const path = `${BOOKINGS_ENDPOINT}/payment-status?${searchParams.toString()}`;
@@ -138,7 +157,40 @@ export async function fetchBookingPaymentStatus(
     return getJsonWithAuth<BookingPaymentStatusResponse>(path, init);
   }
 
-  return getJson<BookingPaymentStatusResponse>(path, init);
+  return getJson<BookingPaymentStatusResponse>(
+    path,
+    withPaymentStatusToken(init, paymentStatusToken),
+  );
+}
+
+export async function confirmBookingPayment(
+  request: ConfirmBookingPaymentRequest,
+  init?: RequestInit,
+): Promise<BookingPaymentStatusResponse> {
+  const {
+    txRef,
+    bookingId,
+    transactionId,
+    isAuthenticated,
+    paymentStatusToken,
+  } = request;
+  if (!isAuthenticated && !paymentStatusToken) {
+    throw new Error("Payment status token is required.");
+  }
+  const body = { txRef, bookingId, transactionId };
+  const path = "/api/payments/booking-confirmation";
+
+  return isAuthenticated
+    ? postJsonWithAuth<BookingPaymentStatusResponse, typeof body>(
+        path,
+        body,
+        init,
+      )
+    : postJson<BookingPaymentStatusResponse, typeof body>(
+        path,
+        body,
+        withPaymentStatusToken(init, paymentStatusToken),
+      );
 }
 
 export function getBookingPaymentErrorMessage(
