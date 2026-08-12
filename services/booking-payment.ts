@@ -174,19 +174,22 @@ export async function confirmBookingPayment(
     isAuthenticated,
     paymentStatusToken,
   } = request;
+  if (!isAuthenticated && !paymentStatusToken) {
+    throw new Error("Payment status token is required.");
+  }
   const body = { txRef, bookingId, transactionId };
-  const requestInit = withPaymentStatusToken(init, paymentStatusToken);
+  const path = "/api/payments/booking-confirmation";
 
   return isAuthenticated
     ? postJsonWithAuth<BookingPaymentStatusResponse, typeof body>(
-        "/api/payments/booking-confirmation",
+        path,
         body,
-        requestInit,
+        init,
       )
     : postJson<BookingPaymentStatusResponse, typeof body>(
-        "/api/payments/booking-confirmation",
+        path,
         body,
-        requestInit,
+        withPaymentStatusToken(init, paymentStatusToken),
       );
 }
 

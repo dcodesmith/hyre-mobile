@@ -2,7 +2,10 @@ import * as SecureStore from "expo-secure-store";
 import { isExpoNative } from "@/lib/expo-platform";
 
 const TOKEN_STORE_KEY = "payment-status-tokens";
-type PaymentStatusTokens = Record<string, string>;
+const TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+
+type PaymentStatusTokenEntry = { token: string; savedAt: number };
+type PaymentStatusTokens = Record<string, PaymentStatusTokenEntry>;
 
 const getBrowserStorage = () => {
   if (typeof window === "undefined") return null;
@@ -24,6 +27,12 @@ const enqueueTokenOperation = <T>(operation: () => Promise<T>): Promise<T> => {
   return result;
 };
 
+const isTokenEntry = (value: unknown): value is PaymentStatusTokenEntry =>
+  typeof value === "object" &&
+  value !== null &&
+  typeof (value as PaymentStatusTokenEntry).token === "string" &&
+  typeof (value as PaymentStatusTokenEntry).savedAt === "number";
+
 const parseTokens = (value: string | null): PaymentStatusTokens => {
   if (!value) return {};
   try {
@@ -31,9 +40,11 @@ const parseTokens = (value: string | null): PaymentStatusTokens => {
     if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
       return {};
     }
+    const now = Date.now();
     return Object.fromEntries(
       Object.entries(parsed).filter(
-        (entry): entry is [string, string] => typeof entry[1] === "string",
+        (entry): entry is [string, PaymentStatusTokenEntry] =>
+          isTokenEntry(entry[1]) && now - entry[1].savedAt < TOKEN_TTL_MS,
       ),
     );
   } catch {
@@ -42,10 +53,18 @@ const parseTokens = (value: string | null): PaymentStatusTokens => {
 };
 
 const readTokens = async (): Promise<PaymentStatusTokens> => {
-  if (isExpoNative) {
-    return parseTokens(await SecureStore.getItemAsync(TOKEN_STORE_KEY));
+  const raw = isExpoNative
+    ? await SecureStore.getItemAsync(TOKEN_STORE_KEY)
+    : (getBrowserStorage()?.getItem(TOKEN_STORE_KEY) ?? null);
+  const tokens = parseTokens(raw);
+  if (raw && JSON.stringify(tokens) !== raw) {
+    if (Object.keys(tokens).length === 0) {
+      await removeTokens();
+    } else {
+      await writeTokens(tokens);
+    }
   }
-  return parseTokens(getBrowserStorage()?.getItem(TOKEN_STORE_KEY) ?? null);
+  return tokens;
 };
 
 const writeTokens = async (tokens: PaymentStatusTokens): Promise<void> => {
@@ -72,12 +91,14 @@ const removeTokens = async (): Promise<void> => {
 export const savePaymentStatusToken = (bookingId: string, token: string) =>
   enqueueTokenOperation(async () => {
     const tokens = await readTokens();
-    tokens[bookingId] = token;
+    tokens[bookingId] = { token, savedAt: Date.now() };
     await writeTokens(tokens);
   });
 
 export const getPaymentStatusToken = (bookingId: string) =>
-  enqueueTokenOperation(async () => (await readTokens())[bookingId] ?? null);
+  enqueueTokenOperation(
+    async () => (await readTokens())[bookingId]?.token ?? null,
+  );
 
 export const deletePaymentStatusToken = (bookingId: string) =>
   enqueueTokenOperation(async () => {

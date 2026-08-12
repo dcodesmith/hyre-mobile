@@ -52,8 +52,14 @@ export function PaymentStatusMessage({
         contentContainerClassName="flex-grow justify-center px-6"
         contentInsetAdjustmentBehavior="automatic"
       >
-        <View className="items-center">
-          {loading ? <ActivityIndicator size="large" color="#2563EB" /> : null}
+        <View className="items-center" accessibilityState={{ busy: loading }}>
+          {loading ? (
+            <ActivityIndicator
+              size="large"
+              color="#2563EB"
+              accessibilityLabel="Loading"
+            />
+          ) : null}
           <Text
             className={`${loading ? "mt-4" : ""} text-center text-xl font-semibold ${classes.title}`}
           >
@@ -68,6 +74,8 @@ export function PaymentStatusMessage({
           {children}
           {primaryAction ? (
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={primaryAction.label}
               className="mt-6 h-11 min-w-[180px] items-center justify-center rounded-md bg-black px-5"
               onPress={primaryAction.onPress}
             >
@@ -78,7 +86,9 @@ export function PaymentStatusMessage({
           ) : null}
           {secondaryAction ? (
             <Pressable
-              className="mt-3 px-5 py-3"
+              accessibilityRole="button"
+              accessibilityLabel={secondaryAction.label}
+              className="mt-3 h-11 justify-center px-5"
               onPress={secondaryAction.onPress}
             >
               <Text className="text-sm font-semibold text-blue-700">

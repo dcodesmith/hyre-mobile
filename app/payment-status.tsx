@@ -108,21 +108,21 @@ export default function PaymentStatusScreen() {
   const callbackConfirmationKey =
     txRef && transactionId ? `${txRef}:${transactionId}` : null;
   const hasGuestAccess = Boolean(paymentStatusToken);
-  const useAuthenticatedAccess = isAuthenticated;
+  const hasAuthenticatedAccess = isAuthenticated;
 
   const canPollStatus =
     Boolean(txRef) &&
     Boolean(bookingId) &&
     !isTokenHydrating &&
     !isHydrating &&
-    (hasGuestAccess || useAuthenticatedAccess);
+    (hasGuestAccess || hasAuthenticatedAccess);
 
   const paymentStatusQuery = useQuery({
     queryKey: [
       "booking-payment-status",
       txRef,
       bookingId,
-      useAuthenticatedAccess,
+      hasAuthenticatedAccess,
     ],
     enabled: canPollStatus && !pollingBudgetExpired,
     queryFn: async ({ signal }) => {
@@ -133,20 +133,17 @@ export default function PaymentStatusScreen() {
       const request = {
         txRef: txRef ?? "",
         bookingId: bookingId ?? "",
-        isAuthenticated: useAuthenticatedAccess,
+        isAuthenticated: hasAuthenticatedAccess,
         paymentStatusToken: paymentStatusToken ?? undefined,
       };
-      const result =
-        transactionId && shouldConfirm
-          ? await confirmBookingPayment(
-              { ...request, transactionId },
-              { signal },
-            )
-          : await fetchBookingPaymentStatus(request, { signal });
-      if (shouldConfirm) {
+      if (transactionId && shouldConfirm) {
         confirmationAttemptedFor.current = callbackConfirmationKey;
+        return confirmBookingPayment(
+          { ...request, transactionId },
+          { signal },
+        );
       }
-      return result;
+      return fetchBookingPaymentStatus(request, { signal });
     },
     refetchInterval: (query) =>
       getPaymentStatusPollingInterval(query.state.data, query.state.error),
@@ -216,9 +213,9 @@ export default function PaymentStatusScreen() {
       queryClient.invalidateQueries({
         queryKey: ["booking", paymentStatusQuery.data.bookingId],
       }),
-    ]);
+    ]).catch(() => undefined);
 
-    const destination = useAuthenticatedAccess
+    const destination = hasAuthenticatedAccess
       ? (`/bookings/${paymentStatusQuery.data.bookingId}` as never)
       : "/";
     const timeout = setTimeout(() => {
@@ -227,7 +224,7 @@ export default function PaymentStatusScreen() {
 
     return () => clearTimeout(timeout);
   }, [
-    useAuthenticatedAccess,
+    hasAuthenticatedAccess,
     paymentStatusQuery.data?.bookingId,
     paymentStatusQuery.data?.lifecycleState,
     queryClient,
@@ -269,12 +266,16 @@ export default function PaymentStatusScreen() {
     return (
       <PaymentStatusMessage
         title="Payment Successful"
-        message="Your booking is confirmed. Redirecting you to bookings..."
+        message={
+          hasAuthenticatedAccess
+            ? "Your booking is confirmed. Redirecting you to your booking..."
+            : "Your booking is confirmed. Redirecting you to the home screen..."
+        }
         tone="emerald"
         primaryAction={{
-          label: useAuthenticatedAccess ? "View Booking" : "Back to Home",
+          label: hasAuthenticatedAccess ? "View Booking" : "Back to Home",
           onPress: () =>
-            useAuthenticatedAccess && paymentStatusQuery.data?.bookingId
+            hasAuthenticatedAccess && paymentStatusQuery.data?.bookingId
               ? router.replace(
                   `/bookings/${paymentStatusQuery.data.bookingId}` as never,
                 )
