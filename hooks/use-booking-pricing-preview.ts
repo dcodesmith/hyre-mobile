@@ -15,6 +15,7 @@ export const bookingPricingPreviewQueryKey = (
     request.pickupTime,
     request.includeSecurityDetail,
     request.requiresFullTank,
+    request.useCredits,
     authenticated,
   ] as const;
 

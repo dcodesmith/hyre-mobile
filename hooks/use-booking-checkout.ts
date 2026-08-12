@@ -3,6 +3,7 @@ import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   type BookingCheckoutAttempt,
   getBookingCheckoutAttempt,
@@ -42,6 +43,7 @@ type BuildPayloadArgs = {
   booking: BookingCheckoutDetailsValues;
   callbackUrl: string;
   requiresFullTank: boolean;
+  useCredits: number;
   expectedTotalAmount: string;
   guest: GuestPayload | null;
 };
@@ -49,8 +51,14 @@ type BuildPayloadArgs = {
 function buildCheckoutPayload(
   args: BuildPayloadArgs,
 ): CreateBookingCheckoutPayload {
-  const { carId, booking, callbackUrl, requiresFullTank, expectedTotalAmount } =
-    args;
+  const {
+    carId,
+    booking,
+    callbackUrl,
+    requiresFullTank,
+    useCredits,
+    expectedTotalAmount,
+  } = args;
   const isAirport = booking.bookingType === AIRPORT_PICKUP_BOOKING_TYPE;
   const sameLocation = isAirport ? false : booking.sameLocation;
   const pickupTime =
@@ -94,6 +102,9 @@ function buildCheckoutPayload(
     payload.guestName = args.guest.guestName;
     payload.guestEmail = args.guest.guestEmail;
     payload.guestPhone = args.guest.guestPhone;
+  }
+  if (useCredits > 0) {
+    payload.useCredits = useCredits;
   }
 
   return payload;
@@ -177,6 +188,7 @@ export type UseBookingCheckoutArgs = {
   carId: string;
   isAuthenticated: boolean;
   requiresFullTank: boolean;
+  useCredits: number;
   authoritativeTotal: number | null;
   validate: () => Promise<boolean>;
   getBookingValues: () => CarBookingFormValues;
@@ -200,6 +212,7 @@ export function useBookingCheckout(
   args: UseBookingCheckoutArgs,
 ): UseBookingCheckoutReturn {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const checkoutAttempt = useRef<BookingCheckoutAttempt | null>(null);
@@ -216,6 +229,7 @@ export function useBookingCheckout(
     carId,
     isAuthenticated,
     requiresFullTank,
+    useCredits,
     authoritativeTotal,
     validate,
     getBookingValues,
@@ -274,6 +288,7 @@ export function useBookingCheckout(
         booking,
         callbackUrl,
         requiresFullTank,
+        useCredits,
         expectedTotalAmount: authoritativeTotal.toFixed(2),
         guest: guestPayload,
       });
@@ -292,6 +307,9 @@ export function useBookingCheckout(
         () => isMounted.current,
       );
       if (!checkout || !isMounted.current) return;
+      void queryClient.invalidateQueries({
+        queryKey: ["referrals", "summary"],
+      });
       await persistPaymentStatusToken(checkout, isAuthenticated);
       const browserResult = await WebBrowser.openAuthSessionAsync(
         checkout.checkoutUrl,
@@ -330,11 +348,13 @@ export function useBookingCheckout(
     carId,
     isAuthenticated,
     requiresFullTank,
+    useCredits,
     authoritativeTotal,
     getBookingValues,
     getGuestValues,
     navigateToPaymentStatus,
     onPriceChanged,
+    queryClient,
   ]);
 
   return { submit, isSubmitting, paymentError };
