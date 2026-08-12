@@ -4,13 +4,7 @@ import { Text } from "@/components/ui/text";
 import { pickRedirectToParam } from "@/lib/sign-in-redirect";
 import { otpFormSchema } from "@/lib/validations/auth";
 import { useAuthModal } from "@/providers/auth-modal-provider";
-import {
-  AUTH_DEFAULTS,
-  getAuthErrorMessage,
-  requestOtp,
-  verifyOtp,
-  type UserProfile,
-} from "@/services/auth";
+import { getAuthErrorMessage } from "@/services/auth";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
@@ -27,7 +21,12 @@ export default function VerifyScreen() {
     redirectTo?: string | string[];
   }>();
   const redirectTo = pickRedirectToParam(redirectToParam);
-  const { completeLogin, pendingEmail, isAuthenticated } = useAuthModal();
+  const {
+    isAuthenticated,
+    pendingEmail,
+    requestLoginOtp,
+    verifyLoginOtp,
+  } = useAuthModal();
   const [sessionEmail] = useState<string | null>(pendingEmail);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [otpError, setOtpError] = useState<string | null>(null);
@@ -72,24 +71,14 @@ export default function VerifyScreen() {
       setOtpError(null);
       setIsSubmitting(true);
       try {
-        const response = await verifyOtp({
-          email,
-          otpCode: data.otpCode,
-          role: AUTH_DEFAULTS.role,
-        });
-        const token = response.token;
-        if (!token || typeof token !== "string") {
-          throw new Error("The server did not return a valid access token.");
-        }
-        const profile: UserProfile = response.user ?? { email };
-        await completeLogin(token, profile, redirectTo);
+        await verifyLoginOtp(data.otpCode, redirectTo);
       } catch (err) {
         setOtpError(getAuthErrorMessage(err, "We could not verify that code."));
       } finally {
         setIsSubmitting(false);
       }
     },
-    [email, completeLogin, redirectTo],
+    [email, redirectTo, verifyLoginOtp],
   );
 
   const onCancel = useCallback(() => {
@@ -99,13 +88,12 @@ export default function VerifyScreen() {
   const onResendCode = useCallback(async () => {
     if (!email) return;
     try {
-      const response = await requestOtp(email, AUTH_DEFAULTS.role);
-      if (!response.success) throw new Error("Unable to resend code.");
+      await requestLoginOtp(email);
       setOtpError(null);
     } catch (err) {
       setOtpError(getAuthErrorMessage(err, "Unable to resend code."));
     }
-  }, [email]);
+  }, [email, requestLoginOtp]);
 
   if (!email) {
     return (

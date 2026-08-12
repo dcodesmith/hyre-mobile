@@ -5,6 +5,11 @@ import {
   postJson,
   postJsonWithAuth,
 } from "@/lib/api-client";
+import {
+  type AuthenticatedUser,
+  requireAuthenticatedUser,
+  resolveAuthenticatedSession,
+} from "@/lib/auth-session";
 
 /** Maps backend error codes to user-friendly messages. Falls back to error.message. */
 export const getAuthErrorMessage = (
@@ -39,15 +44,10 @@ export type RequestOtpResponse = {
   success: boolean;
 };
 
-export type AuthUser = {
-  id: string;
-  email: string;
-  name?: string;
-  roles: string[];
-};
+export type UserProfile = AuthenticatedUser;
 
 export type VerifyOtpResponse = {
-  user?: AuthUser;
+  user?: UserProfile;
   token?: string;
 };
 
@@ -67,30 +67,8 @@ export type VerifyOtpPayload = {
   role?: string;
 };
 
-export const verifyOtp = ({
-  email,
-  otpCode,
-  role = AUTH_DEFAULTS.role,
-}: VerifyOtpPayload) => {
-  return postJson<
-    VerifyOtpResponse,
-    { email: string; otp: string; role: string }
-  >(API_ENDPOINTS.verifyOtp, {
-    email,
-    otp: otpCode,
-    role,
-  });
-};
-
-export type UserProfile = {
-  id?: string;
-  email?: string;
-  name?: string;
-  [key: string]: unknown;
-};
-
 type SessionResponse = {
-  user: UserProfile;
+  user: unknown;
   session: {
     id: string;
     userId: string;
@@ -106,7 +84,27 @@ export const fetchCurrentUser = async (token: string) => {
     { token },
   );
 
-  return user;
+  return requireAuthenticatedUser(user);
+};
+
+export const verifyOtp = async ({
+  email,
+  otpCode,
+  role = AUTH_DEFAULTS.role,
+}: VerifyOtpPayload): Promise<{
+  token: string;
+  user: UserProfile;
+}> => {
+  const response = await postJson<
+    VerifyOtpResponse,
+    { email: string; otp: string; role: string }
+  >(API_ENDPOINTS.verifyOtp, {
+    email,
+    otp: otpCode,
+    role,
+  });
+
+  return resolveAuthenticatedSession(response, fetchCurrentUser);
 };
 
 export const logout = (token: string) => {

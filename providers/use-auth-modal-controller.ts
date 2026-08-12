@@ -308,17 +308,24 @@ export function useAuthModalController() {
     setOtpError,
   ]);
 
+  const requestLoginOtp = useCallback(
+    async (email: string) => {
+      const response = await requestOtp(email, AUTH_DEFAULTS.role);
+      if (!response.success) {
+        throw new Error("Unable to send a verification code right now.");
+      }
+      setPendingEmail(email);
+    },
+    [setPendingEmail],
+  );
+
   const handleRequestOtp = useCallback(
     async (data: EmailOnlyFormValues) => {
       setEmailError(null);
       setIsRequestingOtp(true);
 
       try {
-        const response = await requestOtp(data.email, AUTH_DEFAULTS.role);
-        if (!response.success) {
-          throw new Error("Unable to send a verification code right now.");
-        }
-        setPendingEmail(data.email);
+        await requestLoginOtp(data.email);
         setIsEmailModalVisible(false);
         setIsOtpModalVisible(true);
         resetOtpForm({ otpCode: "" });
@@ -338,67 +345,12 @@ export function useAuthModalController() {
       setIsEmailModalVisible,
       setIsOtpModalVisible,
       setIsRequestingOtp,
-      setPendingEmail,
-    ],
-  );
-
-  const handleVerifyOtp = useCallback(
-    async (data: OtpFormValues) => {
-      if (!pendingEmail) {
-        setOtpError("Request a new code to continue.");
-        return;
-      }
-
-      setOtpError(null);
-      setIsVerifyingOtp(true);
-
-      try {
-        const response = await verifyOtp({
-          email: pendingEmail,
-          otpCode: data.otpCode,
-          role: AUTH_DEFAULTS.role,
-        });
-        const resolvedToken = response.token;
-
-        if (!resolvedToken || typeof resolvedToken !== "string") {
-          throw new Error("The server did not return a valid access token.");
-        }
-
-        await deleteAllPaymentStatusTokens();
-        await saveAuthToken(resolvedToken);
-        setAuthToken(resolvedToken);
-
-        const profile =
-          response.user ?? (await fetchCurrentUser(resolvedToken));
-        setUser(profile);
-        setIsOtpModalVisible(false);
-        setIsEmailModalVisible(false);
-
-        setTimeout(() => {
-          router.push("/(tabs)");
-        }, 0);
-      } catch (error) {
-        setOtpError(
-          getAuthErrorMessage(error, "We could not verify that code."),
-        );
-      } finally {
-        setIsVerifyingOtp(false);
-      }
-    },
-    [
-      pendingEmail,
-      router,
-      setAuthToken,
-      setIsEmailModalVisible,
-      setIsOtpModalVisible,
-      setIsVerifyingOtp,
-      setOtpError,
-      setUser,
+      requestLoginOtp,
     ],
   );
 
   const completeLogin = useCallback(
-    async (token: string, profile: UserProfile, redirectTo?: string) => {
+    async (token: string, profile: UserProfile) => {
       setEnablePushRegistrationLogs(true);
       await deleteAllPaymentStatusTokens();
       await saveAuthToken(token);
@@ -411,10 +363,8 @@ export function useAuthModalController() {
       setOtpError(null);
       setIsEmailModalVisible(false);
       setIsOtpModalVisible(false);
-      router.replace(resolvePostLoginHref(redirectTo));
     },
     [
-      router,
       resetEmailForm,
       resetOtpForm,
       setAuthToken,
@@ -426,6 +376,47 @@ export function useAuthModalController() {
       setPendingEmail,
       setUser,
     ],
+  );
+
+  const authenticateWithOtp = useCallback(
+    async (otpCode: string) => {
+      if (!pendingEmail) {
+        throw new Error("Request a new code to continue.");
+      }
+      const session = await verifyOtp({
+        email: pendingEmail,
+        otpCode,
+        role: AUTH_DEFAULTS.role,
+      });
+      await completeLogin(session.token, session.user);
+    },
+    [completeLogin, pendingEmail],
+  );
+
+  const verifyLoginOtp = useCallback(
+    async (otpCode: string, redirectTo?: string) => {
+      await authenticateWithOtp(otpCode);
+      router.replace(resolvePostLoginHref(redirectTo));
+    },
+    [authenticateWithOtp, router],
+  );
+
+  const handleVerifyOtp = useCallback(
+    async (data: OtpFormValues) => {
+      setOtpError(null);
+      setIsVerifyingOtp(true);
+
+      try {
+        await authenticateWithOtp(data.otpCode);
+      } catch (error) {
+        setOtpError(
+          getAuthErrorMessage(error, "We could not verify that code."),
+        );
+      } finally {
+        setIsVerifyingOtp(false);
+      }
+    },
+    [authenticateWithOtp, setIsVerifyingOtp, setOtpError],
   );
 
   const handleLogout = useCallback(async () => {
@@ -536,25 +527,25 @@ export function useAuthModalController() {
     () => ({
       openLoginModal,
       closeLoginModal,
-      completeLogin,
+      requestLoginOtp,
+      verifyLoginOtp,
       isEmailModalVisible,
       isOtpModalVisible,
       isAuthenticated: Boolean(authToken),
       user,
       authToken,
       pendingEmail,
-      setPendingEmail,
     }),
     [
       openLoginModal,
       closeLoginModal,
-      completeLogin,
+      requestLoginOtp,
+      verifyLoginOtp,
       isEmailModalVisible,
       isOtpModalVisible,
       authToken,
       user,
       pendingEmail,
-      setPendingEmail,
     ],
   );
 

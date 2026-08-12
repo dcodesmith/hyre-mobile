@@ -6,7 +6,7 @@ import { API_BASE_URL } from "@/constants/config";
 import { pickRedirectToParam } from "@/lib/sign-in-redirect";
 import { emailFormSchema } from "@/lib/validations/auth";
 import { useAuthModal } from "@/providers/auth-modal-provider";
-import { AUTH_DEFAULTS, getAuthErrorMessage, requestOtp } from "@/services/auth";
+import { getAuthErrorMessage } from "@/services/auth";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
@@ -23,7 +23,7 @@ export default function LoginScreen() {
     redirectTo?: string | string[];
   }>();
   const redirectTo = pickRedirectToParam(redirectToParam);
-  const { setPendingEmail } = useAuthModal();
+  const { requestLoginOtp } = useAuthModal();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
 
@@ -45,13 +45,7 @@ export default function LoginScreen() {
       setApiError(null);
       setIsSubmitting(true);
       try {
-        const response = await requestOtp(data.email, AUTH_DEFAULTS.role);
-        if (!response.success) {
-          throw new Error("Unable to send a verification code right now.");
-        }
-        // Record the active OTP session so /login/verify knows this isn't a
-        // stale stack restoration after logout.
-        setPendingEmail(data.email);
+        await requestLoginOtp(data.email);
         router.push({
           pathname: "/login/verify",
           params: {
@@ -67,7 +61,7 @@ export default function LoginScreen() {
         setIsSubmitting(false);
       }
     },
-    [redirectTo, router, setPendingEmail],
+    [redirectTo, requestLoginOtp, router],
   );
 
   const openTerms = () => Linking.openURL(`${API_BASE_URL}/terms`);
