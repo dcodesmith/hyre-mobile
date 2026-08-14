@@ -1,4 +1,5 @@
 import type { BookingPricingPreviewRequest } from "@/lib/booking-pricing-preview-types";
+import { reportHandledException } from "@/lib/telemetry";
 import { fetchBookingPricingPreview } from "@/services/booking-pricing-preview";
 import { useQuery } from "@tanstack/react-query";
 
@@ -27,12 +28,24 @@ export function useBookingPricingPreview(
     queryKey: request
       ? bookingPricingPreviewQueryKey(request, authenticated)
       : ["booking-pricing-preview", "disabled"],
-    queryFn: ({ signal }) => {
+    queryFn: async ({ signal }) => {
       if (!request) {
         throw new Error("Booking pricing preview request is required.");
       }
 
-      return fetchBookingPricingPreview(request, { signal }, authenticated);
+      try {
+        return await fetchBookingPricingPreview(
+          request,
+          { signal },
+          authenticated,
+        );
+      } catch (error) {
+        reportHandledException(error, {
+          area: "booking_pricing",
+          operation: "preview",
+        });
+        throw error;
+      }
     },
     enabled: request !== null,
     staleTime: 15 * 1000,

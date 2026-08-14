@@ -10,6 +10,10 @@ import {
 } from "@/lib/booking-checkout-attempt";
 import type { BookingPricingPreviewResponse } from "@/lib/booking-pricing-preview-types";
 import {
+  reportHandledException,
+  reportUnexpectedState,
+} from "@/lib/telemetry";
+import {
   AIRPORT_PICKUP_BOOKING_TYPE,
   DAY_BOOKING_TYPE,
   NIGHT_BOOKING_TYPE,
@@ -324,6 +328,10 @@ export function useBookingCheckout(
 
       const callback = parsePaymentCallback(browserResult.url);
       if (!callback) {
+        reportUnexpectedState("Payment callback was missing transaction details", {
+          area: "booking_checkout",
+          operation: "parse_payment_callback",
+        });
         setPaymentError(
           "Payment returned without a transaction reference. Please contact support if you were charged.",
         );
@@ -332,6 +340,10 @@ export function useBookingCheckout(
 
       navigateToPaymentStatus(checkout, callback);
     } catch (error) {
+      reportHandledException(error, {
+        area: "booking_checkout",
+        operation: "submit",
+      });
       if (!isMounted.current) return;
       handleBookingPriceChange(error, onPriceChanged);
       if (isIdempotencyKeyReused(error)) {

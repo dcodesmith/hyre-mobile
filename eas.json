@@ -16,6 +16,7 @@
         "resourceClass": "medium"
       },
       "env": {
+        "EXPO_PUBLIC_APP_ENV": "preview",
         "EXPO_PUBLIC_API_BASE_URL": "https://hyre-worker-nestjs.fly.dev",
         "EXPO_PUBLIC_TRUSTED_ORIGIN": "https://hyre-worker-nestjs.fly.dev"
       }
@@ -26,6 +27,7 @@
         "resourceClass": "medium"
       },
       "env": {
+        "EXPO_PUBLIC_APP_ENV": "production",
         "EXPO_PUBLIC_API_BASE_URL": "https://hyre-worker-nestjs.fly.dev",
         "EXPO_PUBLIC_TRUSTED_ORIGIN": "https://hyre-worker-nestjs.fly.dev"
       }
