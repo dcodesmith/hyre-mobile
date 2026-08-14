@@ -7,6 +7,10 @@ import { useAuth } from "@/hooks/use-auth";
 import { formatCurrency } from "@/lib/currency";
 import { getPaymentStatusPollingInterval } from "@/lib/payment-status-polling";
 import {
+  reportHandledException,
+  reportUnexpectedState,
+} from "@/lib/telemetry";
+import {
   confirmBookingPayment,
   fetchBookingPaymentStatus,
   getBookingPaymentErrorMessage,
@@ -55,7 +59,11 @@ function useStoredPaymentStatusToken(
       .then((storedToken) => {
         if (active) setToken(storedToken);
       })
-      .catch(() => {
+      .catch((error) => {
+        reportHandledException(error, {
+          area: "payment",
+          operation: "hydrate_status_token",
+        });
         if (active) setToken(null);
       })
       .finally(() => {
@@ -126,24 +134,32 @@ export default function PaymentStatusScreen() {
     ],
     enabled: canPollStatus && !pollingBudgetExpired,
     queryFn: async ({ signal }) => {
-      const shouldConfirm = Boolean(
-        transactionId &&
-          confirmationAttemptedFor.current !== callbackConfirmationKey,
-      );
-      const request = {
-        txRef: txRef ?? "",
-        bookingId: bookingId ?? "",
-        isAuthenticated: hasAuthenticatedAccess,
-        paymentStatusToken: paymentStatusToken ?? undefined,
-      };
-      if (transactionId && shouldConfirm) {
-        confirmationAttemptedFor.current = callbackConfirmationKey;
-        return confirmBookingPayment(
-          { ...request, transactionId },
-          { signal },
+      try {
+        const shouldConfirm = Boolean(
+          transactionId &&
+            confirmationAttemptedFor.current !== callbackConfirmationKey,
         );
+        const request = {
+          txRef: txRef ?? "",
+          bookingId: bookingId ?? "",
+          isAuthenticated: hasAuthenticatedAccess,
+          paymentStatusToken: paymentStatusToken ?? undefined,
+        };
+        if (transactionId && shouldConfirm) {
+          confirmationAttemptedFor.current = callbackConfirmationKey;
+          return await confirmBookingPayment(
+            { ...request, transactionId },
+            { signal },
+          );
+        }
+        return await fetchBookingPaymentStatus(request, { signal });
+      } catch (error) {
+        reportHandledException(error, {
+          area: "payment",
+          operation: "verify",
+        });
+        throw error;
       }
-      return fetchBookingPaymentStatus(request, { signal });
     },
     refetchInterval: (query) =>
       getPaymentStatusPollingInterval(query.state.data, query.state.error),
@@ -200,7 +216,12 @@ export default function PaymentStatusScreen() {
     }
 
     if (bookingId && paymentStatusToken) {
-      void deletePaymentStatusToken(bookingId).catch(() => undefined);
+      void deletePaymentStatusToken(bookingId).catch((error) => {
+        reportHandledException(error, {
+          area: "payment",
+          operation: "delete_status_token",
+        });
+      });
     }
     if (hasAuthenticatedAccess) {
       void queryClient.invalidateQueries({
@@ -259,6 +280,14 @@ export default function PaymentStatusScreen() {
     isHydrating || isTokenHydrating,
     canPollStatus,
   );
+
+  useEffect(() => {
+    if (!setupErrorMessage) return;
+    reportUnexpectedState("Payment status screen could not start verification", {
+      area: "payment",
+      operation: "setup",
+    });
+  }, [setupErrorMessage]);
 
   if (setupErrorMessage) {
     return (

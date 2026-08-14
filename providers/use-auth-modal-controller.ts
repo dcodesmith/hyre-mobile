@@ -8,6 +8,7 @@ import {
   otpFormSchema,
 } from "@/lib/validations/auth";
 import { setAuthSessionInvalidationHandler } from "@/lib/auth-session-events";
+import { reportHandledException } from "@/lib/telemetry";
 import type { AuthModalContextValue } from "@/providers/auth-modal-context";
 import {
   type AuthModalUiState,
@@ -263,6 +264,10 @@ export function useAuthModalController() {
           }
         }
       } catch (error) {
+        reportHandledException(error, {
+          area: "auth",
+          operation: "hydrate_session",
+        });
         if (error instanceof Error) {
           console.warn("Failed to hydrate auth state", error.message);
         }
@@ -310,11 +315,19 @@ export function useAuthModalController() {
 
   const requestLoginOtp = useCallback(
     async (email: string) => {
-      const response = await requestOtp(email, AUTH_DEFAULTS.role);
-      if (!response.success) {
-        throw new Error("Unable to send a verification code right now.");
+      try {
+        const response = await requestOtp(email, AUTH_DEFAULTS.role);
+        if (!response.success) {
+          throw new Error("Unable to send a verification code right now.");
+        }
+        setPendingEmail(email);
+      } catch (error) {
+        reportHandledException(error, {
+          area: "auth",
+          operation: "request_otp",
+        });
+        throw error;
       }
-      setPendingEmail(email);
     },
     [setPendingEmail],
   );
@@ -383,12 +396,21 @@ export function useAuthModalController() {
       if (!pendingEmail) {
         throw new Error("Request a new code to continue.");
       }
-      const session = await verifyOtp({
-        email: pendingEmail,
-        otpCode,
-        role: AUTH_DEFAULTS.role,
-      });
-      await completeLogin(session.token, session.user);
+
+      try {
+        const session = await verifyOtp({
+          email: pendingEmail,
+          otpCode,
+          role: AUTH_DEFAULTS.role,
+        });
+        await completeLogin(session.token, session.user);
+      } catch (error) {
+        reportHandledException(error, {
+          area: "auth",
+          operation: "verify_otp",
+        });
+        throw error;
+      }
     },
     [completeLogin, pendingEmail],
   );
@@ -431,6 +453,10 @@ export function useAuthModalController() {
         try {
           await revokeRegisteredPushToken();
         } catch (error) {
+          reportHandledException(error, {
+            area: "auth",
+            operation: "revoke_push_token",
+          });
           if (error instanceof Error) {
             console.warn(
               "Failed to persist push token revocation",
@@ -441,6 +467,10 @@ export function useAuthModalController() {
         await logoutRequest(authToken);
       }
     } catch (error) {
+      reportHandledException(error, {
+        area: "auth",
+        operation: "logout",
+      });
       if (error instanceof Error) {
         console.warn("Failed to logout", error.message);
       }
@@ -452,6 +482,10 @@ export function useAuthModalController() {
           deleteAllPaymentStatusTokens(),
         ]);
       } catch (error) {
+        reportHandledException(error, {
+          area: "auth",
+          operation: "clear_session",
+        });
         console.warn(
           "Failed to delete persisted session data",
           error instanceof Error ? error.message : "Unknown storage error",
@@ -475,14 +509,11 @@ export function useAuthModalController() {
     }
 
     try {
-      const response = await requestOtp(pendingEmail, AUTH_DEFAULTS.role);
-      if (!response.success) {
-        throw new Error("Unable to resend code.");
-      }
+      await requestLoginOtp(pendingEmail);
     } catch (error) {
       setOtpError(getAuthErrorMessage(error, "Unable to resend code."));
     }
-  }, [pendingEmail, setOtpError]);
+  }, [pendingEmail, requestLoginOtp, setOtpError]);
 
   const handleEmailInputChange = useCallback(
     (text: string, onChange: (value: string) => void) => {

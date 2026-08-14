@@ -13,6 +13,8 @@ import { Calendar, Gift, Home, LogIn, LogOut, User } from "lucide-react-native";
 import { useCallback, useEffect } from "react";
 import { View } from "react-native";
 
+export { RouteErrorBoundary as ErrorBoundary } from "@/components/route-error-boundary";
+
 const HREF_TAB_ITEM_STYLE = twStyle(
   "flex-col items-center justify-center py-2 px-1 min-w-0 flex-1",
 );

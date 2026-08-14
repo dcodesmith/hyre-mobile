@@ -4,6 +4,7 @@ import {
   TRUSTED_REQUEST_ORIGIN,
 } from "@/constants/config";
 import { invalidateAuthSession } from "@/lib/auth-session-events";
+import { reportApiFailure } from "@/lib/telemetry";
 import {
   deleteSavedAuthTokenIfMatches,
   getSavedAuthToken,
@@ -20,6 +21,7 @@ export class ApiError extends Error {
     { status, data }: { status: number; data?: unknown },
   ) {
     super(message);
+    this.name = "ApiError";
     this.status = status;
     this.data = data;
     this.code = extractErrorCode(data);
@@ -104,6 +106,7 @@ export const apiRequest = async <T>(
   init: RequestInit | undefined = undefined,
   { timeout = API_TIMEOUT_MS }: { timeout?: number } = {},
 ): Promise<T> => {
+  const method = (init?.method ?? "GET").toUpperCase();
   const headers = new Headers(init?.headers);
   headers.set("Accept", "application/json");
   headers.set("X-Client-Type", "mobile");
@@ -124,21 +127,32 @@ export const apiRequest = async <T>(
       timeout,
     );
   } catch (error) {
-    if (error instanceof ApiError || isAbortError(error)) {
+    if (error instanceof ApiError) {
+      reportApiFailure(error, { method, path });
+      throw error;
+    }
+    if (isAbortError(error)) {
       throw error;
     }
 
-    throw new ApiError("Network request failed", {
+    const networkError = new ApiError("Network request failed", {
       status: 0,
       data: getNetworkErrorData(error),
     });
+    reportApiFailure(networkError, { method, path });
+    throw networkError;
   }
 
   const payload = await parseResponseBody(response);
 
   if (!response.ok) {
     const message = extractErrorMessage(payload, response.status);
-    throw new ApiError(message, { status: response.status, data: payload });
+    const apiError = new ApiError(message, {
+      status: response.status,
+      data: payload,
+    });
+    reportApiFailure(apiError, { method, path });
+    throw apiError;
   }
 
   return payload as T;

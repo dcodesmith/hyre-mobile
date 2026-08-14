@@ -13,6 +13,7 @@ import {
 } from "@expo-google-fonts/plus-jakarta-sans";
 import NetInfo from "@react-native-community/netinfo";
 import { ThemeProvider } from "@react-navigation/native";
+import * as Sentry from "@sentry/react-native";
 import { AutocompletePortalHostProvider } from "@/providers/autocomplete-portal-host-provider";
 import {
   focusManager,
@@ -20,7 +21,7 @@ import {
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
-import { Stack } from "expo-router";
+import { Stack, useNavigationContainerRef } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import * as WebBrowser from "expo-web-browser";
@@ -32,8 +33,16 @@ import "../global.css";
 
 import { BookingSearchDraftProvider } from "@/components/booking-search";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import {
+  initializeTelemetry,
+  registerTelemetryNavigationContainer,
+} from "@/lib/telemetry";
 import { NAV_THEME } from "@/lib/theme";
 import { AuthModalProvider } from "@/providers/auth-modal-provider";
+
+export { RouteErrorBoundary as ErrorBoundary } from "@/components/route-error-boundary";
+
+initializeTelemetry();
 
 LogBox.ignoreLogs([
   "SafeAreaView has been deprecated",
@@ -182,8 +191,9 @@ const queryClient = new QueryClient({
   },
 });
 
-export default function RootLayout() {
+function RootLayout() {
   const { colorScheme } = useColorScheme();
+  const navigationRef = useNavigationContainerRef();
   const [fontsLoaded, fontError] = useFonts({
     "NunitoSans-Regular": NunitoSans_400Regular,
     "NunitoSans-Medium": NunitoSans_500Medium,
@@ -194,6 +204,10 @@ export default function RootLayout() {
     "PlusJakartaSans-SemiBold": PlusJakartaSans_600SemiBold,
     "PlusJakartaSans-Bold": PlusJakartaSans_700Bold,
   });
+
+  useEffect(() => {
+    registerTelemetryNavigationContainer(navigationRef);
+  }, [navigationRef]);
 
   useEffect(() => {
     if (fontsLoaded || fontError) {
@@ -242,3 +256,5 @@ export default function RootLayout() {
     </QueryClientProvider>
   );
 }
+
+export default Sentry.wrap(RootLayout);

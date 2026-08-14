@@ -1,3 +1,35 @@
+const sentryEnvironmentVariables = [
+  "EXPO_PUBLIC_SENTRY_DSN",
+  "SENTRY_AUTH_TOKEN",
+  "SENTRY_ORG",
+  "SENTRY_PROJECT",
+];
+const requiresSentry =
+  process.env.EAS_BUILD_PROFILE === "preview" ||
+  process.env.EAS_BUILD_PROFILE === "production";
+const missingSentryEnvironmentVariables = requiresSentry
+  ? sentryEnvironmentVariables.filter(
+      (name) => !process.env[name]?.trim(),
+    )
+  : [];
+
+if (missingSentryEnvironmentVariables.length > 0) {
+  throw new Error(
+    `Missing Sentry environment variables for ${process.env.EAS_BUILD_PROFILE}: ${missingSentryEnvironmentVariables.join(", ")}`,
+  );
+}
+
+const sentryPlugin =
+  process.env.SENTRY_ORG && process.env.SENTRY_PROJECT
+    ? [
+        "@sentry/react-native",
+        {
+          organization: process.env.SENTRY_ORG,
+          project: process.env.SENTRY_PROJECT,
+        },
+      ]
+    : "@sentry/react-native";
+
 /** @type {import('expo/config').ExpoConfig} */
 export default {
   expo: {
@@ -47,6 +79,7 @@ export default {
     },
     plugins: [
       "expo-router",
+      sentryPlugin,
       [
         "expo-dev-client",
         {
