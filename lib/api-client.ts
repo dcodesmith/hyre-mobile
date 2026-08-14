@@ -94,7 +94,9 @@ const parseResponseBody = async (response: Response) => {
 };
 
 const isAbortError = (error: unknown) =>
-  error instanceof Error && error.name === "AbortError";
+  typeof error === "object" &&
+  error !== null &&
+  (error as { name?: unknown }).name === "AbortError";
 
 const getNetworkErrorData = (error: unknown) => ({
   code: "NETWORK_ERROR",
@@ -143,7 +145,20 @@ export const apiRequest = async <T>(
     throw networkError;
   }
 
-  const payload = await parseResponseBody(response);
+  let payload: unknown;
+  try {
+    payload = await parseResponseBody(response);
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw error;
+    }
+    const apiError = new ApiError("Failed to read response", {
+      status: response.ok ? 0 : response.status,
+      data: getNetworkErrorData(error),
+    });
+    reportApiFailure(apiError, { method, path });
+    throw apiError;
+  }
 
   if (!response.ok) {
     const message = extractErrorMessage(payload, response.status);

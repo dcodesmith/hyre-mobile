@@ -206,8 +206,9 @@ function RootLayout() {
   });
 
   useEffect(() => {
+    if (!fontsLoaded && !fontError) return;
     registerTelemetryNavigationContainer(navigationRef);
-  }, [navigationRef]);
+  }, [fontError, fontsLoaded, navigationRef]);
 
   useEffect(() => {
     if (fontsLoaded || fontError) {

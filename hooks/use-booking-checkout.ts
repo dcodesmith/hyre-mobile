@@ -340,15 +340,15 @@ export function useBookingCheckout(
 
       navigateToPaymentStatus(checkout, callback);
     } catch (error) {
+      reportHandledException(error, {
+        area: "booking_checkout",
+        operation: "submit",
+      });
       if (!isMounted.current) return;
       handleBookingPriceChange(error, onPriceChanged);
       if (isIdempotencyKeyReused(error)) {
         checkoutAttempt.current = null;
       }
-      reportHandledException(error, {
-        area: "booking_checkout",
-        operation: "submit",
-      });
       setPaymentError(getBookingPaymentErrorMessage(error));
     } finally {
       if (isMounted.current) {

@@ -26,7 +26,11 @@ const isApiErrorLike = (error: unknown): error is ApiErrorLike =>
 export function getTelemetryErrorDetails(
   error: unknown,
 ): TelemetryErrorDetails {
-  if (error instanceof Error && error.name === "AbortError") {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    (error as { name?: unknown }).name === "AbortError"
+  ) {
     return { kind: "abort", shouldReport: false };
   }
 
