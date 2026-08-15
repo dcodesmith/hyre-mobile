@@ -39,7 +39,8 @@ export function getTelemetryErrorDetails(
     return {
       kind: "api",
       shouldReport:
-        error.status === 0 || error.status === 408 || error.status >= 500,
+        code !== "REQUEST_CANCELLED" &&
+        (error.status === 0 || error.status === 408 || error.status >= 500),
       status: error.status,
       code,
     };

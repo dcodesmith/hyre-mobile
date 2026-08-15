@@ -29,6 +29,8 @@ export class ApiError extends Error {
   }
 }
 
+export const REQUEST_CANCELLED_CODE = "REQUEST_CANCELLED";
+
 const withTimeout = async <T>(
   promise: Promise<T>,
   timeout: number,
@@ -98,6 +100,15 @@ const isAbortError = (error: unknown) =>
   error !== null &&
   (error as { name?: unknown }).name === "AbortError";
 
+const createRequestCancelledError = (error: unknown) =>
+  new ApiError("Request cancelled", {
+    status: 0,
+    data: {
+      code: REQUEST_CANCELLED_CODE,
+      cause: error instanceof Error ? error.message : undefined,
+    },
+  });
+
 const getNetworkErrorData = (error: unknown) => ({
   code: "NETWORK_ERROR",
   cause: error instanceof Error ? error.message : undefined,
@@ -129,11 +140,11 @@ export const apiRequest = async <T>(
       timeout,
     );
   } catch (error) {
+    if (init?.signal?.aborted || isAbortError(error)) {
+      throw createRequestCancelledError(error);
+    }
     if (error instanceof ApiError) {
       reportApiFailure(error, { method, path });
-      throw error;
-    }
-    if (isAbortError(error)) {
       throw error;
     }
 
@@ -149,8 +160,8 @@ export const apiRequest = async <T>(
   try {
     payload = await parseResponseBody(response);
   } catch (error) {
-    if (isAbortError(error)) {
-      throw error;
+    if (init?.signal?.aborted || isAbortError(error)) {
+      throw createRequestCancelledError(error);
     }
     const apiError = new ApiError("Failed to read response", {
       status: response.ok ? 0 : response.status,

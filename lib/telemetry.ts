@@ -20,6 +20,15 @@ type TelemetryContext = {
   operation: string;
 };
 
+type BookingCheckoutOperation =
+  | "create_booking"
+  | "open_flutterwave_checkout";
+type BookingCheckoutState =
+  | "started"
+  | "succeeded"
+  | "cancelled"
+  | "failed";
+
 const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN?.trim();
 const telemetryEnabled = Boolean(sentryDsn) && !__DEV__;
 const appEnvironment =
@@ -111,6 +120,21 @@ export function reportHandledException(
     configureScope(scope, context);
     scope.setTag("error_kind", details.kind);
     return Sentry.captureException(normalizeThrownValue(error));
+  });
+}
+
+export function recordBookingCheckoutStep(
+  operation: BookingCheckoutOperation,
+  state: BookingCheckoutState,
+  data?: Record<string, string | number | boolean>,
+): void {
+  if (!telemetryEnabled) return;
+
+  Sentry.addBreadcrumb({
+    category: `booking_checkout.${operation}`,
+    message: state,
+    level: state === "failed" ? "error" : "info",
+    data,
   });
 }
 

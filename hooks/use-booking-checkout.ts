@@ -10,6 +10,7 @@ import {
 } from "@/lib/booking-checkout-attempt";
 import type { BookingPricingPreviewResponse } from "@/lib/booking-pricing-preview-types";
 import {
+  recordBookingCheckoutStep,
   reportHandledException,
   reportUnexpectedState,
 } from "@/lib/telemetry";
@@ -304,24 +305,72 @@ export function useBookingCheckout(
       );
       checkoutAttempt.current = attempt;
 
-      const checkout = await createCheckoutWithRetry(
-        payload,
-        isAuthenticated,
-        attempt.idempotencyKey,
-        () => isMounted.current,
-      );
+      const checkoutMode = isAuthenticated ? "authenticated" : "guest";
+      recordBookingCheckoutStep("create_booking", "started", {
+        checkout_mode: checkoutMode,
+      });
+      let checkout: CreateBookingCheckoutResponse | null;
+      try {
+        checkout = await createCheckoutWithRetry(
+          payload,
+          isAuthenticated,
+          attempt.idempotencyKey,
+          () => isMounted.current,
+        );
+        recordBookingCheckoutStep(
+          "create_booking",
+          checkout ? "succeeded" : "cancelled",
+          { checkout_mode: checkoutMode },
+        );
+      } catch (error) {
+        recordBookingCheckoutStep("create_booking", "failed", {
+          checkout_mode: checkoutMode,
+        });
+        throw error;
+      }
       if (!checkout || !isMounted.current) return;
       void queryClient.invalidateQueries({
         queryKey: ["referrals", "summary"],
       });
       await persistPaymentStatusToken(checkout, isAuthenticated);
-      const browserResult = await WebBrowser.openAuthSessionAsync(
-        checkout.checkoutUrl,
-        callbackUrl,
-      );
+      recordBookingCheckoutStep("open_flutterwave_checkout", "started", {
+        checkout_mode: checkoutMode,
+      });
+      let browserResult: WebBrowser.WebBrowserAuthSessionResult;
+      try {
+        browserResult = await WebBrowser.openAuthSessionAsync(
+          checkout.checkoutUrl,
+          callbackUrl,
+        );
+      } catch (error) {
+        recordBookingCheckoutStep("open_flutterwave_checkout", "failed", {
+          checkout_mode: checkoutMode,
+        });
+        throw error;
+      }
+      const browserState =
+        browserResult.type === "success"
+          ? "succeeded"
+          : browserResult.type === "cancel" ||
+              browserResult.type === "dismiss"
+            ? "cancelled"
+            : "failed";
+      recordBookingCheckoutStep("open_flutterwave_checkout", browserState, {
+        checkout_mode: checkoutMode,
+        result_type: browserResult.type,
+      });
 
       if (!isMounted.current) return;
       if (browserResult.type !== "success" || !browserResult.url) {
+        if (
+          browserResult.type !== "cancel" &&
+          browserResult.type !== "dismiss"
+        ) {
+          reportUnexpectedState("Flutterwave checkout did not complete", {
+            area: "booking_checkout",
+            operation: "open_flutterwave_checkout",
+          });
+        }
         setPaymentError(getBrowserFailureMessage(browserResult.type));
         return;
       }
