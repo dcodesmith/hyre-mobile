@@ -5,6 +5,11 @@ import {
   NIGHT_BOOKING_TYPE,
 } from "@/lib/booking-types";
 import { getFuelTankNote } from "@/lib/booking-utils";
+import {
+  DEFAULT_PLATFORM_FEE_RATE,
+  DEFAULT_VAT_RATE,
+  getListRateForBookingType,
+} from "@/lib/car-detail-pricing";
 import type { CostBreakdownData } from "@/lib/car-detail-types";
 import type { CarPromotion } from "@/lib/car-types";
 import {
@@ -13,9 +18,7 @@ import {
 } from "@/lib/promotion-utils";
 import { useMemo } from "react";
 
-/** Defaults when API omits or sends invalid (e.g. 0) rates — keep in sync with worker. */
-export const DEFAULT_PLATFORM_FEE_RATE = 5;
-export const DEFAULT_VAT_RATE = 7.5;
+export { DEFAULT_PLATFORM_FEE_RATE, DEFAULT_VAT_RATE };
 const roundMoney = (value: number) => Math.round(value * 100) / 100;
 
 interface UseBookingPricingParams {
@@ -52,21 +55,12 @@ export function useBookingPricing({
   promotion = null,
 }: UseBookingPricingParams): CostBreakdownData {
   return useMemo(() => {
-    let baseRate: number;
-    switch (bookingType) {
-      case NIGHT_BOOKING_TYPE:
-        baseRate = nightRate ?? dayRate;
-        break;
-      case FULL_DAY_BOOKING_TYPE:
-        baseRate = fullDayRate ?? dayRate;
-        break;
-      case AIRPORT_PICKUP_BOOKING_TYPE:
-        baseRate = airportPickupRate ?? dayRate;
-        break;
-      default:
-        baseRate = dayRate;
-        break;
-    }
+    let baseRate = getListRateForBookingType(bookingType, {
+      dayRate,
+      nightRate,
+      fullDayRate,
+      airportPickupRate,
+    });
 
     const originalBaseRate = baseRate;
 

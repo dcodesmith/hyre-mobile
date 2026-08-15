@@ -1,19 +1,11 @@
-import { TimePicker } from "@/components/booking-search/TimePicker";
-import { AddressAutocompleteInput } from "@/components/ui/address-autocomplete-input";
+import { BookingActionDialogs } from "@/components/booking-action-dialogs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/use-auth";
-import { useBookingActionEligibility } from "@/hooks/use-booking-action-eligibility";
-import { useBookingActions } from "@/hooks/use-booking-actions";
+import {
+	type BookingActionFeedback,
+	useBookingActionController,
+} from "@/hooks/use-booking-action-controller";
 import { useBookingDetail } from "@/hooks/use-booking-detail";
 import {
   AIRPORT_PICKUP_BOOKING_TYPE,
@@ -24,10 +16,7 @@ import {
 } from "@/lib/booking-types";
 import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
-import {
-  type BookingDetail,
-  getBookingActionErrorMessage,
-} from "@/services/bookings";
+import type { BookingDetail } from "@/services/bookings";
 import { format, toZonedTime } from "date-fns-tz";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -40,7 +29,7 @@ import {
   Plane,
   User,
 } from "lucide-react-native";
-import { type ReactNode, useState } from "react";
+import type { ReactNode } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -96,11 +85,6 @@ const bookingTypeDescription = (type: BookingType) => {
     return "Each airport pickup booking is for a one-way trip from the airport.";
   }
   return "Each full day booking is for a 24-hour duration ending 24 hours after the pickup time.";
-};
-
-type BookingActionFeedback = {
-  type: "success" | "error";
-  message: string;
 };
 
 function SectionTitleRow({
@@ -461,184 +445,6 @@ function PaymentSummaryCard({ booking }: Readonly<{ booking: BookingDetail }>) {
   );
 }
 
-function ModifyBookingDialog({
-  booking,
-  open,
-  onOpenChange,
-  pickupTime,
-  setPickupTime,
-  pickupAddress,
-  setPickupAddress,
-  sameLocation,
-  setSameLocation,
-  dropOffAddress,
-  setDropOffAddress,
-  isSubmitting,
-  onSubmit,
-}: Readonly<{
-  booking: BookingDetail;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  pickupTime: string;
-  setPickupTime: (value: string) => void;
-  pickupAddress: string;
-  setPickupAddress: (value: string) => void;
-  sameLocation: boolean;
-  setSameLocation: (value: boolean) => void;
-  dropOffAddress: string;
-  setDropOffAddress: (value: string) => void;
-  isSubmitting: boolean;
-  onSubmit: () => void;
-}>) {
-  const isDayBooking = booking.type === DAY_BOOKING_TYPE;
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Modify Booking</DialogTitle>
-          <DialogDescription>
-            {isDayBooking
-              ? "Edit pickup time and location details for this booking."
-              : "Edit pickup and drop-off location details for this booking."}
-          </DialogDescription>
-        </DialogHeader>
-
-        <View className="gap-3">
-          {isDayBooking ? (
-            <View className="gap-1.5">
-              <Text className="text-sm font-medium text-slate-900">
-                Pickup Time
-              </Text>
-              <TimePicker
-                date={new Date(booking.startDate)}
-                value={pickupTime}
-                onValueChange={setPickupTime}
-                bookingType={booking.type}
-                variant="form"
-                placeholder="Select pickup time"
-              />
-            </View>
-          ) : null}
-
-          <View className="gap-1.5">
-            <Text className="text-sm font-medium text-slate-900">
-              Pickup Address
-            </Text>
-            <AddressAutocompleteInput
-              value={pickupAddress}
-              onChangeText={setPickupAddress}
-              placeholder="Enter pickup address"
-            />
-          </View>
-
-          <View className="flex-row items-center gap-2">
-            <Checkbox
-              checked={sameLocation}
-              onCheckedChange={(checked) => {
-                const isChecked = checked === true;
-                setSameLocation(isChecked);
-                if (isChecked) setDropOffAddress("");
-              }}
-            />
-            <Text className="text-sm text-slate-700">
-              Drop-off location same as pickup
-            </Text>
-          </View>
-
-          {sameLocation ? null : (
-            <View className="gap-1.5">
-              <Text className="text-sm font-medium text-slate-900">
-                Drop-off Address
-              </Text>
-              <AddressAutocompleteInput
-                value={dropOffAddress}
-                onChangeText={setDropOffAddress}
-                placeholder="Enter drop-off address"
-              />
-            </View>
-          )}
-        </View>
-
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onPress={() => onOpenChange(false)}
-            disabled={isSubmitting}
-          >
-            <Text className="text-sm font-medium">Close</Text>
-          </Button>
-          <Button onPress={onSubmit} disabled={isSubmitting}>
-            <Text className="text-sm font-semibold text-white">
-              {isSubmitting ? "Saving..." : "Save Changes"}
-            </Text>
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function CancelBookingDialog({
-  open,
-  onOpenChange,
-  isSubmitting,
-  showRefundWarning,
-  onSubmit,
-}: Readonly<{
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  isSubmitting: boolean;
-  showRefundWarning: boolean;
-  onSubmit: () => void;
-}>) {
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (!isSubmitting) onOpenChange(next);
-      }}
-    >
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Cancel Booking</DialogTitle>
-          <DialogDescription>
-            Are you sure you want to cancel this booking? This action cannot be
-            undone.
-          </DialogDescription>
-        </DialogHeader>
-
-        {showRefundWarning ? (
-          <View className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
-            <Text className="text-sm text-amber-800">
-              A refund will be processed automatically.
-            </Text>
-          </View>
-        ) : null}
-
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onPress={() => onOpenChange(false)}
-            disabled={isSubmitting}
-          >
-            <Text className="text-sm font-medium">Keep Booking</Text>
-          </Button>
-          <Button
-            variant="destructive"
-            onPress={onSubmit}
-            disabled={isSubmitting}
-          >
-            <Text className="text-sm font-semibold text-white">
-              {isSubmitting ? "Cancelling..." : "Yes, Cancel Booking"}
-            </Text>
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 function BookingActionFeedbackBanner({
   feedback,
 }: Readonly<{ feedback: BookingActionFeedback | null }>) {
@@ -669,26 +475,10 @@ export default function BookingDetailScreen() {
   const bookingId = Array.isArray(params.id) ? params.id[0] : params.id;
 
   const bookingQuery = useBookingDetail(bookingId, isAuthenticated);
-	const { canEdit, canCancel } = useBookingActionEligibility({
-		canEdit: bookingQuery.data?.canEdit ?? false,
-		canCancel: bookingQuery.data?.canCancel ?? false,
-		modificationCutoffAt: bookingQuery.data?.modificationCutoffAt,
-		isRefreshing: bookingQuery.isFetching,
-	});
-  const {
-    updateBooking: updateBookingAction,
-    cancelBooking: cancelBookingAction,
-    isUpdatingBooking,
-    isCancellingBooking,
-  } = useBookingActions(bookingId);
-  const [actionFeedback, setActionFeedback] =
-    useState<BookingActionFeedback | null>(null);
-  const [isModifyDialogOpen, setIsModifyDialogOpen] = useState(false);
-  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
-  const [pickupTime, setPickupTime] = useState("");
-  const [pickupAddress, setPickupAddress] = useState("");
-  const [sameLocation, setSameLocation] = useState(true);
-  const [dropOffAddress, setDropOffAddress] = useState("");
+  const actions = useBookingActionController(
+    bookingQuery.data,
+    bookingQuery.isFetching,
+  );
 
   if (!isAuthenticated) {
     return (
@@ -759,78 +549,6 @@ export default function BookingDetailScreen() {
 
   const booking = bookingQuery.data;
 
-  const openModifyDialog = () => {
-    setPickupTime(format(toLagosTime(booking.startDate), "h:mm a"));
-    setPickupAddress(booking.pickupLocation);
-    const isSameLocation = booking.pickupLocation === booking.returnLocation;
-    setSameLocation(isSameLocation);
-    setDropOffAddress(isSameLocation ? "" : booking.returnLocation);
-    setActionFeedback(null);
-    setIsModifyDialogOpen(true);
-  };
-
-  const submitBookingUpdate = async () => {
-    const nextPickupAddress = pickupAddress.trim();
-    const nextDropOffAddress = dropOffAddress.trim();
-    if (!nextPickupAddress) {
-      setActionFeedback({
-        type: "error",
-        message: "Pickup address is required.",
-      });
-      return;
-    }
-    if (!sameLocation && !nextDropOffAddress) {
-      setActionFeedback({
-        type: "error",
-        message: "Drop-off address is required when locations differ.",
-      });
-      return;
-    }
-
-    try {
-      await updateBookingAction({
-        ...(booking.type === DAY_BOOKING_TYPE && pickupTime
-          ? { pickupTime }
-          : {}),
-        pickupAddress: nextPickupAddress,
-        sameLocation,
-        ...(sameLocation ? {} : { dropOffAddress: nextDropOffAddress }),
-      });
-      setActionFeedback({
-        type: "success",
-        message: "Booking updated successfully.",
-      });
-      setIsModifyDialogOpen(false);
-    } catch (error) {
-      setActionFeedback({
-        type: "error",
-        message: getBookingActionErrorMessage(
-          error,
-          "Failed to update booking.",
-        ),
-      });
-    }
-  };
-
-  const submitBookingCancellation = async () => {
-    try {
-      await cancelBookingAction();
-      setActionFeedback({
-        type: "success",
-        message: "Booking cancelled successfully.",
-      });
-      setIsCancelDialogOpen(false);
-    } catch (error) {
-      setActionFeedback({
-        type: "error",
-        message: getBookingActionErrorMessage(
-          error,
-          "Failed to cancel booking.",
-        ),
-      });
-    }
-  };
-
   return (
     <SafeAreaView
       className="flex-1 bg-white"
@@ -851,7 +569,7 @@ export default function BookingDetailScreen() {
             </Text>
           </Pressable>
 
-          <BookingActionFeedbackBanner feedback={actionFeedback} />
+					<BookingActionFeedbackBanner feedback={actions.feedback} />
 
           <View className="flex-row gap-3">
             <Image
@@ -1055,7 +773,7 @@ export default function BookingDetailScreen() {
 
             <PaymentSummaryCard booking={booking} />
 
-						{canEdit || canCancel ? (
+            {actions.canEdit || actions.canCancel ? (
               <Card className="rounded-xl py-4">
                 <CardHeader className="px-4">
                   <SectionTitleRow
@@ -1065,28 +783,31 @@ export default function BookingDetailScreen() {
                 </CardHeader>
                 <CardContent className="px-4 pt-0">
                   <View className="gap-2">
-										{canEdit ? (
+                    {actions.canEdit ? (
                       <Button
                         variant="outline"
-                        onPress={openModifyDialog}
-                        disabled={isUpdatingBooking || isCancellingBooking}
+                        onPress={actions.openModifyDialog}
+                        disabled={
+                          actions.isUpdatingBooking ||
+                          actions.isCancellingBooking
+                        }
                       >
                         <Text className="text-sm font-medium">
                           Modify Booking
                         </Text>
                       </Button>
                     ) : null}
-										{canCancel ? (
+                    {actions.canCancel ? (
                       <Button
                         variant="outline"
-                        onPress={() => {
-                          setActionFeedback(null);
-                          setIsCancelDialogOpen(true);
-                        }}
-                        disabled={isUpdatingBooking || isCancellingBooking}
+                        onPress={actions.openCancelDialog}
+                        disabled={
+                          actions.isUpdatingBooking ||
+                          actions.isCancellingBooking
+                        }
                       >
                         <Text className="text-sm font-medium text-red-600">
-                          {isCancellingBooking
+                          {actions.isCancellingBooking
                             ? "Cancelling..."
                             : "Cancel Booking"}
                         </Text>
@@ -1100,28 +821,9 @@ export default function BookingDetailScreen() {
         </View>
       </ScrollView>
 
-      <ModifyBookingDialog
+      <BookingActionDialogs
         booking={booking}
-        open={isModifyDialogOpen}
-        onOpenChange={setIsModifyDialogOpen}
-        pickupTime={pickupTime}
-        setPickupTime={setPickupTime}
-        pickupAddress={pickupAddress}
-        setPickupAddress={setPickupAddress}
-        sameLocation={sameLocation}
-        setSameLocation={setSameLocation}
-        dropOffAddress={dropOffAddress}
-        setDropOffAddress={setDropOffAddress}
-        isSubmitting={isUpdatingBooking}
-        onSubmit={() => void submitBookingUpdate()}
-      />
-
-      <CancelBookingDialog
-        open={isCancelDialogOpen}
-        onOpenChange={setIsCancelDialogOpen}
-        isSubmitting={isCancellingBooking}
-        showRefundWarning={booking.paymentStatus === "PAID"}
-        onSubmit={() => void submitBookingCancellation()}
+        controller={actions}
       />
     </SafeAreaView>
   );

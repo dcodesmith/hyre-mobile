@@ -1,36 +1,22 @@
-import { TimePicker } from "@/components/booking-search/TimePicker";
-import { AddressAutocompleteInput } from "@/components/ui/address-autocomplete-input";
+import { BookingActionDialogs } from "@/components/booking-action-dialogs";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Text } from "@/components/ui/text";
 import { useTabBarVisibility } from "@/context/tab-bar-visibility-context";
 import { useAuth } from "@/hooks/use-auth";
-import { useBookingActionEligibility } from "@/hooks/use-booking-action-eligibility";
-import { useBookingActions } from "@/hooks/use-booking-actions";
+import { useBookingActionController } from "@/hooks/use-booking-action-controller";
 import { useBookings } from "@/hooks/use-bookings";
-import { DAY_BOOKING_TYPE } from "@/lib/booking-types";
 import { formatCurrency } from "@/lib/currency";
 import {
   BOOKING_STATUSES,
 	type BookingsByStatusResponse,
   type BookingStatus,
   type BookingSummary,
-	getBookingActionErrorMessage,
-  type UpdateBookingPayload,
 } from "@/services/bookings";
 import { format, toZonedTime } from "date-fns-tz";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useMemo, useReducer, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   type NativeScrollEvent,
@@ -54,362 +40,18 @@ function countBookingsByStatus(
   return bookings?.[status]?.length ?? 0;
 }
 
-type BookingActionFeedback = {
-  type: "success" | "error";
-  message: string;
-};
-
-type BookingListItemState = {
-  isModifyDialogOpen: boolean;
-  isCancelDialogOpen: boolean;
-  actionFeedback: BookingActionFeedback | null;
-  pickupTime: string;
-  pickupAddress: string;
-  sameLocation: boolean;
-  dropOffAddress: string;
-};
-
-type BookingListItemAction = {
-  type: "patch";
-  payload: Partial<BookingListItemState>;
-};
-
-const initialBookingListItemState: BookingListItemState = {
-  isModifyDialogOpen: false,
-  isCancelDialogOpen: false,
-  actionFeedback: null,
-  pickupTime: "",
-  pickupAddress: "",
-  sameLocation: true,
-  dropOffAddress: "",
-};
-
-function bookingListItemReducer(
-  state: BookingListItemState,
-  action: BookingListItemAction,
-): BookingListItemState {
-  if (action.type === "patch") {
-    return { ...state, ...action.payload };
-  }
-  return state;
-}
-
-function ModifyBookingDialog({
-  booking,
-  open,
-  onOpenChange,
-  pickupTime,
-  setPickupTime,
-  pickupAddress,
-  setPickupAddress,
-  sameLocation,
-  setSameLocation,
-  dropOffAddress,
-  setDropOffAddress,
-  isSubmitting,
-  onSubmit,
-}: Readonly<{
-  booking: BookingSummary;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  pickupTime: string;
-  setPickupTime: (value: string) => void;
-  pickupAddress: string;
-  setPickupAddress: (value: string) => void;
-  sameLocation: boolean;
-  setSameLocation: (value: boolean) => void;
-  dropOffAddress: string;
-  setDropOffAddress: (value: string) => void;
-  isSubmitting: boolean;
-  onSubmit: () => void;
-}>) {
-  const isDayBooking = booking.type === DAY_BOOKING_TYPE;
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Modify Booking</DialogTitle>
-          <DialogDescription>
-            {isDayBooking
-              ? "Edit the pickup time, pickup address, and drop-off address."
-              : "Edit the pickup and drop-off address."}
-          </DialogDescription>
-        </DialogHeader>
-
-        <View className="gap-3">
-          {isDayBooking ? (
-            <View className="gap-1.5">
-              <Text className="text-sm font-medium text-slate-900">
-                Pickup Time
-              </Text>
-              <TimePicker
-                date={new Date(booking.startDate)}
-                value={pickupTime}
-                onValueChange={setPickupTime}
-                bookingType={booking.type}
-                variant="form"
-                placeholder="Select pickup time"
-              />
-            </View>
-          ) : null}
-
-          <View className="gap-1.5">
-            <Text className="text-sm font-medium text-slate-900">
-              Pickup Address
-            </Text>
-            <AddressAutocompleteInput
-              value={pickupAddress}
-              onChangeText={setPickupAddress}
-              placeholder="Enter pickup address"
-            />
-          </View>
-
-          <View className="flex-row items-center gap-2">
-            <Checkbox
-              checked={sameLocation}
-              onCheckedChange={(checked) => {
-                const isChecked = checked === true;
-                setSameLocation(isChecked);
-                if (isChecked) setDropOffAddress("");
-              }}
-            />
-            <Text className="text-sm text-slate-700">
-              Drop-off location same as pickup
-            </Text>
-          </View>
-
-          {sameLocation ? null : (
-            <View className="gap-1.5">
-              <Text className="text-sm font-medium text-slate-900">
-                Drop-off Address
-              </Text>
-              <AddressAutocompleteInput
-                value={dropOffAddress}
-                onChangeText={setDropOffAddress}
-                placeholder="Enter drop-off address"
-              />
-            </View>
-          )}
-        </View>
-
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onPress={() => onOpenChange(false)}
-            disabled={isSubmitting}
-          >
-            <Text className="text-sm font-medium">Cancel</Text>
-          </Button>
-          <Button onPress={onSubmit} disabled={isSubmitting}>
-            <Text className="text-sm font-semibold text-white">
-              {isSubmitting ? "Saving..." : "Save Changes"}
-            </Text>
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function CancelBookingDialog({
-  open,
-  onOpenChange,
-  isSubmitting,
-  onSubmit,
-}: Readonly<{
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  isSubmitting: boolean;
-  onSubmit: () => void;
-}>) {
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (!isSubmitting) onOpenChange(next);
-      }}
-    >
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Cancel Booking</DialogTitle>
-          <DialogDescription>
-            Are you sure you want to cancel this booking? This action cannot be
-            undone.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onPress={() => onOpenChange(false)}
-            disabled={isSubmitting}
-          >
-            <Text className="text-sm font-medium">No</Text>
-          </Button>
-          <Button
-            variant="destructive"
-            onPress={onSubmit}
-            disabled={isSubmitting}
-          >
-            <Text className="text-sm font-semibold text-white">
-              {isSubmitting ? "Cancelling..." : "Yes, Cancel Booking"}
-            </Text>
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 function BookingListItem({
   booking,
   isLast,
-	isRefreshing,
+  isRefreshing,
 }: Readonly<{
-	booking: BookingSummary;
-	isLast: boolean;
-	isRefreshing: boolean;
+  booking: BookingSummary;
+  isLast: boolean;
+  isRefreshing: boolean;
 }>) {
   const router = useRouter();
-  const {
-    updateBooking,
-    cancelBooking,
-    isUpdatingBooking,
-    isCancellingBooking,
-  } = useBookingActions(booking.id);
-  const [state, dispatch] = useReducer(
-    bookingListItemReducer,
-    initialBookingListItemState,
-  );
-  const {
-    isModifyDialogOpen,
-    isCancelDialogOpen,
-    actionFeedback,
-    pickupTime,
-    pickupAddress,
-    sameLocation,
-    dropOffAddress,
-  } = state;
-
   const bookingImageUrl = booking.car.images[0]?.url;
-	const { canEdit, canCancel } = useBookingActionEligibility({
-		canEdit: booking.canEdit,
-		canCancel: booking.canCancel,
-		modificationCutoffAt: booking.modificationCutoffAt,
-		isRefreshing,
-	});
-
-  const openModifyDialog = () => {
-    const hasSameLocation = booking.pickupLocation === booking.returnLocation;
-    dispatch({
-      type: "patch",
-      payload: {
-        pickupTime: format(
-          toZonedTime(new Date(booking.startDate), LAGOS_TIMEZONE),
-          "h:mm a",
-        ),
-        pickupAddress: booking.pickupLocation,
-        sameLocation: hasSameLocation,
-        dropOffAddress: hasSameLocation ? "" : booking.returnLocation,
-        actionFeedback: null,
-        isModifyDialogOpen: true,
-      },
-    });
-  };
-
-  const submitBookingUpdate = async () => {
-    const nextPickupAddress = pickupAddress.trim();
-    const nextDropOffAddress = dropOffAddress.trim();
-    if (!nextPickupAddress) {
-      dispatch({
-        type: "patch",
-        payload: {
-          actionFeedback: {
-            type: "error",
-            message: "Pickup address is required.",
-          },
-        },
-      });
-      return;
-    }
-    if (!sameLocation && !nextDropOffAddress) {
-      dispatch({
-        type: "patch",
-        payload: {
-          actionFeedback: {
-            type: "error",
-            message: "Drop-off address is required when locations differ.",
-          },
-        },
-      });
-      return;
-    }
-    const payload: UpdateBookingPayload = {
-      pickupAddress: nextPickupAddress,
-      sameLocation,
-    };
-    if (booking.type === DAY_BOOKING_TYPE && pickupTime) {
-      payload.pickupTime = pickupTime;
-    }
-    if (!sameLocation) {
-      payload.dropOffAddress = nextDropOffAddress;
-    }
-    try {
-      await updateBooking(payload);
-      dispatch({
-        type: "patch",
-        payload: {
-          actionFeedback: {
-            type: "success",
-            message: "Booking updated successfully.",
-          },
-          isModifyDialogOpen: false,
-        },
-      });
-    } catch (error) {
-      dispatch({
-        type: "patch",
-        payload: {
-          actionFeedback: {
-            type: "error",
-            message: getBookingActionErrorMessage(
-              error,
-              "Failed to update booking.",
-            ),
-          },
-        },
-      });
-    }
-  };
-
-  const submitBookingCancellation = async () => {
-    try {
-      await cancelBooking();
-      dispatch({
-        type: "patch",
-        payload: {
-          actionFeedback: {
-            type: "success",
-            message: "Booking cancelled successfully.",
-          },
-          isCancelDialogOpen: false,
-        },
-      });
-    } catch (error) {
-      dispatch({
-        type: "patch",
-        payload: {
-          actionFeedback: {
-            type: "error",
-            message: getBookingActionErrorMessage(
-              error,
-              "Failed to cancel booking.",
-            ),
-          },
-        },
-      });
-    }
-  };
+  const actions = useBookingActionController(booking, isRefreshing);
 
   return (
     <View
@@ -469,88 +111,56 @@ function BookingListItem({
         {/* <ChevronRight size={16} color="#6B7280" /> */}
       </Pressable>
 
-			{canEdit || canCancel ? (
+      {actions.canEdit || actions.canCancel ? (
         <View className="mt-3 flex-row items-center gap-2">
-					{canEdit ? (
+          {actions.canEdit ? (
             <Button
               className="flex-1"
               variant="outline"
-              onPress={openModifyDialog}
-              disabled={isUpdatingBooking || isCancellingBooking}
+              onPress={actions.openModifyDialog}
+              disabled={
+                actions.isUpdatingBooking || actions.isCancellingBooking
+              }
             >
               <Text className="text-sm font-medium">Modify Booking</Text>
             </Button>
           ) : null}
-					{canCancel ? (
+          {actions.canCancel ? (
             <Button
               className="flex-1"
               variant="destructive"
-              onPress={() => {
-                dispatch({
-                  type: "patch",
-                  payload: {
-                    actionFeedback: null,
-                    isCancelDialogOpen: true,
-                  },
-                });
-              }}
-              disabled={isCancellingBooking || isUpdatingBooking}
+              onPress={actions.openCancelDialog}
+              disabled={
+                actions.isCancellingBooking || actions.isUpdatingBooking
+              }
             >
               <Text className="text-sm font-semibold text-white">
-                {isCancellingBooking ? "Cancelling..." : "Cancel Booking"}
+                {actions.isCancellingBooking
+                  ? "Cancelling..."
+                  : "Cancel Booking"}
               </Text>
             </Button>
           ) : null}
         </View>
       ) : null}
 
-      {actionFeedback ? (
+      {actions.feedback ? (
         <View className="mt-2">
           <Text
             className={
-              actionFeedback.type === "success"
+              actions.feedback.type === "success"
                 ? "text-xs text-green-700"
                 : "text-xs text-red-700"
             }
           >
-            {actionFeedback.message}
+            {actions.feedback.message}
           </Text>
         </View>
       ) : null}
 
-      <ModifyBookingDialog
+      <BookingActionDialogs
         booking={booking}
-        open={isModifyDialogOpen}
-        onOpenChange={(open) =>
-          dispatch({ type: "patch", payload: { isModifyDialogOpen: open } })
-        }
-        pickupTime={pickupTime}
-        setPickupTime={(value) =>
-          dispatch({ type: "patch", payload: { pickupTime: value } })
-        }
-        pickupAddress={pickupAddress}
-        setPickupAddress={(value) =>
-          dispatch({ type: "patch", payload: { pickupAddress: value } })
-        }
-        sameLocation={sameLocation}
-        setSameLocation={(value) =>
-          dispatch({ type: "patch", payload: { sameLocation: value } })
-        }
-        dropOffAddress={dropOffAddress}
-        setDropOffAddress={(value) =>
-          dispatch({ type: "patch", payload: { dropOffAddress: value } })
-        }
-        isSubmitting={isUpdatingBooking}
-        onSubmit={() => void submitBookingUpdate()}
-      />
-
-      <CancelBookingDialog
-        open={isCancelDialogOpen}
-        onOpenChange={(open) =>
-          dispatch({ type: "patch", payload: { isCancelDialogOpen: open } })
-        }
-        isSubmitting={isCancellingBooking}
-        onSubmit={() => void submitBookingCancellation()}
+        controller={actions}
       />
     </View>
   );
