@@ -1,11 +1,9 @@
 import { BookingActionDialogs } from "@/components/booking-action-dialogs";
+import { BookingActionFeedbackBanner } from "@/components/booking-action-feedback-banner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
-import {
-	type BookingActionFeedback,
-	useBookingActionController,
-} from "@/hooks/use-booking-action-controller";
+import { useBookingActionController } from "@/hooks/use-booking-action-controller";
 import { useBookingDetail } from "@/hooks/use-booking-detail";
 import {
   AIRPORT_PICKUP_BOOKING_TYPE,
@@ -445,29 +443,6 @@ function PaymentSummaryCard({ booking }: Readonly<{ booking: BookingDetail }>) {
   );
 }
 
-function BookingActionFeedbackBanner({
-  feedback,
-}: Readonly<{ feedback: BookingActionFeedback | null }>) {
-  if (!feedback) return null;
-  const isSuccess = feedback.type === "success";
-  return (
-    <View
-      className={cn(
-        "mb-3 rounded-lg border px-3 py-2.5",
-        isSuccess ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50",
-      )}
-    >
-      <Text
-        className={
-          isSuccess ? "text-sm text-green-800" : "text-sm text-red-800"
-        }
-      >
-        {feedback.message}
-      </Text>
-    </View>
-  );
-}
-
 export default function BookingDetailScreen() {
   const router = useRouter();
   const { isAuthenticated, openLoginModal } = useAuth();
@@ -475,7 +450,16 @@ export default function BookingDetailScreen() {
   const bookingId = Array.isArray(params.id) ? params.id[0] : params.id;
 
   const bookingQuery = useBookingDetail(bookingId, isAuthenticated);
-  const actions = useBookingActionController(
+  const {
+    canEdit,
+    canCancel,
+    isUpdatingBooking,
+    isCancellingBooking,
+    feedback,
+    openModifyDialog,
+    openCancelDialog,
+    ...controller
+  } = useBookingActionController(
     bookingQuery.data,
     bookingQuery.isFetching,
   );
@@ -569,7 +553,7 @@ export default function BookingDetailScreen() {
             </Text>
           </Pressable>
 
-					<BookingActionFeedbackBanner feedback={actions.feedback} />
+          <BookingActionFeedbackBanner feedback={feedback} />
 
           <View className="flex-row gap-3">
             <Image
@@ -773,7 +757,7 @@ export default function BookingDetailScreen() {
 
             <PaymentSummaryCard booking={booking} />
 
-            {actions.canEdit || actions.canCancel ? (
+            {canEdit || canCancel ? (
               <Card className="rounded-xl py-4">
                 <CardHeader className="px-4">
                   <SectionTitleRow
@@ -783,31 +767,25 @@ export default function BookingDetailScreen() {
                 </CardHeader>
                 <CardContent className="px-4 pt-0">
                   <View className="gap-2">
-                    {actions.canEdit ? (
+                    {canEdit ? (
                       <Button
                         variant="outline"
-                        onPress={actions.openModifyDialog}
-                        disabled={
-                          actions.isUpdatingBooking ||
-                          actions.isCancellingBooking
-                        }
+                        onPress={openModifyDialog}
+                        disabled={isUpdatingBooking || isCancellingBooking}
                       >
                         <Text className="text-sm font-medium">
                           Modify Booking
                         </Text>
                       </Button>
                     ) : null}
-                    {actions.canCancel ? (
+                    {canCancel ? (
                       <Button
                         variant="outline"
-                        onPress={actions.openCancelDialog}
-                        disabled={
-                          actions.isUpdatingBooking ||
-                          actions.isCancellingBooking
-                        }
+                        onPress={openCancelDialog}
+                        disabled={isUpdatingBooking || isCancellingBooking}
                       >
                         <Text className="text-sm font-medium text-red-600">
-                          {actions.isCancellingBooking
+                          {isCancellingBooking
                             ? "Cancelling..."
                             : "Cancel Booking"}
                         </Text>
@@ -823,7 +801,16 @@ export default function BookingDetailScreen() {
 
       <BookingActionDialogs
         booking={booking}
-        controller={actions}
+        controller={{
+          canEdit,
+          canCancel,
+          isUpdatingBooking,
+          isCancellingBooking,
+          feedback,
+          openModifyDialog,
+          openCancelDialog,
+          ...controller,
+        }}
       />
     </SafeAreaView>
   );

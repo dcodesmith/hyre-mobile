@@ -3,6 +3,7 @@ import { DAY_BOOKING_TYPE, type BookingType } from "./booking-types";
 import type { UpdateBookingPayload } from "../services/bookings";
 
 const LAGOS_TIMEZONE = "Africa/Lagos";
+const INVALID_BOOKING_DATE_LABEL = "Date unavailable";
 
 export type BookingActionFormValues = {
 	pickupTime: string;
@@ -18,15 +19,26 @@ type EditableBooking = {
 	returnLocation: string;
 };
 
+function formatLagosDate(
+	value: string,
+	pattern: string,
+	fallback: string,
+): string {
+	const date = new Date(value);
+	if (!Number.isFinite(date.getTime())) return fallback;
+	return format(toZonedTime(date, LAGOS_TIMEZONE), pattern);
+}
+
+export function formatBookingDateTime(value: string): string {
+	return formatLagosDate(value, "PPPp", INVALID_BOOKING_DATE_LABEL);
+}
+
 export function createBookingActionFormValues(
 	booking: EditableBooking,
 ): BookingActionFormValues {
 	const sameLocation = booking.pickupLocation === booking.returnLocation;
 	return {
-		pickupTime: format(
-			toZonedTime(new Date(booking.startDate), LAGOS_TIMEZONE),
-			"h:mm a",
-		),
+		pickupTime: formatLagosDate(booking.startDate, "h:mm a", ""),
 		pickupAddress: booking.pickupLocation,
 		sameLocation,
 		dropOffAddress: sameLocation ? "" : booking.returnLocation,

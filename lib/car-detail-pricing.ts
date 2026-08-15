@@ -23,16 +23,28 @@ type BookingRates = {
 	airportPickupRate?: number | null;
 };
 
-export function resolvePlatformFeeRate(raw: unknown): number {
+function toConfiguredRate(raw: unknown): number | undefined {
+	if (
+		raw === null ||
+		raw === undefined ||
+		(typeof raw === "string" && raw.trim() === "")
+	) {
+		return undefined;
+	}
 	const rate = typeof raw === "number" ? raw : Number(raw);
+	return Number.isFinite(rate) ? rate : undefined;
+}
+
+export function resolvePlatformFeeRate(raw: unknown): number {
+	const rate = toConfiguredRate(raw);
 	// An explicit zero is valid; only invalid or negative values use the fallback.
-	return Number.isFinite(rate) && rate >= 0 ? rate : DEFAULT_PLATFORM_FEE_RATE;
+	return rate !== undefined && rate >= 0 ? rate : DEFAULT_PLATFORM_FEE_RATE;
 }
 
 export function resolveVatRate(raw: unknown): number {
-	const rate = typeof raw === "number" ? raw : Number(raw);
+	const rate = toConfiguredRate(raw);
 	// Zero is not a valid VAT configuration and must use the worker-aligned default.
-	return Number.isFinite(rate) && rate > 0 ? rate : DEFAULT_VAT_RATE;
+	return rate !== undefined && rate > 0 ? rate : DEFAULT_VAT_RATE;
 }
 
 export function getListRateForBookingType(

@@ -1,10 +1,12 @@
 import { BookingActionDialogs } from "@/components/booking-action-dialogs";
+import { BookingActionFeedbackBanner } from "@/components/booking-action-feedback-banner";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { useTabBarVisibility } from "@/context/tab-bar-visibility-context";
 import { useAuth } from "@/hooks/use-auth";
 import { useBookingActionController } from "@/hooks/use-booking-action-controller";
 import { useBookings } from "@/hooks/use-bookings";
+import { formatBookingDateTime } from "@/lib/booking-action-form";
 import { formatCurrency } from "@/lib/currency";
 import {
   BOOKING_STATUSES,
@@ -12,7 +14,6 @@ import {
   type BookingStatus,
   type BookingSummary,
 } from "@/services/bookings";
-import { format, toZonedTime } from "date-fns-tz";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -26,12 +27,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-const LAGOS_TIMEZONE = "Africa/Lagos";
-
-const formatDateTime = (value: string) => {
-  return format(toZonedTime(new Date(value), LAGOS_TIMEZONE), "PPPp");
-};
 
 function countBookingsByStatus(
   bookings: BookingsByStatusResponse | undefined,
@@ -95,10 +90,10 @@ function BookingListItem({
           </View>
 
           <Text selectable className="mt-1 text-sm text-neutral-600">
-            {formatDateTime(booking.startDate)}
+            {formatBookingDateTime(booking.startDate)}
           </Text>
           <Text selectable className="mt-0.5 text-sm text-neutral-600">
-            {formatDateTime(booking.endDate)}
+            {formatBookingDateTime(booking.endDate)}
           </Text>
 
           <View className="mt-2 flex-row flex-wrap items-center gap-2">
@@ -144,19 +139,7 @@ function BookingListItem({
         </View>
       ) : null}
 
-      {actions.feedback ? (
-        <View className="mt-2">
-          <Text
-            className={
-              actions.feedback.type === "success"
-                ? "text-xs text-green-700"
-                : "text-xs text-red-700"
-            }
-          >
-            {actions.feedback.message}
-          </Text>
-        </View>
-      ) : null}
+      <BookingActionFeedbackBanner feedback={actions.feedback} />
 
       <BookingActionDialogs
         booking={booking}

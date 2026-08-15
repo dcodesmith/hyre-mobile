@@ -24,6 +24,13 @@ type RatesApiResponse = {
 };
 
 const toNumber = (value: unknown): number | undefined => {
+  if (
+    value === null ||
+    value === undefined ||
+    (typeof value === "string" && value.trim() === "")
+  ) {
+    return undefined;
+  }
   const n = typeof value === "number" ? value : Number(value);
   return Number.isFinite(n) ? n : undefined;
 };
@@ -53,9 +60,9 @@ function normalizeRatesResponse(payload: RatesApiResponse): RatesResponse {
   const latestSecurityRate = pickLatestActive(payload.addonRates);
 
   return {
-    vatRatePercent: toNumber(latestTaxRate?.ratePercent) ?? 0,
+    vatRatePercent: toNumber(latestTaxRate?.ratePercent),
     platformCustomerServiceFeeRatePercent:
-      toNumber(platformServiceFee?.ratePercent) ?? 0,
+      toNumber(platformServiceFee?.ratePercent),
     securityDetailRate: toNumber(latestSecurityRate?.rateAmount) ?? 0,
   };
 }

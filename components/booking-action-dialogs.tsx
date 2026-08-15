@@ -39,7 +39,12 @@ export function BookingActionDialogs({
 
 	return (
 		<>
-			<Dialog open={isModifyDialogOpen} onOpenChange={setModifyDialogOpen}>
+			<Dialog
+				open={isModifyDialogOpen}
+				onOpenChange={(open) => {
+					if (!isUpdatingBooking) setModifyDialogOpen(open);
+				}}
+			>
 				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>Modify Booking</DialogTitle>

@@ -21,8 +21,8 @@ export interface PlatformRates {
 
 /** Response shape for GET /api/rates */
 export interface RatesResponse {
-  vatRatePercent: number;
-  platformCustomerServiceFeeRatePercent: number;
+  vatRatePercent?: number;
+  platformCustomerServiceFeeRatePercent?: number;
   securityDetailRate: number;
 }
 
