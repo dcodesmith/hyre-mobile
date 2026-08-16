@@ -5,10 +5,13 @@ import {
 } from "@/constants/config";
 import { invalidateAuthSession } from "@/lib/auth-session-events";
 import { reportApiFailure } from "@/lib/telemetry";
+import { REQUEST_CANCELLED_CODE } from "@/lib/telemetry-policy";
 import {
   deleteSavedAuthTokenIfMatches,
   getSavedAuthToken,
 } from "@/storage/auth-token";
+
+export { REQUEST_CANCELLED_CODE } from "@/lib/telemetry-policy";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -29,9 +32,10 @@ export class ApiError extends Error {
   }
 }
 
-const withTimeout = async <T>(
+const withTimeout = <T>(
   promise: Promise<T>,
   timeout: number,
+  signal?: AbortSignal,
 ): Promise<T> => {
   if (!timeout) {
     return promise;
@@ -39,18 +43,33 @@ const withTimeout = async <T>(
 
   return new Promise<T>((resolve, reject) => {
     const timeoutId = setTimeout(() => {
+      cleanup();
       reject(new ApiError("Request timed out", { status: 408 }));
     }, timeout);
+    const cleanup = () => {
+      clearTimeout(timeoutId);
+      signal?.removeEventListener("abort", handleAbort);
+    };
+    const handleAbort = () => {
+      cleanup();
+      reject(signal?.reason);
+    };
 
-    promise
-      .then((value) => {
-        clearTimeout(timeoutId);
+    signal?.addEventListener("abort", handleAbort, { once: true });
+    if (signal?.aborted) {
+      handleAbort();
+    }
+
+    promise.then(
+      (value) => {
+        cleanup();
         resolve(value);
-      })
-      .catch((error) => {
-        clearTimeout(timeoutId);
+      },
+      (error) => {
+        cleanup();
         reject(error);
-      });
+      },
+    );
   });
 };
 
@@ -79,8 +98,69 @@ const extractErrorMessage = (payload: unknown, status: number): string => {
   return `Request failed with status ${status}`;
 };
 
-const parseResponseBody = async (response: Response) => {
-  const text = await response.text();
+const isAbortError = (error: unknown) =>
+  typeof error === "object" &&
+  error !== null &&
+  (error as { name?: unknown }).name === "AbortError";
+
+const createRequestCancelledError = (error: unknown) =>
+  new ApiError("Request cancelled", {
+    status: 0,
+    data: {
+      code: REQUEST_CANCELLED_CODE,
+      cause: error instanceof Error ? error.message : undefined,
+    },
+  });
+
+const isRequestCancelledError = (error: unknown): error is ApiError =>
+  error instanceof ApiError && error.code === REQUEST_CANCELLED_CODE;
+
+type RequestCancellation = {
+  signal: AbortSignal | undefined;
+  race<T>(promise: Promise<T>): Promise<T>;
+  dispose(): void;
+};
+
+const createRequestCancellation = (
+  signal: AbortSignal | undefined,
+): RequestCancellation => {
+  if (!signal) {
+    return {
+      signal: undefined,
+      race: <T>(promise: Promise<T>) => promise,
+      dispose: () => undefined,
+    };
+  }
+
+  const controller = new AbortController();
+  let rejectCancellation: (error: ApiError) => void = () => undefined;
+  const cancellationPromise = new Promise<never>((_, reject) => {
+    rejectCancellation = reject;
+  });
+  const cancel = () => {
+    const error = createRequestCancelledError(signal.reason);
+    rejectCancellation(error);
+    controller.abort(error);
+  };
+
+  signal.addEventListener("abort", cancel, { once: true });
+  if (signal.aborted) {
+    cancel();
+  }
+
+  return {
+    signal: controller.signal,
+    race: <T>(promise: Promise<T>) =>
+      Promise.race([promise, cancellationPromise]),
+    dispose: () => signal.removeEventListener("abort", cancel),
+  };
+};
+
+const parseResponseBody = async (
+  response: Response,
+  cancellation: RequestCancellation,
+) => {
+  const text = await cancellation.race(response.text());
 
   if (!text) {
     return undefined;
@@ -93,15 +173,57 @@ const parseResponseBody = async (response: Response) => {
   }
 };
 
-const isAbortError = (error: unknown) =>
-  typeof error === "object" &&
-  error !== null &&
-  (error as { name?: unknown }).name === "AbortError";
-
 const getNetworkErrorData = (error: unknown) => ({
   code: "NETWORK_ERROR",
   cause: error instanceof Error ? error.message : undefined,
 });
+
+type ApiRequestDetails = {
+  method: string;
+  path: string;
+};
+
+const getCancellationError = (error: unknown): ApiError | undefined => {
+  if (isRequestCancelledError(error)) return error;
+  if (isAbortError(error)) return createRequestCancelledError(error);
+  return undefined;
+};
+
+const getRequestError = (
+  error: unknown,
+  request: ApiRequestDetails,
+): ApiError => {
+  const cancellationError = getCancellationError(error);
+  if (cancellationError) return cancellationError;
+
+  if (error instanceof ApiError) {
+    reportApiFailure(error, request);
+    return error;
+  }
+
+  const networkError = new ApiError("Network request failed", {
+    status: 0,
+    data: getNetworkErrorData(error),
+  });
+  reportApiFailure(networkError, request);
+  return networkError;
+};
+
+const getResponseBodyError = (
+  error: unknown,
+  response: Response,
+  request: ApiRequestDetails,
+): ApiError => {
+  const cancellationError = getCancellationError(error);
+  if (cancellationError) return cancellationError;
+
+  const apiError = new ApiError("Failed to read response", {
+    status: response.ok ? 0 : response.status,
+    data: getNetworkErrorData(error),
+  });
+  reportApiFailure(apiError, request);
+  return apiError;
+};
 
 export const apiRequest = async <T>(
   path: string,
@@ -110,6 +232,7 @@ export const apiRequest = async <T>(
 ): Promise<T> => {
   const method = (init?.method ?? "GET").toUpperCase();
   const headers = new Headers(init?.headers);
+  const cancellation = createRequestCancellation(init?.signal ?? undefined);
   headers.set("Accept", "application/json");
   headers.set("X-Client-Type", "mobile");
   if (!headers.has("Origin")) {
@@ -119,58 +242,45 @@ export const apiRequest = async <T>(
     headers.set("Content-Type", "application/json");
   }
 
-  let response: Response;
   try {
-    response = await withTimeout(
-      fetch(buildUrl(path), {
-        ...init,
-        headers,
-      }),
-      timeout,
-    );
-  } catch (error) {
-    if (error instanceof ApiError) {
-      reportApiFailure(error, { method, path });
-      throw error;
+    let response: Response;
+    try {
+      response = await cancellation.race(
+        withTimeout(
+          fetch(buildUrl(path), {
+            ...init,
+            headers,
+            signal: cancellation.signal,
+          }),
+          timeout,
+          cancellation.signal,
+        ),
+      );
+    } catch (error) {
+      throw getRequestError(error, { method, path });
     }
-    if (isAbortError(error)) {
-      throw error;
+
+    let payload: unknown;
+    try {
+      payload = await parseResponseBody(response, cancellation);
+    } catch (error) {
+      throw getResponseBodyError(error, response, { method, path });
     }
 
-    const networkError = new ApiError("Network request failed", {
-      status: 0,
-      data: getNetworkErrorData(error),
-    });
-    reportApiFailure(networkError, { method, path });
-    throw networkError;
-  }
-
-  let payload: unknown;
-  try {
-    payload = await parseResponseBody(response);
-  } catch (error) {
-    if (isAbortError(error)) {
-      throw error;
+    if (!response.ok) {
+      const message = extractErrorMessage(payload, response.status);
+      const apiError = new ApiError(message, {
+        status: response.status,
+        data: payload,
+      });
+      reportApiFailure(apiError, { method, path });
+      throw apiError;
     }
-    const apiError = new ApiError("Failed to read response", {
-      status: response.ok ? 0 : response.status,
-      data: getNetworkErrorData(error),
-    });
-    reportApiFailure(apiError, { method, path });
-    throw apiError;
-  }
 
-  if (!response.ok) {
-    const message = extractErrorMessage(payload, response.status);
-    const apiError = new ApiError(message, {
-      status: response.status,
-      data: payload,
-    });
-    reportApiFailure(apiError, { method, path });
-    throw apiError;
+    return payload as T;
+  } finally {
+    cancellation.dispose();
   }
-
-  return payload as T;
 };
 
 export const getJson = async <T>(

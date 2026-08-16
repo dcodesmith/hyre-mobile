@@ -24,11 +24,14 @@ export type ResolvePlaceResponse = {
   };
 };
 
-export async function autocompletePlaces(params: {
-  input: string;
-  sessionToken?: string;
-  limit?: number;
-}): Promise<PlacesAutocompleteResponse> {
+export async function autocompletePlaces(
+  params: {
+    input: string;
+    sessionToken?: string;
+    limit?: number;
+  },
+  init?: RequestInit,
+): Promise<PlacesAutocompleteResponse> {
   const search = new URLSearchParams({
     input: params.input,
     ...(params.sessionToken ? { sessionToken: params.sessionToken } : {}),
@@ -38,6 +41,7 @@ export async function autocompletePlaces(params: {
   });
   return getJson<PlacesAutocompleteResponse>(
     `${PLACES_ENDPOINT}/autocomplete?${search.toString()}`,
+    init,
   );
 }
 

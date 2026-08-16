@@ -47,13 +47,17 @@ export function AddressAutocompleteInput({
   const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false);
   const [isResolvingSelection, setIsResolvingSelection] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  const [autocompleteQuery, setAutocompleteQuery] = useState<string | null>(null);
   const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autocompleteControllerRef = useRef<AbortController | null>(null);
+  const resolvedAddressRef = useRef<string | null>(null);
   const sessionTokenRef = useRef<string>(createSessionToken());
   const latestAutocompleteRequestRef = useRef(0);
   const suggestionsCacheRef = useRef<Map<string, PlaceSuggestion[]>>(new Map());
   const portalName = `address-autocomplete-${useId()}`;
 
-  const query = value.trim();
+  const query = autocompleteQuery?.trim() ?? "";
 
   const shouldOpenSuggestions =
     isFocused && suggestions.length > 0 && query.length >= MIN_QUERY_LENGTH;
@@ -66,13 +70,41 @@ export function AddressAutocompleteInput({
     setSuggestions([]);
   }, []);
 
+  const cancelAutocomplete = useCallback(() => {
+    latestAutocompleteRequestRef.current += 1;
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+      debounceTimeoutRef.current = null;
+    }
+    autocompleteControllerRef.current?.abort();
+    autocompleteControllerRef.current = null;
+    setIsFetchingSuggestions(false);
+  }, []);
+
   useEffect(() => {
     return () => {
       if (blurTimeoutRef.current) {
         clearTimeout(blurTimeoutRef.current);
       }
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+      autocompleteControllerRef.current?.abort();
     };
   }, []);
+
+  useEffect(() => {
+    if (
+      autocompleteQuery !== null &&
+      value !== autocompleteQuery &&
+      value !== resolvedAddressRef.current
+    ) {
+      cancelAutocomplete();
+      closeSuggestions();
+      setAutocompleteQuery(null);
+      resolvedAddressRef.current = null;
+    }
+  }, [autocompleteQuery, cancelAutocomplete, closeSuggestions, value]);
 
   useEffect(() => {
     if (!isFocused || query.length < MIN_QUERY_LENGTH || disabled) {
@@ -84,20 +116,27 @@ export function AddressAutocompleteInput({
     const normalizedQuery = query.toLowerCase();
     const cached = suggestionsCacheRef.current.get(normalizedQuery);
     if (cached) {
+      setIsFetchingSuggestions(false);
       setSuggestions(cached);
       return;
     }
 
     const requestId = latestAutocompleteRequestRef.current + 1;
     latestAutocompleteRequestRef.current = requestId;
-    const timer = setTimeout(async () => {
+    debounceTimeoutRef.current = setTimeout(async () => {
+      debounceTimeoutRef.current = null;
+      const controller = new AbortController();
+      autocompleteControllerRef.current = controller;
       try {
         setIsFetchingSuggestions(true);
-        const response = await autocompletePlaces({
-          input: query,
-          sessionToken: sessionTokenRef.current,
-          limit: 5,
-        });
+        const response = await autocompletePlaces(
+          {
+            input: query,
+            sessionToken: sessionTokenRef.current,
+            limit: 5,
+          },
+          { signal: controller.signal },
+        );
         if (latestAutocompleteRequestRef.current !== requestId) {
           return;
         }
@@ -110,13 +149,24 @@ export function AddressAutocompleteInput({
         closeSuggestions();
       } finally {
         if (latestAutocompleteRequestRef.current === requestId) {
+          autocompleteControllerRef.current = null;
           setIsFetchingSuggestions(false);
         }
       }
     }, DEBOUNCE_MS);
 
     return () => {
-      clearTimeout(timer);
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+        debounceTimeoutRef.current = null;
+      }
+      if (autocompleteControllerRef.current) {
+        autocompleteControllerRef.current.abort();
+        autocompleteControllerRef.current = null;
+      }
+      if (latestAutocompleteRequestRef.current === requestId) {
+        latestAutocompleteRequestRef.current += 1;
+      }
     };
   }, [isFocused, query, closeSuggestions, disabled]);
 
@@ -125,6 +175,8 @@ export function AddressAutocompleteInput({
       if (blurTimeoutRef.current) {
         clearTimeout(blurTimeoutRef.current);
       }
+      cancelAutocomplete();
+      setAutocompleteQuery(null);
       setIsResolvingSelection(true);
       try {
         const resolved = await resolvePlace({
@@ -132,9 +184,11 @@ export function AddressAutocompleteInput({
           sessionToken: sessionTokenRef.current,
         });
         const address = resolved.address ?? suggestion.description;
+        resolvedAddressRef.current = address;
         onChangeText(address);
         onAddressSelected?.(address);
       } catch {
+        resolvedAddressRef.current = suggestion.description;
         onChangeText(suggestion.description);
         onAddressSelected?.(suggestion.description);
       } finally {
@@ -144,7 +198,7 @@ export function AddressAutocompleteInput({
         sessionTokenRef.current = createSessionToken();
       }
     },
-    [closeSuggestions, onAddressSelected, onChangeText],
+    [cancelAutocomplete, closeSuggestions, onAddressSelected, onChangeText],
   );
 
   const isBusy = isFetchingSuggestions || isResolvingSelection;
@@ -173,6 +227,10 @@ export function AddressAutocompleteInput({
             if (blurTimeoutRef.current) {
               clearTimeout(blurTimeoutRef.current);
             }
+            resolvedAddressRef.current = null;
+            cancelAutocomplete();
+            closeSuggestions();
+            setAutocompleteQuery(next);
             setIsFocused(true);
             onChangeText(next);
           }}
@@ -185,6 +243,7 @@ export function AddressAutocompleteInput({
           }}
           onBlur={() => {
             blurTimeoutRef.current = setTimeout(() => {
+              cancelAutocomplete();
               setIsFocused(false);
               closeSuggestions();
             }, 200);
