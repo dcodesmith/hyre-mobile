@@ -229,6 +229,7 @@ export function AddressAutocompleteInput({
             }
             resolvedAddressRef.current = null;
             cancelAutocomplete();
+            closeSuggestions();
             setAutocompleteQuery(next);
             setIsFocused(true);
             onChangeText(next);

@@ -5,6 +5,8 @@ export type TelemetryErrorDetails = {
   code?: string;
 };
 
+export const REQUEST_CANCELLED_CODE = "REQUEST_CANCELLED";
+
 type ApiErrorLike = {
   name: "ApiError";
   status: number;
@@ -39,7 +41,7 @@ export function getTelemetryErrorDetails(
     return {
       kind: "api",
       shouldReport:
-        code !== "REQUEST_CANCELLED" &&
+        code !== REQUEST_CANCELLED_CODE &&
         (error.status === 0 || error.status === 408 || error.status >= 500),
       status: error.status,
       code,
