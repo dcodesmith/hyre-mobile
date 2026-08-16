@@ -35,6 +35,7 @@ export class ApiError extends Error {
 const withTimeout = <T>(
   promise: Promise<T>,
   timeout: number,
+  signal?: AbortSignal,
 ): Promise<T> => {
   if (!timeout) {
     return promise;
@@ -42,18 +43,33 @@ const withTimeout = <T>(
 
   return new Promise<T>((resolve, reject) => {
     const timeoutId = setTimeout(() => {
+      cleanup();
       reject(new ApiError("Request timed out", { status: 408 }));
     }, timeout);
+    const cleanup = () => {
+      clearTimeout(timeoutId);
+      signal?.removeEventListener("abort", handleAbort);
+    };
+    const handleAbort = () => {
+      cleanup();
+      reject(signal?.reason);
+    };
 
-    promise
-      .then((value) => {
-        clearTimeout(timeoutId);
+    signal?.addEventListener("abort", handleAbort, { once: true });
+    if (signal?.aborted) {
+      handleAbort();
+    }
+
+    promise.then(
+      (value) => {
+        cleanup();
         resolve(value);
-      })
-      .catch((error) => {
-        clearTimeout(timeoutId);
+      },
+      (error) => {
+        cleanup();
         reject(error);
-      });
+      },
+    );
   });
 };
 
@@ -237,6 +253,7 @@ export const apiRequest = async <T>(
             signal: cancellation.signal,
           }),
           timeout,
+          cancellation.signal,
         ),
       );
     } catch (error) {
