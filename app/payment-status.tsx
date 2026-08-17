@@ -5,15 +5,18 @@ import { Text, View } from "react-native";
 import { PaymentStatusMessage } from "@/components/payment-status-message";
 import { useAuth } from "@/hooks/use-auth";
 import { formatCurrency } from "@/lib/currency";
+import { buildExpiredBookingSearchDestination } from "@/lib/payment-expiry-navigation";
 import { getPaymentStatusPollingInterval } from "@/lib/payment-status-polling";
 import {
   reportHandledException,
   reportUnexpectedState,
 } from "@/lib/telemetry";
 import {
+  type BookingPaymentStatusResponse,
   confirmBookingPayment,
   fetchBookingPaymentStatus,
   getBookingPaymentErrorMessage,
+  reconcileBookingExpiration,
 } from "@/services/booking-payment";
 import {
   deletePaymentStatusToken,
@@ -27,12 +30,6 @@ const TERMINAL_PAYMENT_MESSAGES = {
     message:
       "The payment could not be completed. If you were charged, contact support with reference",
     tone: "red",
-  },
-  EXPIRED: {
-    title: "Payment Session Expired",
-    message:
-      "The booking reservation expired before payment was confirmed. If you were charged, contact support with reference",
-    tone: "orange",
   },
 } as const;
 
@@ -100,17 +97,24 @@ export default function PaymentStatusScreen() {
   const queryClient = useQueryClient();
   const { isAuthenticated, isHydrating } = useAuth();
   const confirmationAttemptedFor = useRef<string | null>(null);
+  const expirationReconciliationAttemptedFor = useRef<string | null>(null);
   const [pollingBudgetExpired, setPollingBudgetExpired] = useState(false);
   const pollingStartedAt = useRef<number | null>(null);
   const params = useLocalSearchParams<{
     tx_ref?: string;
     transaction_id?: string;
     bookingId?: string;
+    bookingType?: string;
+    from?: string;
+    to?: string;
+    pickupTime?: string;
+    flightNumber?: string;
   }>();
 
   const txRef = readParam(params.tx_ref);
   const bookingId = readParam(params.bookingId);
   const transactionId = readParam(params.transaction_id);
+  const searchDestination = buildExpiredBookingSearchDestination(params);
   const { paymentStatusToken, isTokenHydrating } =
     useStoredPaymentStatusToken(bookingId, isAuthenticated);
   const callbackConfirmationKey =
@@ -145,14 +149,36 @@ export default function PaymentStatusScreen() {
           isAuthenticated: hasAuthenticatedAccess,
           paymentStatusToken: paymentStatusToken ?? undefined,
         };
+        let status: BookingPaymentStatusResponse;
         if (transactionId && shouldConfirm) {
           confirmationAttemptedFor.current = callbackConfirmationKey;
-          return await confirmBookingPayment(
-            { ...request, transactionId },
+          status = await confirmBookingPayment(
+            {
+              ...request,
+              transactionId,
+            },
             { signal },
           );
+        } else {
+          status = await fetchBookingPaymentStatus(request, { signal });
         }
-        return await fetchBookingPaymentStatus(request, { signal });
+
+        if (
+          status.lifecycleState === "VERIFYING" &&
+          expirationReconciliationAttemptedFor.current !== status.bookingId
+        ) {
+          expirationReconciliationAttemptedFor.current = status.bookingId;
+          try {
+            return await reconcileBookingExpiration(request, { signal });
+          } catch (error) {
+            reportHandledException(error, {
+              area: "payment",
+              operation: "reconcile_expiration",
+            });
+          }
+        }
+
+        return status;
       } catch (error) {
         reportHandledException(error, {
           area: "payment",
@@ -173,6 +199,7 @@ export default function PaymentStatusScreen() {
   useEffect(() => {
     if (!bookingId || !txRef) return;
     confirmationAttemptedFor.current = null;
+    expirationReconciliationAttemptedFor.current = null;
     pollingStartedAt.current = null;
     setPollingBudgetExpired(false);
   }, [bookingId, txRef]);
@@ -210,7 +237,8 @@ export default function PaymentStatusScreen() {
   useEffect(() => {
     if (
       lifecycleState === undefined ||
-      lifecycleState === "PENDING"
+      lifecycleState === "PENDING" ||
+      lifecycleState === "VERIFYING"
     ) {
       return;
     }
@@ -264,8 +292,19 @@ export default function PaymentStatusScreen() {
     router,
   ]);
 
+  useEffect(() => {
+    if (lifecycleState !== "EXPIRED") return;
+
+    const timeout = setTimeout(() => {
+      router.replace(searchDestination as never);
+    }, 1500);
+
+    return () => clearTimeout(timeout);
+  }, [lifecycleState, router, searchDestination]);
+
   const retryVerification = () => {
     confirmationAttemptedFor.current = null;
+    expirationReconciliationAttemptedFor.current = null;
     pollingStartedAt.current = Date.now();
     setPollingBudgetExpired(false);
     void paymentStatusQuery.refetch();
@@ -340,6 +379,20 @@ export default function PaymentStatusScreen() {
     );
   }
 
+  if (lifecycleState === "EXPIRED") {
+    return (
+      <PaymentStatusMessage
+        title="Reservation Released"
+        message="Your payment wasn’t completed, so the reservation was released. Returning you to search..."
+        tone="orange"
+        primaryAction={{
+          label: "Back to Search",
+          onPress: () => router.replace(searchDestination as never),
+        }}
+      />
+    );
+  }
+
   if (terminalMessage) {
     return (
       <PaymentStatusMessage
@@ -379,6 +432,17 @@ export default function PaymentStatusScreen() {
         message={getBookingPaymentErrorMessage(paymentStatusQuery.error)}
         tone="red"
         primaryAction={{ label: "Retry", onPress: retryVerification }}
+      />
+    );
+  }
+
+  if (lifecycleState === "VERIFYING") {
+    return (
+      <PaymentStatusMessage
+        title="Payment Verification in Progress"
+        message={`We’re checking the final payment status. Your payment has not been marked as failed. Reference: ${txRef}`}
+        tone="blue"
+        loading
       />
     );
   }

@@ -1,19 +1,15 @@
+import { useQueryClient } from "@tanstack/react-query";
+import dayjs from "dayjs";
 import { randomUUID } from "expo-crypto";
 import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import {
   type BookingCheckoutAttempt,
   getBookingCheckoutAttempt,
 } from "@/lib/booking-checkout-attempt";
 import type { BookingPricingPreviewResponse } from "@/lib/booking-pricing-preview-types";
-import {
-  recordBookingCheckoutStep,
-  reportHandledException,
-  reportUnexpectedState,
-} from "@/lib/telemetry";
 import {
   AIRPORT_PICKUP_BOOKING_TYPE,
   DAY_BOOKING_TYPE,
@@ -21,6 +17,15 @@ import {
   NIGHT_PICKUP_TIME,
 } from "@/lib/booking-types";
 import { normalizeBookingTimeWindow } from "@/lib/booking-utils";
+import {
+  type PaymentSearchParams,
+  shouldReconcileAfterBrowserClose,
+} from "@/lib/payment-expiry-navigation";
+import {
+  recordBookingCheckoutStep,
+  reportHandledException,
+  reportUnexpectedState,
+} from "@/lib/telemetry";
 import {
   type BookingCheckoutDetailsValues,
   bookingCheckoutDetailsSchema,
@@ -243,10 +248,15 @@ export function useBookingCheckout(
   } = args;
 
   const navigateToPaymentStatus = useCallback(
-    (checkout: CreateBookingCheckoutResponse, callback: PaymentCallback) => {
+    (
+      checkout: CreateBookingCheckoutResponse,
+      callback: PaymentCallback,
+      searchParams: PaymentSearchParams,
+    ) => {
       router.push({
         pathname: "/payment-status" as never,
         params: {
+          ...searchParams,
           tx_ref: callback.txRef,
           transactionType: "booking_creation",
           bookingId: checkout.bookingId,
@@ -297,6 +307,15 @@ export function useBookingCheckout(
         expectedTotalAmount: authoritativeTotal.toFixed(2),
         guest: guestPayload,
       });
+      const searchParams: PaymentSearchParams = {
+        bookingType: booking.bookingType,
+        from: dayjs(booking.from).format("YYYY-MM-DD"),
+        to: dayjs(booking.to).format("YYYY-MM-DD"),
+        pickupTime: payload.pickupTime,
+        ...(booking.flightNumber
+          ? { flightNumber: booking.flightNumber }
+          : {}),
+      };
 
       const attempt = getBookingCheckoutAttempt(
         checkoutAttempt.current,
@@ -363,6 +382,23 @@ export function useBookingCheckout(
       if (!isMounted.current) return;
       if (browserResult.type !== "success" || !browserResult.url) {
         if (
+          shouldReconcileAfterBrowserClose(
+            browserResult.type,
+            checkout.reservationExpiresAt,
+          )
+        ) {
+          navigateToPaymentStatus(
+            checkout,
+            {
+              txRef: checkout.txRef,
+              status: "expired",
+              transactionId: null,
+            },
+            searchParams,
+          );
+          return;
+        }
+        if (
           browserResult.type !== "cancel" &&
           browserResult.type !== "dismiss"
         ) {
@@ -387,7 +423,7 @@ export function useBookingCheckout(
         return;
       }
 
-      navigateToPaymentStatus(checkout, callback);
+      navigateToPaymentStatus(checkout, callback, searchParams);
     } catch (error) {
       reportHandledException(error, {
         area: "booking_checkout",
