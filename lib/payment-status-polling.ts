@@ -6,6 +6,12 @@ export function getPaymentStatusPollingInterval(
   data: { lifecycleState: BookingPaymentLifecycleState } | undefined,
   error: Error | null,
 ): number | false {
-  if (error || data?.lifecycleState !== "PENDING") return false;
+  if (
+    error ||
+    (data?.lifecycleState !== "PENDING" &&
+      data?.lifecycleState !== "VERIFYING")
+  ) {
+    return false;
+  }
   return POLLING_INTERVAL_MS;
 }

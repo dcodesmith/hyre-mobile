@@ -32,6 +32,7 @@ export type CreateBookingCheckoutPayload = {
 
 export type CreateBookingCheckoutResponse = {
   bookingId: string;
+  txRef: string;
   checkoutUrl: string;
   totalAmount: number;
   currency: "NGN";
@@ -42,6 +43,7 @@ export type CreateBookingCheckoutResponse = {
 
 export type BookingPaymentLifecycleState =
   | "PENDING"
+  | "VERIFYING"
   | "CONFIRMED"
   | "FAILED"
   | "EXPIRED";
@@ -179,6 +181,30 @@ export async function confirmBookingPayment(
   }
   const body = { txRef, bookingId, transactionId };
   const path = "/api/payments/booking-confirmation";
+
+  return isAuthenticated
+    ? postJsonWithAuth<BookingPaymentStatusResponse, typeof body>(
+        path,
+        body,
+        init,
+      )
+    : postJson<BookingPaymentStatusResponse, typeof body>(
+        path,
+        body,
+        withPaymentStatusToken(init, paymentStatusToken),
+      );
+}
+
+export async function reconcileBookingExpiration(
+  request: BookingPaymentStatusRequest,
+  init?: RequestInit,
+): Promise<BookingPaymentStatusResponse> {
+  const { txRef, bookingId, isAuthenticated, paymentStatusToken } = request;
+  if (!isAuthenticated && !paymentStatusToken) {
+    throw new Error("Payment status token is required.");
+  }
+  const body = { bookingId, txRef };
+  const path = "/api/payments/booking-expiration";
 
   return isAuthenticated
     ? postJsonWithAuth<BookingPaymentStatusResponse, typeof body>(
