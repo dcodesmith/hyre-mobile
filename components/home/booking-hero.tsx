@@ -127,16 +127,29 @@ function LoadingVehicleSectionSkeleton() {
 }
 
 function BookingHero() {
-  const { data, isLoading, error, refetch, isRefetching } = useCarCategories();
+  const { data, isPending, refetch, isRefetching } = useCarCategories();
   let carouselContent: ReactNode;
-  if (isLoading) {
+  if (data) {
+    carouselContent = (
+      <View className="gap-6">
+        {data.categories.map((category) => (
+          <VehicleCarouselSection
+            key={category.name}
+            title={category.title}
+            searchQuery={buildCategorySearchQuery(category)}
+            vehicles={category.cars.map(toVehicleItem)}
+          />
+        ))}
+      </View>
+    );
+  } else if (isPending) {
     carouselContent = (
       <View className="gap-6 py-2">
         <LoadingVehicleSectionSkeleton />
         <LoadingVehicleSectionSkeleton />
       </View>
     );
-  } else if (error) {
+  } else {
     carouselContent = (
       <View className="items-center justify-center gap-3 py-12">
         <Text className="text-sm text-red-500">Failed to load vehicles</Text>
@@ -149,19 +162,6 @@ function BookingHero() {
             {isRefetching ? "Retrying..." : "Try again"}
           </Text>
         </Pressable>
-      </View>
-    );
-  } else {
-    carouselContent = (
-      <View className="gap-6">
-        {data?.categories.map((category) => (
-          <VehicleCarouselSection
-            key={category.name}
-            title={category.title}
-            searchQuery={buildCategorySearchQuery(category)}
-            vehicles={category.cars.map(toVehicleItem)}
-          />
-        ))}
       </View>
     );
   }
