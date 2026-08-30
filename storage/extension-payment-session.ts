@@ -5,6 +5,7 @@ const STORE_KEY = "extension-payment-session";
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 
 export type ExtensionPaymentSession = {
+  userId: string;
   bookingId: string;
   extensionId: string;
   txRef: string;
@@ -51,6 +52,7 @@ const parseSession = (value: string | null) => {
   try {
     const session = JSON.parse(value) as Partial<StoredExtensionPaymentSession>;
     if (
+      typeof session.userId !== "string" ||
       typeof session.bookingId !== "string" ||
       typeof session.extensionId !== "string" ||
       typeof session.txRef !== "string" ||
@@ -99,3 +101,5 @@ export const deleteExtensionPaymentSession = (txRef: string) =>
     const session = parseSession(await readRaw());
     if (session?.txRef === txRef) await removeRaw();
   });
+
+export const clearExtensionPaymentSession = () => enqueue(removeRaw);

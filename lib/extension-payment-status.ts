@@ -12,8 +12,10 @@ export function getExtensionPaymentLifecycleState(
   ) {
     return "CONFIRMED";
   }
-  if (payment.status === "SUCCESSFUL") return "FAILED";
-  if (payment.extension.status === "CANCELLED") return "EXPIRED";
+  if (payment.extension.status === "CANCELLED") {
+    return payment.status === "SUCCESSFUL" ? "FAILED" : "EXPIRED";
+  }
+  if (payment.status === "SUCCESSFUL") return "VERIFYING";
   if (payment.status === "PENDING") return "PENDING";
   return "FAILED";
 }
