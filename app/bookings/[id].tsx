@@ -12,6 +12,7 @@ import {
   FULL_DAY_BOOKING_TYPE,
   NIGHT_BOOKING_TYPE,
 } from "@/lib/booking-types";
+import { createBookingPaymentSummary } from "@/lib/booking-payment-summary";
 import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import type { BookingDetail } from "@/services/bookings";
@@ -21,6 +22,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import {
   Calendar,
+  CalendarClock,
   ChevronLeft,
   CreditCard,
   MapPin,
@@ -50,11 +52,6 @@ const formatDateOnly = (value: string | null | undefined) => {
 const formatTimeOnly = (value: string | null | undefined) => {
   if (!value) return "TBD";
   return format(toLagosTime(value), "h:mm a");
-};
-
-const toNumber = (value: number | string | null | undefined) => {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : 0;
 };
 
 const statusPillClass = (status: string) => {
@@ -261,8 +258,11 @@ function BookingTimelineLegItem({
     now >= legStart &&
     now < legEnd;
   const status = getLegStatus(bookingStatus, legStart, legEnd);
-  const extendedHours = (leg.extensions ?? []).reduce(
-    (acc, ext) => acc + (ext.extendedDurationHours ?? 0),
+  const extendedHours = leg.extensions.reduce(
+    (total, extension) =>
+      extension.status === "ACTIVE" && extension.paymentStatus === "PAID"
+        ? total + extension.extendedDurationHours
+        : total,
     0,
   );
   const isExtendedDayBooking =
@@ -327,19 +327,21 @@ function BookingTimelineLegItem({
 }
 
 function PaymentSummaryCard({ booking }: Readonly<{ booking: BookingDetail }>) {
-  const netTotal = toNumber(booking.netTotal);
-  const securityDetailCost = toNumber(booking.securityDetailCost);
-  const fuelUpgradeCost = toNumber(booking.fuelUpgradeCost);
-  const referralDiscountAmount = toNumber(booking.referralDiscountAmount);
-  const referralCreditsUsed = toNumber(booking.referralCreditsUsed);
-  const referralCreditsReserved = toNumber(booking.referralCreditsReserved);
-  const platformFee = toNumber(booking.platformCustomerServiceFeeAmount);
-  const platformFeeRate = toNumber(
-    booking.platformCustomerServiceFeeRatePercent,
-  );
-  const vatAmount = toNumber(booking.vatAmount);
-  const vatRate = toNumber(booking.vatRatePercent);
-  const totalAmount = toNumber(booking.totalAmount);
+  const {
+    netTotal,
+    extensionNetTotal,
+    extendedHours,
+    securityDetailCost,
+    fuelUpgradeCost,
+    referralDiscountAmount,
+    referralCreditsUsed,
+    referralCreditsReserved,
+    platformFee,
+    platformFeeRate,
+    vatAmount,
+    vatRate,
+    totalAmount,
+  } = createBookingPaymentSummary(booking);
 
   return (
     <Card className="rounded-xl py-4">
@@ -360,6 +362,18 @@ function PaymentSummaryCard({ booking }: Readonly<{ booking: BookingDetail }>) {
               {formatCurrency(netTotal)}
             </Text>
           </View>
+
+          {extensionNetTotal > 0 ? (
+            <View className="flex-row items-center justify-between">
+              <Text className="text-sm text-slate-600">
+                Extension ({extendedHours}{" "}
+                {extendedHours === 1 ? "hour" : "hours"})
+              </Text>
+              <Text className="text-sm font-medium text-slate-950">
+                {formatCurrency(extensionNetTotal)}
+              </Text>
+            </View>
+          ) : null}
 
           {securityDetailCost > 0 ? (
             <View className="flex-row items-center justify-between">
@@ -756,6 +770,23 @@ export default function BookingDetailScreen() {
             ) : null}
 
             <PaymentSummaryCard booking={booking} />
+
+            {booking.legs.some((leg) => leg.canExtend) ? (
+              <Card className="rounded-xl py-4">
+                <CardContent className="px-4">
+                  <Button
+                    onPress={() =>
+                      router.push(`/bookings/${booking.id}/extend` as never)
+                    }
+                  >
+                    <CalendarClock size={16} color="#FFFFFF" />
+                    <Text className="text-sm font-semibold text-white">
+                      Extend Trip
+                    </Text>
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : null}
 
             {canEdit || canCancel ? (
               <Card className="rounded-xl py-4">

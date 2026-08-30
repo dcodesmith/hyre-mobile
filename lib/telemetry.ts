@@ -11,6 +11,7 @@ export type TelemetryArea =
   | "api"
   | "auth"
   | "booking_checkout"
+  | "booking_extension"
   | "booking_pricing"
   | "payment"
   | "route";

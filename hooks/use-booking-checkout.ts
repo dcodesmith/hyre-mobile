@@ -22,6 +22,10 @@ import {
   shouldReconcileAfterBrowserClose,
 } from "@/lib/payment-expiry-navigation";
 import {
+  type PaymentCallback,
+  parsePaymentCallback,
+} from "@/lib/payment-callback";
+import {
   recordBookingCheckoutStep,
   reportHandledException,
   reportUnexpectedState,
@@ -118,27 +122,6 @@ function buildCheckoutPayload(
   }
 
   return payload;
-}
-
-type PaymentCallback = {
-  txRef: string;
-  status: string | null;
-  transactionId: string | null;
-};
-
-function parsePaymentCallback(url: string): PaymentCallback | null {
-  const parsed = new URL(url);
-  const txRef = parsed.searchParams.get("tx_ref");
-
-  if (!txRef) {
-    return null;
-  }
-
-  return {
-    txRef,
-    status: parsed.searchParams.get("status"),
-    transactionId: parsed.searchParams.get("transaction_id"),
-  };
 }
 
 function getBrowserFailureMessage(type: string): string {
