@@ -34,6 +34,7 @@ import {
   getSavedAuthToken,
   saveAuthToken,
 } from "@/storage/auth-token";
+import { clearExtensionPaymentSession } from "@/storage/extension-payment-session";
 import { deleteAllPaymentStatusTokens } from "@/storage/payment-status-token";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
@@ -242,7 +243,10 @@ export function useAuthModalController() {
       }
 
       clearInMemoryAuthSession();
-      await deleteAllPaymentStatusTokens();
+      await Promise.all([
+        deleteAllPaymentStatusTokens(),
+        clearExtensionPaymentSession(),
+      ]);
       if (activeToken) {
         router.replace("/");
       }
@@ -365,7 +369,10 @@ export function useAuthModalController() {
   const completeLogin = useCallback(
     async (token: string, profile: UserProfile) => {
       setEnablePushRegistrationLogs(true);
-      await deleteAllPaymentStatusTokens();
+      await Promise.all([
+        deleteAllPaymentStatusTokens(),
+        clearExtensionPaymentSession(),
+      ]);
       await saveAuthToken(token);
       setAuthToken(token);
       setUser(profile);
@@ -480,6 +487,7 @@ export function useAuthModalController() {
         await Promise.all([
           deleteSavedAuthToken(),
           deleteAllPaymentStatusTokens(),
+          clearExtensionPaymentSession(),
         ]);
       } catch (error) {
         reportHandledException(error, {

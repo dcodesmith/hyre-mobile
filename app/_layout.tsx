@@ -241,7 +241,15 @@ function RootLayout() {
                   options={{ headerShown: false, title: "Booking Details" }}
                 />
                 <Stack.Screen
+                  name="bookings/[id]/extend"
+                  options={{ headerShown: false, title: "Extend Trip" }}
+                />
+                <Stack.Screen
                   name="payment-status"
+                  options={{ headerShown: false, title: "Payment Status" }}
+                />
+                <Stack.Screen
+                  name="extension-payment-status"
                   options={{ headerShown: false, title: "Payment Status" }}
                 />
                 <Stack.Screen

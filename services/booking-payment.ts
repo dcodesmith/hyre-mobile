@@ -60,6 +60,18 @@ export type BookingPaymentStatusResponse = {
   lifecycleState: BookingPaymentLifecycleState;
 };
 
+export type ExtensionPaymentStatusResponse = {
+  txRef: string;
+  status: string;
+  amountExpected: number;
+  amountCharged: number | null;
+  confirmedAt: string | null;
+  extension: {
+    id: string;
+    status: string;
+  };
+};
+
 type BookingPaymentStatusRequest = {
   txRef: string;
   bookingId: string;
@@ -68,6 +80,12 @@ type BookingPaymentStatusRequest = {
 };
 
 type ConfirmBookingPaymentRequest = BookingPaymentStatusRequest & {
+  transactionId: string;
+};
+
+type ConfirmExtensionPaymentRequest = {
+  extensionId: string;
+  txRef: string;
   transactionId: string;
 };
 
@@ -193,6 +211,26 @@ export async function confirmBookingPayment(
         body,
         withPaymentStatusToken(init, paymentStatusToken),
       );
+}
+
+export async function fetchExtensionPaymentStatus(
+  txRef: string,
+  init?: RequestInit,
+): Promise<ExtensionPaymentStatusResponse> {
+  return getJsonWithAuth<ExtensionPaymentStatusResponse>(
+    `/api/payments/status/${encodeURIComponent(txRef)}`,
+    init,
+  );
+}
+
+export async function confirmExtensionPayment(
+  request: ConfirmExtensionPaymentRequest,
+  init?: RequestInit,
+): Promise<ExtensionPaymentStatusResponse> {
+  return postJsonWithAuth<
+    ExtensionPaymentStatusResponse,
+    ConfirmExtensionPaymentRequest
+  >("/api/payments/extension-confirmation", request, init);
 }
 
 export async function reconcileBookingExpiration(

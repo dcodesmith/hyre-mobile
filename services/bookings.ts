@@ -1,4 +1,9 @@
-import { ApiError, getJsonWithAuth, patchJsonWithAuth } from "@/lib/api-client";
+import {
+  ApiError,
+  getJsonWithAuth,
+  patchJsonWithAuth,
+  postJsonWithAuth,
+} from "@/lib/api-client";
 import type { BookingType } from "@/lib/booking-types";
 
 const BOOKINGS_ENDPOINT = "/api/bookings";
@@ -52,7 +57,15 @@ export type BookingLeg = {
   legStartTime: string;
   legEndTime: string;
   totalDailyPrice?: number;
-  extensions?: Array<{ id: string; extendedDurationHours?: number | null }>;
+  extensions: Array<{
+    id: string;
+    status: string;
+    paymentStatus: string;
+    extendedDurationHours: number;
+    netTotal?: number | null;
+  }>;
+  canExtend: boolean;
+  maxExtendableHours: number;
 };
 
 export type BookingDetail = BookingSummary & {
@@ -93,6 +106,18 @@ export type UpdateBookingPayload = {
   dropOffAddress?: string;
 };
 
+export type CreateBookingExtensionPayload = {
+  bookingLegId: string;
+  hours: number;
+  callbackUrl: string;
+};
+
+export type CreateBookingExtensionResponse = {
+  extensionId: string;
+  paymentIntentId: string;
+  checkoutUrl: string;
+};
+
 type CancelBookingPayload = {
   reason?: string;
 };
@@ -130,6 +155,21 @@ export async function cancelBooking(
   return patchJsonWithAuth<BookingDetail, CancelBookingPayload>(
     `${BOOKINGS_ENDPOINT}/${encodeURIComponent(bookingId)}/cancel`,
     { reason },
+  );
+}
+
+export async function createBookingExtension(
+  bookingId: string,
+  payload: CreateBookingExtensionPayload,
+  idempotencyKey: string,
+): Promise<CreateBookingExtensionResponse> {
+  return postJsonWithAuth<
+    CreateBookingExtensionResponse,
+    CreateBookingExtensionPayload
+  >(
+    `${BOOKINGS_ENDPOINT}/${encodeURIComponent(bookingId)}/extensions`,
+    payload,
+    { headers: { "Idempotency-Key": idempotencyKey } },
   );
 }
 
