@@ -1,7 +1,5 @@
 import * as SecureStore from "expo-secure-store";
 
-import { isExpoNative } from "@/lib/expo-platform";
-
 const GUEST_BOOKING_SESSION_KEY = "guest-booking-session";
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
@@ -15,15 +13,6 @@ export type GuestBookingSessionResult =
   | { status: "valid"; session: GuestBookingSession }
   | { status: "expired" }
   | { status: "missing" };
-
-const getBrowserStorage = () => {
-  if (typeof window === "undefined") return null;
-  try {
-    return window.sessionStorage;
-  } catch {
-    return null;
-  }
-};
 
 let sessionOperationQueue = Promise.resolve();
 
@@ -54,9 +43,7 @@ const isGuestBookingSession = (
 };
 
 const readSession = async () => {
-  const raw = isExpoNative
-    ? await SecureStore.getItemAsync(GUEST_BOOKING_SESSION_KEY)
-    : (getBrowserStorage()?.getItem(GUEST_BOOKING_SESSION_KEY) ?? null);
+  const raw = await SecureStore.getItemAsync(GUEST_BOOKING_SESSION_KEY);
   if (!raw) return null;
 
   try {
@@ -71,24 +58,14 @@ const readSession = async () => {
 };
 
 const writeSession = async (session: GuestBookingSession) => {
-  const value = JSON.stringify(session);
-  if (isExpoNative) {
-    await SecureStore.setItemAsync(GUEST_BOOKING_SESSION_KEY, value);
-    return;
-  }
-
-  const storage = getBrowserStorage();
-  if (!storage) throw new Error("Guest booking storage is unavailable.");
-  storage.setItem(GUEST_BOOKING_SESSION_KEY, value);
+  await SecureStore.setItemAsync(
+    GUEST_BOOKING_SESSION_KEY,
+    JSON.stringify(session),
+  );
 };
 
-const removeSession = async () => {
-  if (isExpoNative) {
-    await SecureStore.deleteItemAsync(GUEST_BOOKING_SESSION_KEY);
-    return;
-  }
-  getBrowserStorage()?.removeItem(GUEST_BOOKING_SESSION_KEY);
-};
+const removeSession = () =>
+  SecureStore.deleteItemAsync(GUEST_BOOKING_SESSION_KEY);
 
 export const saveGuestBookingSession = (session: GuestBookingSession) =>
   enqueueSessionOperation(async () => {
