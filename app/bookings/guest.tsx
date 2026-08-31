@@ -6,6 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Text } from "@/components/ui/text";
 import { guestBookingAsDetail } from "@/lib/guest-booking";
+import { reportHandledException } from "@/lib/telemetry";
 import {
   fetchGuestBooking,
   isInvalidGuestBookingAccessError,
@@ -61,6 +62,10 @@ export default function GuestBookingExchangeScreen() {
         );
         if (isActive) router.replace(`/bookings/${booking.bookingId}`);
       } catch (error) {
+        reportHandledException(error, {
+          area: "guest_booking",
+          operation: "exchange_access",
+        });
         if (!isActive) return;
         const status = isInvalidGuestBookingAccessError(error)
           ? "invalid-link"

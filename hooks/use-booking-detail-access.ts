@@ -6,6 +6,7 @@ import {
   guestBookingAsDetail,
   resolveBookingDetailAccess,
 } from "@/lib/guest-booking";
+import { reportHandledException } from "@/lib/telemetry";
 import {
   fetchGuestBooking,
   isInvalidGuestBookingAccessError,
@@ -16,12 +17,29 @@ import {
   type GuestBookingSessionResult,
 } from "@/storage/guest-booking-session";
 
+type GuestSessionState =
+  | GuestBookingSessionResult
+  | { status: "error" }
+  | { status: "loading" };
+
 type LoadedGuestSession = {
   bookingId: string;
   loadAttempt: number;
-  result:
-    | GuestBookingSessionResult
-    | { status: "error"; error: unknown };
+  result: Exclude<GuestSessionState, { status: "loading" }>;
+};
+
+const deleteGuestSessionSafely = async (
+  bookingId: string,
+  token: string,
+) => {
+  try {
+    await deleteGuestBookingSession(bookingId, token);
+  } catch (error) {
+    reportHandledException(error, {
+      area: "guest_booking",
+      operation: "delete_session",
+    });
+  }
 };
 
 export function useBookingDetailAccess({
@@ -54,11 +72,15 @@ export function useBookingDetailAccess({
           });
         }
       } catch (error) {
+        reportHandledException(error, {
+          area: "guest_booking",
+          operation: "load_session",
+        });
         if (!isCancelled) {
           setLoadedGuestSession({
             bookingId,
             loadAttempt: guestSessionLoadAttempt,
-            result: { status: "error", error },
+            result: { status: "error" },
           });
         }
       }
@@ -71,10 +93,7 @@ export function useBookingDetailAccess({
     };
   }, [bookingId, guestSessionLoadAttempt, shouldLoadGuestSession]);
 
-  const guestSessionResult:
-    | GuestBookingSessionResult
-    | { status: "error"; error: unknown }
-    | { status: "loading" } =
+  const guestSessionResult: GuestSessionState =
     !shouldLoadGuestSession || !bookingId
       ? { status: "missing" }
       : loadedGuestSession?.bookingId === bookingId &&
@@ -99,7 +118,7 @@ export function useBookingDetailAccess({
         loadAttempt: guestSessionLoadAttempt,
         result: { status: "expired" },
       });
-      void deleteGuestBookingSession(bookingId, token);
+      void deleteGuestSessionSafely(bookingId, token);
       return;
     }
 
@@ -109,7 +128,7 @@ export function useBookingDetailAccess({
         loadAttempt: guestSessionLoadAttempt,
         result: { status: "expired" },
       });
-      void deleteGuestBookingSession(bookingId, token);
+      void deleteGuestSessionSafely(bookingId, token);
     }, delay);
     return () => clearTimeout(timeout);
   }, [bookingId, guestSessionLoadAttempt, guestSessionResult]);
@@ -137,7 +156,7 @@ export function useBookingDetailAccess({
           guestToken &&
           isInvalidGuestBookingAccessError(error)
         ) {
-          await deleteGuestBookingSession(bookingId, guestToken);
+          await deleteGuestSessionSafely(bookingId, guestToken);
         }
         throw error;
       }
@@ -157,10 +176,6 @@ export function useBookingDetailAccess({
   const activeQuery = accessMode === "account" ? accountQuery : guestQuery;
   const canFetchBooking =
     accessMode === "account" || accessMode === "guest";
-  const storageError =
-    guestSessionResult.status === "error"
-      ? guestSessionResult.error
-      : null;
   const refetch = () => {
     if (accessMode === "error") {
       setLoadedGuestSession(null);
@@ -173,7 +188,7 @@ export function useBookingDetailAccess({
   return {
     accessMode,
     data: canFetchBooking ? activeQuery.data : undefined,
-    error: storageError ?? (canFetchBooking ? activeQuery.error : null),
+    error: canFetchBooking ? activeQuery.error : null,
     isLoading:
       accessMode === "loading" ||
       (canFetchBooking && activeQuery.isLoading),
