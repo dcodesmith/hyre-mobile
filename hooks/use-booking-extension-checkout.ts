@@ -82,23 +82,17 @@ export function useBookingExtensionCheckout({
         setErrorMessage("Payment was cancelled before completion.");
       } else {
         const callback = parsePaymentCallback(browserResult.url);
-        if (!callback) {
-          setErrorMessage(
-            "Payment returned without transaction details. Contact support if you were charged.",
-          );
-        } else {
-          router.replace({
-            pathname: "/extension-payment-status",
-            params: {
-              bookingId: booking.id,
-              extensionId: checkout.extensionId,
-              tx_ref: checkout.paymentIntentId,
-              ...(callback.transactionId
-                ? { transaction_id: callback.transactionId }
-                : {}),
-            },
-          } as never);
-        }
+        router.replace({
+          pathname: "/extension-payment-status",
+          params: {
+            bookingId: booking.id,
+            extensionId: checkout.extensionId,
+            tx_ref: checkout.paymentIntentId,
+            ...(callback?.transactionId
+              ? { transaction_id: callback.transactionId }
+              : {}),
+          },
+        } as never);
       }
     } catch (error) {
       reportHandledException(error, {

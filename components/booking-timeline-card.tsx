@@ -7,17 +7,13 @@ import {
   NIGHT_BOOKING_TYPE,
   type BookingType,
 } from "@/lib/booking-types";
+import { toLagosTime } from "@/lib/booking-detail-display";
 import { cn } from "@/lib/utils";
 import type { BookingDetail } from "@/services/bookings";
-import { format, toZonedTime } from "date-fns-tz";
+import { format } from "date-fns-tz";
 import { Calendar } from "lucide-react-native";
 import type { ReactNode } from "react";
 import { Text, View } from "react-native";
-
-const LAGOS_TIMEZONE = "Africa/Lagos";
-
-const toLagosTime = (value: string | Date) =>
-  toZonedTime(new Date(value), LAGOS_TIMEZONE);
 
 type LegStatus = {
   text: string;

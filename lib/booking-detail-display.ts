@@ -3,7 +3,7 @@ import { format, toZonedTime } from "date-fns-tz";
 
 const LAGOS_TIMEZONE = "Africa/Lagos";
 
-const toLagosTime = (value: string | Date) =>
+export const toLagosTime = (value: string | Date) =>
   toZonedTime(new Date(value), LAGOS_TIMEZONE);
 
 export const formatBookingDate = (value: string | null | undefined) =>
