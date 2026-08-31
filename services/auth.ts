@@ -11,22 +11,22 @@ import {
   resolveAuthenticatedSession,
 } from "@/lib/auth-session";
 
-/** Maps backend error codes to user-friendly messages. Falls back to error.message. */
+/** Maps backend errors to the same user-facing copy as web. */
 export const getAuthErrorMessage = (
   error: unknown,
   fallback = "Something went wrong. Please try again.",
 ): string => {
   if (error instanceof ApiError) {
-    if (error.code === "INVALID_OTP") {
-      return "Invalid or expired code. Please try again.";
+    if (error.status === 0 || error.status === 408 || error.status >= 500) {
+      return "Something went wrong. Please try again.";
     }
-
-    return error.message;
-  }
-
-  if (error instanceof Error) {
-    if (error.message === "Network request failed") {
-      return "Unable to connect. Ensure the backend is running. If using a simulator, try setting EXPO_PUBLIC_API_BASE_URL to your machine's IP (e.g. http://192.168.1.x:3000) in .env.";
+    if (error.status === 403) {
+      return "We couldn't start the login process. Please check your details and try again.";
+    }
+    if (error.status === 429) {
+      return error.retryAfter
+        ? `Too many attempts. Try again in ${error.retryAfter} seconds.`
+        : "Too many attempts. Please try again shortly.";
     }
 
     return error.message;

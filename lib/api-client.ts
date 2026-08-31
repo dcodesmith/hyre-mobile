@@ -18,16 +18,22 @@ export class ApiError extends Error {
   readonly data?: unknown;
   /** Backend error code if present (e.g. "INVALID_OTP") */
   readonly code?: string;
+  readonly retryAfter?: string;
 
   constructor(
     message: string,
-    { status, data }: { status: number; data?: unknown },
+    {
+      status,
+      data,
+      retryAfter,
+    }: { status: number; data?: unknown; retryAfter?: string },
   ) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.data = data;
     this.code = extractErrorCode(data);
+    this.retryAfter = retryAfter;
     Object.setPrototypeOf(this, ApiError.prototype);
   }
 }
@@ -272,6 +278,10 @@ export const apiRequest = async <T>(
       const apiError = new ApiError(message, {
         status: response.status,
         data: payload,
+        retryAfter:
+          response.headers.get("x-retry-after") ??
+          response.headers.get("retry-after") ??
+          undefined,
       });
       reportApiFailure(apiError, { method, path });
       throw apiError;
