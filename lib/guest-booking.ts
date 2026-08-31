@@ -5,6 +5,7 @@ export type BookingDetailAccessMode =
   | "loading"
   | "account"
   | "guest"
+  | "error"
   | "expired"
   | "unauthenticated";
 
@@ -15,12 +16,13 @@ export function resolveBookingDetailAccess({
 }: {
   isAuthHydrating: boolean;
   isAuthenticated: boolean;
-  guestSessionStatus: "loading" | "valid" | "expired" | "missing";
+  guestSessionStatus: "loading" | "valid" | "error" | "expired" | "missing";
 }): BookingDetailAccessMode {
   if (isAuthHydrating) return "loading";
   if (isAuthenticated) return "account";
   if (guestSessionStatus === "loading") return "loading";
   if (guestSessionStatus === "valid") return "guest";
+  if (guestSessionStatus === "error") return "error";
   if (guestSessionStatus === "expired") return "expired";
   return "unauthenticated";
 }

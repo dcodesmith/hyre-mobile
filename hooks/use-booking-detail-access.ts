@@ -18,7 +18,10 @@ import {
 
 type LoadedGuestSession = {
   bookingId: string;
-  result: GuestBookingSessionResult;
+  loadAttempt: number;
+  result:
+    | GuestBookingSessionResult
+    | { status: "error"; error: unknown };
 };
 
 export function useBookingDetailAccess({
@@ -34,26 +37,45 @@ export function useBookingDetailAccess({
     !isAuthHydrating && !isAuthenticated && Boolean(bookingId);
   const [loadedGuestSession, setLoadedGuestSession] =
     useState<LoadedGuestSession | null>(null);
+  const [guestSessionLoadAttempt, setGuestSessionLoadAttempt] = useState(0);
 
   useEffect(() => {
     if (!shouldLoadGuestSession || !bookingId) return;
     let isCancelled = false;
 
-    void getGuestBookingSession(bookingId).then((result) => {
-      if (!isCancelled) setLoadedGuestSession({ bookingId, result });
-    });
+    void getGuestBookingSession(bookingId)
+      .then((result) => {
+        if (!isCancelled) {
+          setLoadedGuestSession({
+            bookingId,
+            loadAttempt: guestSessionLoadAttempt,
+            result,
+          });
+        }
+      })
+      .catch((error: unknown) => {
+        if (!isCancelled) {
+          setLoadedGuestSession({
+            bookingId,
+            loadAttempt: guestSessionLoadAttempt,
+            result: { status: "error", error },
+          });
+        }
+      });
 
     return () => {
       isCancelled = true;
     };
-  }, [bookingId, shouldLoadGuestSession]);
+  }, [bookingId, guestSessionLoadAttempt, shouldLoadGuestSession]);
 
   const guestSessionResult:
     | GuestBookingSessionResult
+    | { status: "error"; error: unknown }
     | { status: "loading" } =
     !shouldLoadGuestSession || !bookingId
       ? { status: "missing" }
-      : loadedGuestSession?.bookingId === bookingId
+      : loadedGuestSession?.bookingId === bookingId &&
+          loadedGuestSession.loadAttempt === guestSessionLoadAttempt
         ? loadedGuestSession.result
         : { status: "loading" };
 
@@ -67,18 +89,27 @@ export function useBookingDetailAccess({
 
     const delay =
       Date.parse(guestSessionResult.session.accessExpiresAt) - Date.now();
+    const { token } = guestSessionResult.session;
     if (delay <= 0) {
-      setLoadedGuestSession({ bookingId, result: { status: "expired" } });
-      void deleteGuestBookingSession(bookingId);
+      setLoadedGuestSession({
+        bookingId,
+        loadAttempt: guestSessionLoadAttempt,
+        result: { status: "expired" },
+      });
+      void deleteGuestBookingSession(bookingId, token);
       return;
     }
 
     const timeout = setTimeout(() => {
-      setLoadedGuestSession({ bookingId, result: { status: "expired" } });
-      void deleteGuestBookingSession(bookingId);
+      setLoadedGuestSession({
+        bookingId,
+        loadAttempt: guestSessionLoadAttempt,
+        result: { status: "expired" },
+      });
+      void deleteGuestBookingSession(bookingId, token);
     }, delay);
     return () => clearTimeout(timeout);
-  }, [bookingId, guestSessionResult]);
+  }, [bookingId, guestSessionLoadAttempt, guestSessionResult]);
 
   const accessMode = resolveBookingDetailAccess({
     isAuthHydrating,
@@ -100,9 +131,10 @@ export function useBookingDetailAccess({
       } catch (error) {
         if (
           bookingId &&
+          guestToken &&
           isInvalidGuestBookingAccessError(error)
         ) {
-          await deleteGuestBookingSession(bookingId);
+          await deleteGuestBookingSession(bookingId, guestToken);
         }
         throw error;
       }
@@ -122,16 +154,28 @@ export function useBookingDetailAccess({
   const activeQuery = accessMode === "account" ? accountQuery : guestQuery;
   const canFetchBooking =
     accessMode === "account" || accessMode === "guest";
+  const storageError =
+    guestSessionResult.status === "error"
+      ? guestSessionResult.error
+      : null;
+  const refetch = () => {
+    if (accessMode === "error") {
+      setLoadedGuestSession(null);
+      setGuestSessionLoadAttempt((attempt) => attempt + 1);
+      return;
+    }
+    return activeQuery.refetch();
+  };
 
   return {
     accessMode,
     data: canFetchBooking ? activeQuery.data : undefined,
-    error: canFetchBooking ? activeQuery.error : null,
+    error: storageError ?? (canFetchBooking ? activeQuery.error : null),
     isLoading:
       accessMode === "loading" ||
       (canFetchBooking && activeQuery.isLoading),
     isFetching: canFetchBooking && activeQuery.isFetching,
-    refetch: activeQuery.refetch,
+    refetch,
     guestLinkInvalid,
   };
 }

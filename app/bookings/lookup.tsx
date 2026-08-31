@@ -16,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
+import { cn } from "@/lib/utils";
 import {
   guestBookingLookupSchema,
   type GuestBookingLookupValues,
@@ -73,10 +74,10 @@ export default function GuestBookingLookupScreen() {
       >
         <View className="mx-auto w-full max-w-sm gap-6">
           <View className="gap-1.5">
-            <Text selectable className="text-2xl font-bold text-neutral-950">
+            <Text selectable className="text-xl font-medium leading-snug">
               Find your booking
             </Text>
-            <Text selectable className="text-sm leading-5 text-neutral-600">
+            <Text selectable variant="muted">
               Enter the booking reference and email address used for your
               booking. We&apos;ll email you a secure link that works for 15
               minutes.
@@ -94,7 +95,7 @@ export default function GuestBookingLookupScreen() {
             >
               <View className="flex-row items-center gap-2">
                 <AlertCircle size={18} color="#B91C1C" />
-                <Text selectable className="font-semibold text-red-800">
+                <Text selectable className="text-sm font-medium text-red-800">
                   Unable to open booking
                 </Text>
               </View>
@@ -112,11 +113,11 @@ export default function GuestBookingLookupScreen() {
             >
               <View className="flex-row items-center gap-2">
                 <MailCheck size={18} color="#111827" />
-                <Text selectable className="font-semibold text-neutral-950">
+                <Text selectable className="text-sm font-medium">
                   Check your email
                 </Text>
               </View>
-              <Text selectable className="text-sm text-neutral-600">
+              <Text selectable variant="muted">
                 {successMessage}
               </Text>
             </Animated.View>
@@ -128,7 +129,10 @@ export default function GuestBookingLookupScreen() {
               name="bookingReference"
               render={({ field: { onBlur, onChange, value } }) => (
                 <View className="gap-1.5">
-                  <Text nativeID="booking-reference-label" className="font-medium">
+                  <Text
+                    nativeID="booking-reference-label"
+                    className="text-sm font-medium"
+                  >
                     Booking reference
                   </Text>
                   <Input
@@ -141,6 +145,10 @@ export default function GuestBookingLookupScreen() {
                     editable={!requestAccess.isPending}
                     aria-invalid={Boolean(errors.bookingReference)}
                     aria-labelledby="booking-reference-label"
+                    className={cn(
+                      "h-11",
+                      errors.bookingReference && "border-red-500",
+                    )}
                   />
                   {errors.bookingReference ? (
                     <Text selectable className="text-sm text-destructive">
@@ -156,7 +164,10 @@ export default function GuestBookingLookupScreen() {
               name="email"
               render={({ field: { onBlur, onChange, value } }) => (
                 <View className="gap-1.5">
-                  <Text nativeID="guest-email-label" className="font-medium">
+                  <Text
+                    nativeID="guest-email-label"
+                    className="text-sm font-medium"
+                  >
                     Email address
                   </Text>
                   <Input
@@ -171,6 +182,7 @@ export default function GuestBookingLookupScreen() {
                     editable={!requestAccess.isPending}
                     aria-invalid={Boolean(errors.email)}
                     aria-labelledby="guest-email-label"
+                    className={cn("h-11", errors.email && "border-red-500")}
                     returnKeyType="send"
                     onSubmitEditing={handleSubmit((values) =>
                       requestAccess.mutate(values),
@@ -192,14 +204,14 @@ export default function GuestBookingLookupScreen() {
             ) : null}
 
             <Button
-              className="w-full"
+              className="h-11 w-full"
               disabled={requestAccess.isPending}
               onPress={handleSubmit((values) => requestAccess.mutate(values))}
             >
               {requestAccess.isPending ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : null}
-              <Text className="font-medium text-white">
+              <Text className="text-sm font-medium text-white">
                 {requestAccess.isPending
                   ? "Sending access link…"
                   : "Email me an access link"}
@@ -207,12 +219,12 @@ export default function GuestBookingLookupScreen() {
             </Button>
 
             <View className="flex-row items-center justify-center gap-1">
-              <Text selectable className="text-sm text-neutral-600">
+              <Text selectable variant="muted">
                 Have an account?
               </Text>
               <Link href="/login" asChild>
                 <Pressable accessibilityRole="link">
-                  <Text className="text-sm font-medium text-neutral-900 underline">
+                  <Text className="text-sm font-medium underline">
                     Sign in
                   </Text>
                 </Pressable>
