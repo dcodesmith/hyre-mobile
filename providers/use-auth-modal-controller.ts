@@ -35,6 +35,7 @@ import {
   saveAuthToken,
 } from "@/storage/auth-token";
 import { clearExtensionPaymentSession } from "@/storage/extension-payment-session";
+import { clearGuestBookingSession } from "@/storage/guest-booking-session";
 import { deleteAllPaymentStatusTokens } from "@/storage/payment-status-token";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
@@ -246,6 +247,7 @@ export function useAuthModalController() {
       await Promise.all([
         deleteAllPaymentStatusTokens(),
         clearExtensionPaymentSession(),
+        clearGuestBookingSession(),
       ]);
       if (activeToken) {
         router.replace("/");
@@ -261,7 +263,10 @@ export function useAuthModalController() {
         const storedToken = await getSavedAuthToken();
         if (storedToken && !isCancelled) {
           const profile = await fetchCurrentUser(storedToken);
-          await deleteAllPaymentStatusTokens();
+          await Promise.all([
+            deleteAllPaymentStatusTokens(),
+            clearGuestBookingSession(),
+          ]);
           if (!isCancelled) {
             setAuthToken(storedToken);
             setUser(profile);
@@ -372,7 +377,9 @@ export function useAuthModalController() {
       await Promise.all([
         deleteAllPaymentStatusTokens(),
         clearExtensionPaymentSession(),
+        clearGuestBookingSession(),
       ]);
+      queryClient.removeQueries({ queryKey: ["guest-booking"] });
       await saveAuthToken(token);
       setAuthToken(token);
       setUser(profile);
@@ -387,6 +394,7 @@ export function useAuthModalController() {
     [
       resetEmailForm,
       resetOtpForm,
+      queryClient,
       setAuthToken,
       setEmailError,
       setEnablePushRegistrationLogs,
@@ -488,6 +496,7 @@ export function useAuthModalController() {
           deleteSavedAuthToken(),
           deleteAllPaymentStatusTokens(),
           clearExtensionPaymentSession(),
+          clearGuestBookingSession(),
         ]);
       } catch (error) {
         reportHandledException(error, {

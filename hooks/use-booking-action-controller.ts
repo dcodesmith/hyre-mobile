@@ -27,8 +27,21 @@ export type BookingActionController = ReturnType<
 	typeof useBookingActionController
 >;
 
+export type BookingActionTarget = Pick<
+	BookingSummary,
+	| "id"
+	| "type"
+	| "startDate"
+	| "pickupLocation"
+	| "returnLocation"
+	| "canEdit"
+	| "canCancel"
+	| "modificationCutoffAt"
+	| "paymentStatus"
+>;
+
 export function useBookingActionController(
-	booking: BookingSummary | undefined,
+	booking: BookingActionTarget | undefined,
 	isRefreshing: boolean,
 ) {
 	const {

@@ -11,16 +11,18 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Text } from "@/components/ui/text";
-import type { BookingActionController } from "@/hooks/use-booking-action-controller";
+import type {
+	BookingActionController,
+	BookingActionTarget,
+} from "@/hooks/use-booking-action-controller";
 import { DAY_BOOKING_TYPE } from "@/lib/booking-types";
-import type { BookingSummary } from "@/services/bookings";
 import { View } from "react-native";
 
 export function BookingActionDialogs({
 	booking,
 	controller,
 }: Readonly<{
-	booking: BookingSummary;
+	booking: BookingActionTarget;
 	controller: BookingActionController;
 }>) {
 	const {

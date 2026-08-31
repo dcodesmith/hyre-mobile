@@ -237,6 +237,14 @@ function RootLayout() {
                   options={{ headerShown: false, title: "Car Details" }}
                 />
                 <Stack.Screen
+                  name="bookings/lookup"
+                  options={{ headerShown: false, title: "Find your booking" }}
+                />
+                <Stack.Screen
+                  name="bookings/guest"
+                  options={{ headerShown: false, title: "Opening booking" }}
+                />
+                <Stack.Screen
                   name="bookings/[id]"
                   options={{ headerShown: false, title: "Booking Details" }}
                 />

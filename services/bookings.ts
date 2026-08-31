@@ -14,7 +14,10 @@ export const BOOKING_STATUSES = [
   "COMPLETED",
   "CANCELLED",
 ] as const;
-export type BookingStatus = (typeof BOOKING_STATUSES)[number];
+export type BookingStatus =
+  | (typeof BOOKING_STATUSES)[number]
+  | "PENDING"
+  | "REJECTED";
 
 export type BookingCarImage = {
   id?: string;
@@ -68,7 +71,8 @@ export type BookingLeg = {
   maxExtendableHours: number;
 };
 
-export type BookingDetail = BookingSummary & {
+export type BookingDetail = Omit<BookingSummary, "car"> & {
+  car: Omit<BookingCarSummary, "id"> & { id?: string };
   paymentId?: string | null;
   platformCustomerServiceFeeAmount?: number | null;
   platformCustomerServiceFeeRatePercent?: number | null;
@@ -81,7 +85,7 @@ export type BookingDetail = BookingSummary & {
   referralCreditsReserved?: number | null;
   netTotal?: number | null;
   chauffeur?: {
-    id: string;
+    id?: string;
     name?: string | null;
     phoneNumber?: string | null;
   } | null;
