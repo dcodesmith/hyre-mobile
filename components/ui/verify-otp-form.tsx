@@ -67,6 +67,7 @@ export function VerifyOtpForm({
           autoCapitalize="none"
           returnKeyType="done"
           keyboardType="number-pad"
+          maxLength={6}
           autoComplete="one-time-code"
           textContentType="oneTimeCode"
           editable={!isSubmitting}
@@ -104,7 +105,7 @@ export function VerifyOtpForm({
         <Button
           className="w-full"
           onPress={onSubmit}
-          disabled={isSubmitting || otpCode.trim().length < 4}
+          disabled={isSubmitting || otpCode.length !== 6}
         >
           <Text>{isSubmitting ? "Verifying..." : "Continue"}</Text>
         </Button>

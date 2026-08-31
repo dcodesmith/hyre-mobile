@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
+import { AuthTextInput } from "@/components/auth/auth-text-input";
 import { API_BASE_URL } from "@/constants/config";
 import { pickRedirectToParam } from "@/lib/sign-in-redirect";
+import { cn } from "@/lib/utils";
 import { emailFormSchema } from "@/lib/validations/auth";
 import { useAuthModal } from "@/providers/auth-modal-provider";
 import { getAuthErrorMessage } from "@/services/auth";
@@ -11,7 +12,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { Linking, Pressable, ScrollView, View } from "react-native";
+import {
+  Linking,
+  Pressable,
+  ScrollView,
+  View,
+} from "react-native";
 import Animated, { SlideInUp } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -54,9 +60,7 @@ export default function LoginScreen() {
           },
         });
       } catch (err) {
-        setApiError(
-          getAuthErrorMessage(err, "Unable to send a verification code right now."),
-        );
+        setApiError(getAuthErrorMessage(err));
       } finally {
         setIsSubmitting(false);
       }
@@ -73,157 +77,165 @@ export default function LoginScreen() {
       edges={["top", "left", "right", "bottom"]}
     >
       <ScrollView
-        className="flex-1 pb-20 text-sm"
-        contentContainerClassName="flex-grow justify-center"
+        className="flex-1"
+        contentContainerClassName="flex-grow justify-center px-6 py-8"
         contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
       >
-        <View className="flex w-full items-center p-6">
         <Animated.View
-          className="w-full max-w-sm"
+          className="mx-auto w-full max-w-sm"
           entering={SlideInUp.duration(300)}
         >
-          <View className="flex flex-col gap-6">
-            <View className="rounded-lg border border-neutral-200 bg-white">
-              <View className="flex flex-col space-y-1.5 p-6">
-                <Text className="text-base font-semibold text-neutral-950">
-                  Login or sign up to your account
-                </Text>
-                <Text className="text-sm text-muted-foreground">
-                  Enter your email below to login or sign up to your account
-                </Text>
-              </View>
-
-              <View className="p-6 pt-0">
-                <View className="flex flex-col gap-4">
-                  <Controller
-                    control={control}
-                    name="email"
-                    render={({ field: { onChange, onBlur, value } }) => (
-                      <View className="space-y-1">
-                        <Text
-                          nativeID="email-label"
-                          className="text-sm font-medium"
-                        >
-                          Email
-                        </Text>
-                        <Input
-                          id="email"
-                          value={value}
-                          onChangeText={onChange}
-                          onBlur={onBlur}
-                          keyboardType="email-address"
-                          autoCapitalize="none"
-                          placeholder="m@example.com"
-                          autoComplete="email"
-                          editable={!isSubmitting}
-                          aria-invalid={!!errors.email}
-                          accessibilityLabel="Email"
-                          aria-labelledby="email-label"
-                          className="h-10 w-full rounded-md border border-neutral-200 bg-transparent px-3 py-2 text-sm placeholder:text-neutral-500"
-                        />
-                        {errors.email && (
-                          <Text className="text-sm text-destructive">
-                            {errors.email.message}
-                          </Text>
-                        )}
-                      </View>
-                    )}
+          <View className="gap-4">
+            <Controller
+              control={control}
+              name="email"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <View>
+                  <AuthTextInput
+                    value={value}
+                    onChangeText={(text) => {
+                      setApiError(null);
+                      onChange(text);
+                    }}
+                    onBlur={onBlur}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoComplete="email"
+                    spellCheck={false}
+                    placeholder="Email address…"
+                    editable={!isSubmitting}
+                    accessibilityLabel="Email"
+                    aria-invalid={Boolean(errors.email)}
+                    invalid={Boolean(errors.email)}
                   />
-
-                  <Controller
-                    control={control}
-                    name="referralCode"
-                    render={({ field: { onChange, onBlur, value } }) => (
-                      <View className="space-y-1">
-                        <Text
-                          nativeID="referral-label"
-                          className="text-sm font-medium"
-                        >
-                          Referral code (optional)
-                        </Text>
-                        <Input
-                          id="referralCode"
-                          value={value ?? ""}
-                          onChangeText={onChange}
-                          onBlur={onBlur}
-                          placeholder="XXXXXXXX"
-                          editable={!isSubmitting}
-                          accessibilityLabel="Referral code (optional)"
-                          aria-labelledby="referral-label"
-                          className="h-10 w-full rounded-md border border-neutral-200 bg-transparent px-3 py-2 text-sm placeholder:text-neutral-500"
-                        />
-                      </View>
-                    )}
-                  />
-
-                  <Controller
-                    control={control}
-                    name="acceptTerms"
-                    render={({ field: { onChange, value } }) => (
-                      <>
-                        <Pressable
-                          className="flex flex-row items-center gap-2"
-                          onPress={() => onChange(!value)}
-                          accessibilityRole="checkbox"
-                          accessibilityState={{ checked: value }}
-                          accessibilityLabel="I agree to the Terms of Service and Privacy Policy"
-                        >
-                          <Checkbox
-                            checked={value}
-                            onCheckedChange={onChange}
-                          />
-                          <Text className="flex-1 text-sm text-muted-foreground">
-                            I agree to the{" "}
-                            <Text
-                              className="text-primary"
-                              onPress={(e) => {
-                                e.stopPropagation();
-                                openTerms();
-                              }}
-                            >
-                              Terms of Service
-                            </Text>{" "}
-                            and{" "}
-                            <Text
-                              className="text-primary"
-                              onPress={(e) => {
-                                e.stopPropagation();
-                                openPrivacy();
-                              }}
-                            >
-                              Privacy Policy
-                            </Text>
-                          </Text>
-                        </Pressable>
-                        {errors.acceptTerms && (
-                          <Text className="text-sm text-destructive">
-                            {errors.acceptTerms.message}
-                          </Text>
-                        )}
-                      </>
-                    )}
-                  />
-
-                  {!!apiError && (
-                    <Text className="text-sm text-destructive">{apiError}</Text>
-                  )}
-
-                  <Button
-                    variant="default"
-                    className="h-10 w-full rounded-md px-4 py-2"
-                    onPress={handleSubmit(onEmailSubmit)}
-                    disabled={isSubmitting}
-                  >
-                    <Text className="text-sm font-medium text-neutral-50">
-                      {isSubmitting ? "Sending..." : "Continue with Email"}
+                  {errors.email ? (
+                    <Text selectable className="mt-1 text-sm text-red-500">
+                      {errors.email.message}
                     </Text>
-                  </Button>
+                  ) : null}
                 </View>
-              </View>
-            </View>
+              )}
+            />
 
-            <View className="flex-row items-center justify-center gap-1">
+            <Controller
+              control={control}
+              name="referralCode"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <View>
+                  <AuthTextInput
+                    value={value ?? ""}
+                    onChangeText={(text) => {
+                      setApiError(null);
+                      onChange(text.toUpperCase());
+                    }}
+                    onBlur={onBlur}
+                    autoCapitalize="characters"
+                    autoComplete="off"
+                    maxLength={8}
+                    spellCheck={false}
+                    placeholder="Referral code (optional)…"
+                    editable={!isSubmitting}
+                    accessibilityLabel="Referral code (optional)"
+                    aria-invalid={Boolean(errors.referralCode)}
+                    invalid={Boolean(errors.referralCode)}
+                  />
+                  {errors.referralCode ? (
+                    <Text selectable className="mt-1 text-sm text-red-500">
+                      {errors.referralCode.message}
+                    </Text>
+                  ) : null}
+                </View>
+              )}
+            />
+
+            <Controller
+              control={control}
+              name="acceptTerms"
+              render={({ field: { onChange, value } }) => (
+                <View>
+                  <Pressable
+                    className={cn(
+                      "flex-row items-start gap-2.5",
+                      isSubmitting && "opacity-50",
+                    )}
+                    disabled={isSubmitting}
+                    onPress={() => {
+                      setApiError(null);
+                      onChange(!value);
+                    }}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: value }}
+                    accessibilityLabel="I agree to Tripdly's Terms of Service and Privacy Policy"
+                  >
+                    <Checkbox
+                      pointerEvents="none"
+                      checked={value}
+                      onCheckedChange={onChange}
+                      className={cn(
+                        "mt-0.5 rounded-[2px] shadow-none",
+                        value
+                          ? "border-neutral-900 bg-neutral-900"
+                          : "border-neutral-400 bg-white",
+                        errors.acceptTerms && "border-red-500",
+                      )}
+                      checkedClassName="border-neutral-900"
+                      indicatorClassName="bg-neutral-900"
+                    />
+                    <Text className="flex-1 text-sm text-neutral-600">
+                      I agree to Tripdly&apos;s{" "}
+                      <Text
+                        className="text-sm underline"
+                        onPress={(event) => {
+                          event.stopPropagation();
+                          openTerms();
+                        }}
+                      >
+                        Terms
+                      </Text>{" "}
+                      and{" "}
+                      <Text
+                        className="text-sm underline"
+                        onPress={(event) => {
+                          event.stopPropagation();
+                          openPrivacy();
+                        }}
+                      >
+                        Privacy Policy
+                      </Text>
+                    </Text>
+                  </Pressable>
+                  {errors.acceptTerms ? (
+                    <Text selectable className="mt-1 text-sm text-red-500">
+                      {errors.acceptTerms.message}
+                    </Text>
+                  ) : null}
+                </View>
+              )}
+            />
+
+            {apiError ? (
+              <Text selectable className="mt-1 text-sm text-red-500">
+                {apiError}
+              </Text>
+            ) : null}
+
+            <Button
+              className="h-12 w-full rounded-md bg-neutral-900"
+              accessibilityLabel={
+                isSubmitting
+                  ? "Sending verification code"
+                  : "Send verification code"
+              }
+              onPress={handleSubmit(onEmailSubmit)}
+              disabled={isSubmitting}
+            >
+              <Text className="text-sm font-medium text-white">
+                {isSubmitting ? "Sending code…" : "Send verification code"}
+              </Text>
+            </Button>
+
+            <View className="flex-row flex-wrap items-center justify-center gap-1">
               <Text className="text-sm text-neutral-600">
                 Booked as a guest?
               </Text>
@@ -237,7 +249,6 @@ export default function LoginScreen() {
             </View>
           </View>
         </Animated.View>
-        </View>
       </ScrollView>
     </SafeAreaView>
   );

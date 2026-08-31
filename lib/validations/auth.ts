@@ -1,21 +1,35 @@
 import { z } from "zod";
 
+export const EMAIL_INVALID_ERROR = "Email address is not valid.";
+export const TERMS_ACCEPTANCE_ERROR =
+  "You must accept the Terms of Service and Privacy Policy";
+export const REFERRAL_CODE_PATTERN =
+  /^[123456789ABCDEFGHJKLMNPQRSTUVWXYZ]{8}$/;
+export const OTP_CODE_ERROR = "Code must be exactly 6 digits.";
+
 export const authEmailSchema = z
+  .string({ error: EMAIL_INVALID_ERROR })
+  .trim()
+  .toLowerCase()
+  .pipe(z.email(EMAIL_INVALID_ERROR));
+
+const referralCodeSchema = z
   .string()
-  .transform((val) => val.trim().toLowerCase())
-  .refine((val) => val.length > 0, "Enter your email address.")
-  .pipe(z.email("Enter a valid email address."));
+  .trim()
+  .toUpperCase()
+  .regex(REFERRAL_CODE_PATTERN, "Referral code must be 8 characters")
+  .optional()
+  .or(z.literal(""));
 
 export const otpCodeSchema = z
-  .string()
-  .min(4, "Enter the code we sent to your email.")
-  .transform((val) => val.trim());
+  .string({ error: OTP_CODE_ERROR })
+  .regex(/^\d{6}$/, OTP_CODE_ERROR);
 
 export const emailFormSchema = z.object({
   email: authEmailSchema,
-  referralCode: z.string().optional(),
+  referralCode: referralCodeSchema,
   acceptTerms: z.boolean().refine((val) => val === true, {
-    message: "You must agree to the Terms of Service and Privacy Policy.",
+    message: TERMS_ACCEPTANCE_ERROR,
   }),
 });
 
