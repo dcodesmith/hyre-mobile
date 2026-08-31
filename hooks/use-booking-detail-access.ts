@@ -43,8 +43,9 @@ export function useBookingDetailAccess({
     if (!shouldLoadGuestSession || !bookingId) return;
     let isCancelled = false;
 
-    void getGuestBookingSession(bookingId)
-      .then((result) => {
+    const loadGuestSession = async () => {
+      try {
+        const result = await getGuestBookingSession(bookingId);
         if (!isCancelled) {
           setLoadedGuestSession({
             bookingId,
@@ -52,8 +53,7 @@ export function useBookingDetailAccess({
             result,
           });
         }
-      })
-      .catch((error: unknown) => {
+      } catch (error) {
         if (!isCancelled) {
           setLoadedGuestSession({
             bookingId,
@@ -61,7 +61,10 @@ export function useBookingDetailAccess({
             result: { status: "error", error },
           });
         }
-      });
+      }
+    };
+
+    void loadGuestSession();
 
     return () => {
       isCancelled = true;
