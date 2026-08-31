@@ -18,6 +18,8 @@ export type CarSignInRedirectValues = {
 /** Typed as a template literal so it satisfies expo-router's typed path union. */
 export type CarSignInRedirectPath =
   `/(tabs)/login?redirectTo=${string}`;
+export type BookingSignInRedirectPath =
+  `/(tabs)/login?redirectTo=${string}`;
 
 function firstSearchParam(value: unknown): string | null {
   if (typeof value === "string" && value.length > 0) return value;
@@ -73,11 +75,20 @@ export function buildCarSignInRedirectPath(
   return `/(tabs)/login?redirectTo=${encodeURIComponent(destination)}`;
 }
 
+export function buildBookingSignInRedirectPath(
+  bookingId: string,
+): BookingSignInRedirectPath {
+  const destination = `/bookings/${encodeURIComponent(bookingId)}`;
+  return `/(tabs)/login?redirectTo=${encodeURIComponent(destination)}`;
+}
+
 /**
- * Only allow returning to car checkout deep links we create. Anything else
- * falls back to home so login cannot be used as an open redirect.
+ * Only allow returning to supported in-app detail routes. Anything else falls
+ * back to home so login cannot be used as an open redirect.
  */
-export function resolvePostLoginHref(redirectTo: unknown): "/" | `/cars/${string}` {
+export function resolvePostLoginHref(
+  redirectTo: unknown,
+): "/" | `/cars/${string}` | `/bookings/${string}` {
   const raw = firstSearchParam(redirectTo);
   if (!raw) return "/";
 
@@ -86,23 +97,23 @@ export function resolvePostLoginHref(redirectTo: unknown): "/" | `/cars/${string
     // helper receives the fully encoded value produced by the path builder.
     const value = raw.startsWith("/") ? raw : decodeURIComponent(raw);
     const pathname = value.split(/[?#]/, 1)[0];
-    const [root, route, encodedCarId, ...extraSegments] = pathname.split("/");
-    const carId = decodeURIComponent(encodedCarId ?? "");
+    const [root, route, encodedId, ...extraSegments] = pathname.split("/");
+    const id = decodeURIComponent(encodedId ?? "");
 
     if (
       root !== "" ||
-      route !== "cars" ||
+      (route !== "cars" && route !== "bookings") ||
       extraSegments.length > 0 ||
-      !carId ||
-      carId === "." ||
-      carId === ".." ||
-      carId.includes("/") ||
-      carId.includes("\\")
+      !id ||
+      id === "." ||
+      id === ".." ||
+      id.includes("/") ||
+      id.includes("\\")
     ) {
       return "/";
     }
 
-    return value as `/cars/${string}`;
+    return value as `/cars/${string}` | `/bookings/${string}`;
   } catch {
     return "/";
   }

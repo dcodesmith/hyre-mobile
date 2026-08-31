@@ -13,6 +13,7 @@ export type TelemetryArea =
   | "booking_checkout"
   | "booking_extension"
   | "booking_pricing"
+  | "guest_booking"
   | "payment"
   | "route";
 

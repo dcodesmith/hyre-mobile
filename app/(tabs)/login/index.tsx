@@ -8,7 +8,7 @@ import { emailFormSchema } from "@/lib/validations/auth";
 import { useAuthModal } from "@/providers/auth-modal-provider";
 import { getAuthErrorMessage } from "@/services/auth";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Linking, Pressable, ScrollView, View } from "react-native";
@@ -221,6 +221,19 @@ export default function LoginScreen() {
                   </Button>
                 </View>
               </View>
+            </View>
+
+            <View className="flex-row items-center justify-center gap-1">
+              <Text className="text-sm text-neutral-600">
+                Booked as a guest?
+              </Text>
+              <Link href="/bookings/lookup" asChild>
+                <Pressable accessibilityRole="link">
+                  <Text className="text-sm font-medium text-neutral-900 underline">
+                    Find your booking
+                  </Text>
+                </Pressable>
+              </Link>
             </View>
           </View>
         </Animated.View>

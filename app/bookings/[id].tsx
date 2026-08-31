@@ -1,5 +1,5 @@
 import { BookingActionDialogs } from "@/components/booking-action-dialogs";
-import { BookingActionFeedbackBanner } from "@/components/booking-action-feedback-banner";
+import { BookingDetailHeader } from "@/components/booking-detail-header";
 import { BookingDetailSectionTitle } from "@/components/booking-detail-section-title";
 import { BookingExtendCard } from "@/components/booking-extend-card";
 import { BookingPaymentSummaryCard } from "@/components/booking-payment-summary-card";
@@ -8,40 +8,28 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import { useBookingActionController } from "@/hooks/use-booking-action-controller";
-import { useBookingDetail } from "@/hooks/use-booking-detail";
+import { useBookingDetailAccess } from "@/hooks/use-booking-detail-access";
 import {
-	bookingTypeDescription,
 	formatBookingDate as formatDateOnly,
 	formatBookingTime as formatTimeOnly,
-	paymentStatusPillClass as paymentPillClass,
-	bookingStatusPillClass as statusPillClass,
 } from "@/lib/booking-detail-display";
-import { Image } from "expo-image";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { type Href, Redirect, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import {
-	ChevronLeft,
-	CreditCard,
-	MapPin,
-	Plane,
-	User,
-} from "lucide-react-native";
-import {
-	ActivityIndicator,
-	Pressable,
-	ScrollView,
-	Text,
-	View,
-} from "react-native";
+import { CreditCard, MapPin, Plane, User } from "lucide-react-native";
+import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function BookingDetailScreen() {
-	const router = useRouter();
-	const { isAuthenticated, openLoginModal } = useAuth();
+	const { isAuthenticated, isHydrating, openLoginModal } = useAuth();
 	const params = useLocalSearchParams<{ id: string }>();
 	const bookingId = Array.isArray(params.id) ? params.id[0] : params.id;
 
-	const bookingQuery = useBookingDetail(bookingId, isAuthenticated);
+	const bookingQuery = useBookingDetailAccess({
+		bookingId,
+		isAuthenticated,
+		isAuthHydrating: isHydrating,
+	});
+	const isGuest = bookingQuery.accessMode === "guest";
 	const {
 		canEdit,
 		canCancel,
@@ -51,9 +39,16 @@ export default function BookingDetailScreen() {
 		openModifyDialog,
 		openCancelDialog,
 		...controller
-	} = useBookingActionController(bookingQuery.data, bookingQuery.isFetching);
+	} = useBookingActionController(
+		isGuest ? undefined : bookingQuery.data,
+		bookingQuery.isFetching,
+	);
 
-	if (!isAuthenticated) {
+	if (bookingQuery.guestLinkInvalid) {
+		return <Redirect href={"/bookings/lookup?status=invalid-link" as Href} />;
+	}
+
+	if (bookingQuery.accessMode === "unauthenticated") {
 		return (
 			<SafeAreaView
 				className="flex-1 bg-white"
@@ -130,59 +125,11 @@ export default function BookingDetailScreen() {
 			<StatusBar style="dark" />
 			<ScrollView className="flex-1" contentInsetAdjustmentBehavior="automatic">
 				<View className="px-4 py-4">
-					<Pressable
-						onPress={() => router.replace("/bookings")}
-						className="mb-3 flex-row items-center gap-1"
-					>
-						<View className="h-4 w-4 items-center justify-center">
-							<ChevronLeft size={16} color="#111827" />
-						</View>
-						<Text className="text-sm font-medium leading-5 text-neutral-900">
-							Back to Bookings
-						</Text>
-					</Pressable>
-
-					<BookingActionFeedbackBanner feedback={feedback} />
-
-					<View className="flex-row gap-3">
-						<Image
-							source={booking.car.images[0]?.url}
-							contentFit="cover"
-							className="h-12 w-12 rounded-full bg-neutral-100"
-						/>
-						<View className="flex-1">
-							<Text className="text-base font-semibold text-neutral-950">
-								{booking.car.make} {booking.car.model} ({booking.car.year})
-							</Text>
-							<View className="mt-1 flex-row flex-wrap items-center gap-2">
-								<Text className="text-sm text-neutral-600">
-									{booking.bookingReference}
-								</Text>
-								<View
-									className={`rounded border px-2 py-0.5 ${statusPillClass(booking.status)}`}
-								>
-									<Text className="text-[11px] font-medium capitalize">
-										{booking.status.toLowerCase()}
-									</Text>
-								</View>
-								<View
-									className={`rounded border px-2 py-0.5 ${paymentPillClass(String(booking.paymentStatus))}`}
-								>
-									<Text className="text-[11px] font-medium capitalize">
-										{String(booking.paymentStatus)
-											.toLowerCase()
-											.replaceAll("_", " ")}
-									</Text>
-								</View>
-							</View>
-						</View>
-					</View>
-
-					<View className="mt-4 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2.5">
-						<Text className="text-sm text-blue-800">
-							{bookingTypeDescription(booking.type)}
-						</Text>
-					</View>
+					<BookingDetailHeader
+						booking={booking}
+						isGuest={isGuest}
+						feedback={feedback}
+					/>
 
 					<View className="mt-4 gap-4">
 						<BookingTimelineCard booking={booking} />
@@ -323,13 +270,16 @@ export default function BookingDetailScreen() {
 							</Card>
 						) : null}
 
-						<BookingPaymentSummaryCard booking={booking} />
+						<BookingPaymentSummaryCard
+							booking={booking}
+							showBreakdown={!isGuest}
+						/>
 
-						{booking.legs.some((leg) => leg.canExtend) ? (
+						{!isGuest && booking.legs.some((leg) => leg.canExtend) ? (
 							<BookingExtendCard bookingId={booking.id} />
 						) : null}
 
-						{canEdit || canCancel ? (
+						{!isGuest && (canEdit || canCancel) ? (
 							<Card className="rounded-xl py-4">
 								<CardHeader className="px-4">
 									<BookingDetailSectionTitle
@@ -371,19 +321,21 @@ export default function BookingDetailScreen() {
 				</View>
 			</ScrollView>
 
-			<BookingActionDialogs
-				booking={booking}
-				controller={{
-					canEdit,
-					canCancel,
-					isUpdatingBooking,
-					isCancellingBooking,
-					feedback,
-					openModifyDialog,
-					openCancelDialog,
-					...controller,
-				}}
-			/>
+			{isGuest ? null : (
+				<BookingActionDialogs
+					booking={booking}
+					controller={{
+						canEdit,
+						canCancel,
+						isUpdatingBooking,
+						isCancellingBooking,
+						feedback,
+						openModifyDialog,
+						openCancelDialog,
+						...controller,
+					}}
+				/>
+			)}
 		</SafeAreaView>
 	);
 }
