@@ -9,12 +9,12 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import { useBookingActionController } from "@/hooks/use-booking-action-controller";
 import { useBookingDetailAccess } from "@/hooks/use-booking-detail-access";
+import { ApiError } from "@/lib/api-client";
 import {
 	formatBookingDate as formatDateOnly,
 	formatBookingTime as formatTimeOnly,
 } from "@/lib/booking-detail-display";
 import { shareBookingReceipt } from "@/lib/booking-receipt-file";
-import { ApiError } from "@/lib/api-client";
 import { reportHandledException } from "@/lib/telemetry";
 import {
 	fetchBookingReceipt,
@@ -354,9 +354,7 @@ export default function BookingDetailScreen() {
 							booking={booking}
 							isDownloadingReceipt={receiptDownload.isPending}
 							onDownloadReceipt={
-								canDownloadReceipt
-									? () => receiptDownload.mutate()
-									: undefined
+								canDownloadReceipt ? () => receiptDownload.mutate() : undefined
 							}
 							receiptError={
 								receiptDownload.error
