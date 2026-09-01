@@ -195,5 +195,6 @@ export function useBookingDetailAccess({
     isFetching: canFetchBooking && activeQuery.isFetching,
     refetch,
     guestLinkInvalid,
+    guestToken,
   };
 }
