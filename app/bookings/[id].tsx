@@ -13,14 +13,36 @@ import {
 	formatBookingDate as formatDateOnly,
 	formatBookingTime as formatTimeOnly,
 } from "@/lib/booking-detail-display";
-import { type Href, Redirect, useLocalSearchParams } from "expo-router";
+import { shareBookingReceipt } from "@/lib/booking-receipt-file";
+import { ApiError } from "@/lib/api-client";
+import { reportHandledException } from "@/lib/telemetry";
+import {
+	fetchBookingReceipt,
+	getBookingReceiptErrorMessage,
+} from "@/services/booking-receipt";
+import { deleteGuestBookingSession } from "@/storage/guest-booking-session";
+import { useMutation } from "@tanstack/react-query";
+import {
+	type Href,
+	Redirect,
+	useLocalSearchParams,
+	useRouter,
+} from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { CreditCard, MapPin, Plane, User } from "lucide-react-native";
+import { useEffect, useRef } from "react";
 import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+const RECEIPT_PAYMENT_STATUSES: readonly string[] = [
+	"PAID",
+	"PARTIALLY_REFUNDED",
+	"REFUNDED",
+];
+
 export default function BookingDetailScreen() {
 	const { isAuthenticated, isHydrating, openLoginModal } = useAuth();
+	const router = useRouter();
 	const params = useLocalSearchParams<{ id: string }>();
 	const bookingId = Array.isArray(params.id) ? params.id[0] : params.id;
 
@@ -30,6 +52,61 @@ export default function BookingDetailScreen() {
 		isAuthHydrating: isHydrating,
 	});
 	const isGuest = bookingQuery.accessMode === "guest";
+	const receiptRequest = useRef<AbortController | null>(null);
+	useEffect(
+		() => () => {
+			receiptRequest.current?.abort();
+		},
+		[],
+	);
+	const receiptDownload = useMutation({
+		mutationFn: async () => {
+			const booking = bookingQuery.data;
+			const guestToken = bookingQuery.guestToken;
+			const access =
+				bookingQuery.accessMode === "guest" && guestToken
+					? { mode: "guest" as const, token: guestToken }
+					: { mode: "account" as const };
+
+			if (!booking) {
+				throw new Error("Booking details are unavailable.");
+			}
+
+			const controller = new AbortController();
+			receiptRequest.current = controller;
+			try {
+				const receipt = await fetchBookingReceipt(
+					booking.id,
+					access,
+					controller.signal,
+				);
+				if (!controller.signal.aborted) {
+					await shareBookingReceipt(receipt);
+				}
+			} catch (error) {
+				if (
+					access.mode === "guest" &&
+					error instanceof ApiError &&
+					error.status === 404
+				) {
+					await deleteGuestBookingSession(booking.id, access.token).catch(
+						(cleanupError) => {
+							reportHandledException(cleanupError, {
+								area: "guest_booking",
+								operation: "delete_session",
+							});
+						},
+					);
+					router.replace("/bookings/lookup?status=invalid-link");
+				}
+				throw error;
+			} finally {
+				if (receiptRequest.current === controller) {
+					receiptRequest.current = null;
+				}
+			}
+		},
+	});
 	const {
 		canEdit,
 		canCancel,
@@ -116,6 +193,9 @@ export default function BookingDetailScreen() {
 	}
 
 	const booking = bookingQuery.data;
+	const canDownloadReceipt =
+		booking.status === "COMPLETED" &&
+		RECEIPT_PAYMENT_STATUSES.includes(booking.paymentStatus);
 
 	return (
 		<SafeAreaView
@@ -272,6 +352,17 @@ export default function BookingDetailScreen() {
 
 						<BookingPaymentSummaryCard
 							booking={booking}
+							isDownloadingReceipt={receiptDownload.isPending}
+							onDownloadReceipt={
+								canDownloadReceipt
+									? () => receiptDownload.mutate()
+									: undefined
+							}
+							receiptError={
+								receiptDownload.error
+									? getBookingReceiptErrorMessage(receiptDownload.error)
+									: null
+							}
 							showBreakdown={!isGuest}
 						/>
 

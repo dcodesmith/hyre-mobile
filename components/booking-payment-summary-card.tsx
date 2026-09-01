@@ -1,15 +1,25 @@
 import { BookingDetailSectionTitle } from "@/components/booking-detail-section-title";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { createBookingPaymentSummary } from "@/lib/booking-payment-summary";
 import { formatCurrency } from "@/lib/currency";
 import type { BookingDetail } from "@/services/bookings";
-import { CreditCard } from "lucide-react-native";
-import { Text, View } from "react-native";
+import { CreditCard, Download } from "lucide-react-native";
+import { ActivityIndicator, Text, View } from "react-native";
 
 export function BookingPaymentSummaryCard({
   booking,
+  isDownloadingReceipt = false,
+  onDownloadReceipt,
+  receiptError,
   showBreakdown = true,
-}: Readonly<{ booking: BookingDetail; showBreakdown?: boolean }>) {
+}: Readonly<{
+  booking: BookingDetail;
+  isDownloadingReceipt?: boolean;
+  onDownloadReceipt?: () => void;
+  receiptError?: string | null;
+  showBreakdown?: boolean;
+}>) {
   const {
     netTotal,
     extensionNetTotal,
@@ -143,6 +153,30 @@ export function BookingPaymentSummaryCard({
               )}
             </Text>
           </View>
+          {onDownloadReceipt ? (
+            <>
+              <Button
+                className="mt-1 w-full"
+                variant="outline"
+                disabled={isDownloadingReceipt}
+                onPress={onDownloadReceipt}
+              >
+                {isDownloadingReceipt ? (
+                  <ActivityIndicator size="small" color="#171717" />
+                ) : (
+                  <Download size={16} color="#171717" />
+                )}
+                <Text className="text-sm font-medium text-neutral-900">
+                  Download Receipt
+                </Text>
+              </Button>
+              {receiptError ? (
+                <Text selectable className="text-sm text-red-600">
+                  {receiptError}
+                </Text>
+              ) : null}
+            </>
+          ) : null}
         </View>
       </CardContent>
     </Card>
