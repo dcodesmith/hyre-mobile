@@ -35,6 +35,15 @@ npm run reset-project
 
 This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
 
+## Environments and releases
+
+Pushes to `main` create preview builds against the development API. Production
+builds are started manually, require EAS approval, and use the production API.
+Merging to `main` does not release the mobile app.
+
+See [docs/environments.md](docs/environments.md) for the complete environment
+mapping and release procedure.
+
 ## Learn more
 
 To learn more about developing your project with Expo, look at the following resources:

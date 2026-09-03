@@ -1,14 +1,59 @@
 name: Production native builds
 
 on:
-  push:
-    tags:
-      - "v*"
   workflow_dispatch: {}
 
 jobs:
+  verify_api:
+    name: Verify production API
+    environment: production
+    env:
+      RELEASE_REF: ${{ github.ref_name }}
+    steps:
+      - name: Require main
+        run: |
+          if [ "$RELEASE_REF" != "main" ]; then
+            echo "Production builds must run from main."
+            exit 1
+          fi
+
+      - name: Check production API health
+        run: |
+          node --input-type=module <<'NODE'
+          const apiOrigin = "https://hyre-worker-nestjs-production.fly.dev";
+          const request = (path) =>
+            fetch(new URL(path, apiOrigin), {
+              headers: { "x-request-id": `mobile-release-${Date.now()}` },
+              signal: AbortSignal.timeout(10_000),
+            });
+
+          const [rootResponse, healthResponse] = await Promise.all([
+            request("/"),
+            request("/health"),
+          ]);
+
+          if (!rootResponse.ok || !healthResponse.ok) {
+            throw new Error(
+              `Production API is unhealthy: root=${rootResponse.status}, health=${healthResponse.status}`,
+            );
+          }
+
+          const root = await rootResponse.json();
+          const health = await healthResponse.json();
+
+          if (root.environment !== "production" || health.status !== "ok") {
+            throw new Error("Production API returned an unexpected environment or health status");
+          }
+          NODE
+
+  approve:
+    name: Approve native release
+    needs: [verify_api]
+    type: require-approval
+
   build_android:
     name: Android production
+    needs: [approve]
     type: build
     params:
       platform: android
@@ -16,6 +61,7 @@ jobs:
 
   build_ios:
     name: iOS production
+    needs: [approve]
     type: build
     params:
       platform: ios
