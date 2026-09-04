@@ -24,7 +24,8 @@ the Play internal track. This is the long-lived development validation path.
 1. Promote and verify the production API.
 2. Run the committed workflow from `main`:
    `eas workflow:run .eas/workflows/production.yml --ref main`.
-3. The workflow verifies that the production API identifies itself as
+3. The workflow verifies that the selected commit matches the current
+   `origin/main` tip and that the production API identifies itself as
    production and reports healthy.
 4. Approve the release in the EAS dashboard.
 5. EAS builds the `production` profile and submits it to TestFlight and the Play
@@ -32,9 +33,9 @@ the Play internal track. This is the long-lived development validation path.
 6. Promote the approved binaries to customer-facing App Store and Play tracks
    using their store release controls.
 
-The workflow rejects any source ref other than `main` and intentionally has no
-tag trigger. Creating a Git tag does not release a mobile binary, and merging
-to `main` only creates preview builds.
+The workflow rejects any commit other than the current `main` tip and
+intentionally has no tag trigger. Creating a Git tag does not release a mobile
+binary, and merging to `main` only creates preview builds.
 
 ## EAS environment configuration
 

@@ -7,13 +7,14 @@ jobs:
   verify_api:
     name: Verify production API
     environment: production
-    env:
-      RELEASE_REF: ${{ github.ref_name }}
     steps:
-      - name: Require main
+      - uses: eas/checkout
+
+      - name: Require current main commit
         run: |
-          if [ "$RELEASE_REF" != "main" ]; then
-            echo "Production builds must run from main."
+          git fetch --no-tags --depth=1 origin main
+          if [ "$(git rev-parse HEAD)" != "$(git rev-parse FETCH_HEAD)" ]; then
+            echo "Production builds must run from the current main commit."
             exit 1
           fi
 
