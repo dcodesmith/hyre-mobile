@@ -57,6 +57,36 @@ export function isVehicleType(value: string): value is VehicleType {
   return (VEHICLE_TYPES as readonly string[]).includes(value);
 }
 
+const VEHICLE_TYPE_NOUNS: Readonly<
+  Record<VehicleType, { singular: string; plural: string }>
+> = {
+  SEDAN: { singular: "sedan", plural: "sedans" },
+  SUV: { singular: "SUV", plural: "SUVs" },
+  VAN: { singular: "van / minibus", plural: "vans / minibuses" },
+  CROSSOVER: { singular: "crossover", plural: "crossovers" },
+};
+
+export function buildResultsHeading(
+  total: number,
+  vehicleTypes: readonly string[],
+): string {
+  const types = vehicleTypes.filter(isVehicleType);
+  const form = total === 1 ? "singular" : "plural";
+
+  if (types.length === 0) {
+    return `${total} ${total === 1 ? "vehicle" : "vehicles"}`;
+  }
+
+  const nouns = types.map((type) => VEHICLE_TYPE_NOUNS[type][form]);
+  const conjunction = total === 1 ? " or " : " and ";
+  const joined =
+    nouns.length > 1
+      ? `${nouns.slice(0, -1).join(", ")}${conjunction}${nouns.at(-1)}`
+      : nouns[0];
+
+  return `${total} ${joined}`;
+}
+
 export interface SearchFilterValues {
   vehicleTypes: VehicleType[];
   serviceTiers: ServiceTier[];

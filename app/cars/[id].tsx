@@ -35,8 +35,10 @@ function CarDetailSkeleton() {
     <View className="flex-1 bg-white">
       <ScrollView className="flex-1" contentInsetAdjustmentBehavior="automatic">
         <View className="h-64 w-full bg-gray-200/80 animate-pulse" />
+        <View className="mt-3 mb-2 px-4">
+          <View className="h-7 w-56 rounded bg-gray-200/80 animate-pulse" />
+        </View>
         <View className="px-4 pt-4 gap-4">
-          <View className="h-5 w-48 rounded bg-gray-200/80 animate-pulse" />
           <View className="h-16 w-full rounded-xl bg-gray-200/80 animate-pulse" />
           <View className="h-14 w-full rounded-xl bg-gray-200/80 animate-pulse" />
 
@@ -274,6 +276,9 @@ export default function CarDetailScreen() {
           <View className="px-4">
             <CarReviewsSection carId={car.id} />
           </View>
+          <Text className="px-4 mt-3 mb-2 text-xl font-bold">
+            {car.make} {car.model} - {car.year}
+          </Text>
 
           <View className="bg-white px-4 pt-0" collapsable={false}>
             <CarInformationAccordion car={car} />
