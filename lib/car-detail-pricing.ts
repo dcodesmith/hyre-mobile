@@ -13,9 +13,6 @@ import type {
 import { normalizeBookingTimeWindow } from "./booking-utils";
 import type { CostBreakdownData } from "./car-detail-types";
 
-export const DEFAULT_PLATFORM_FEE_RATE = 0;
-export const DEFAULT_VAT_RATE = 7.5;
-
 type BookingRates = {
 	dayRate: number;
 	nightRate?: number | null;
@@ -23,28 +20,29 @@ type BookingRates = {
 	airportPickupRate?: number | null;
 };
 
-function toConfiguredRate(raw: unknown): number | undefined {
-	if (
-		raw === null ||
-		raw === undefined ||
-		(typeof raw === "string" && raw.trim() === "")
-	) {
-		return undefined;
-	}
-	const rate = typeof raw === "number" ? raw : Number(raw);
-	return Number.isFinite(rate) ? rate : undefined;
-}
+export type BookingPricingState =
+	| "incomplete"
+	| "loading"
+	| "ready"
+	| "error";
 
-export function resolvePlatformFeeRate(raw: unknown): number {
-	const rate = toConfiguredRate(raw);
-	// An explicit zero is valid; only invalid or negative values use the fallback.
-	return rate !== undefined && rate >= 0 ? rate : DEFAULT_PLATFORM_FEE_RATE;
-}
-
-export function resolveVatRate(raw: unknown): number {
-	const rate = toConfiguredRate(raw);
-	// Zero is not a valid VAT configuration and must use the worker-aligned default.
-	return rate !== undefined && rate > 0 ? rate : DEFAULT_VAT_RATE;
+export function resolveBookingPricingState({
+	requested,
+	hasPreview,
+	isFetching,
+	isError,
+	isPaused,
+}: {
+	requested: boolean;
+	hasPreview: boolean;
+	isFetching: boolean;
+	isError: boolean;
+	isPaused: boolean;
+}): BookingPricingState {
+	if (!requested) return "incomplete";
+	if (isFetching) return "loading";
+	if (isError || isPaused || !hasPreview) return "error";
+	return "ready";
 }
 
 export function getListRateForBookingType(

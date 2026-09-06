@@ -6,7 +6,6 @@ import {
 	useBookingPricingPreview,
 } from "@/hooks/use-booking-pricing-preview";
 import type { CarBookingFormReturn } from "@/hooks/use-car-booking-form";
-import { useRates } from "@/hooks/use-rates";
 import { useReferralSummary } from "@/hooks/use-referrals";
 import { getBookingCreditsToUse } from "@/lib/booking-credits";
 import type { BookingPricingPreviewResponse } from "@/lib/booking-pricing-preview-types";
@@ -15,8 +14,7 @@ import type { CarDetail } from "@/lib/car-detail-types";
 import {
 	buildBookingPricingPreviewRequest,
 	mergeBookingPricingPreview,
-	resolvePlatformFeeRate,
-	resolveVatRate,
+	resolveBookingPricingState,
 } from "@/lib/car-detail-pricing";
 import { getBookingPricingPreviewErrorMessage } from "@/services/booking-pricing-preview";
 
@@ -30,7 +28,6 @@ export function useCarDetailPricing({
 	isAuthenticated: boolean;
 }) {
 	const queryClient = useQueryClient();
-	const { data: rates } = useRates();
 	const { data: referralSummary } = useReferralSummary(isAuthenticated);
 	const [requiresFullTank, setRequiresFullTank] = useState(false);
 	const [applyCredits, setApplyCredits] = useState(false);
@@ -76,10 +73,6 @@ export function useCarDetailPricing({
 		airportPickupRate: car?.airportPickupRate,
 		bookingType: booking.values.bookingType,
 		totalDays,
-		platformFeeRate: resolvePlatformFeeRate(
-			rates?.platformCustomerServiceFeeRatePercent,
-		),
-		vatRate: resolveVatRate(rates?.vatRatePercent),
 		requiresFullTank,
 		fullTankUpgradeFee: car?.fuelUpgradeRate ?? 0,
 		pricingIncludesFuel: car?.pricingIncludesFuel ?? false,
@@ -112,12 +105,16 @@ export function useCarDetailPricing({
 		isAuthenticated,
 	);
 	const pricingPreview = previewQuery.data;
-	const pricingIsAuthoritative =
-		pricingPreviewRequest !== null &&
-		pricingPreview !== undefined &&
-		!previewQuery.isFetching &&
-		!previewQuery.isError;
-	const pricingPreviewError = previewQuery.isError
+	const pricingState = resolveBookingPricingState({
+		requested: pricingPreviewRequest !== null,
+		hasPreview: pricingPreview !== undefined,
+		isFetching: previewQuery.isFetching,
+		isError: previewQuery.isError,
+		isPaused: previewQuery.isPaused,
+	});
+	const pricingIsLoading = pricingState === "loading";
+	const pricingIsAuthoritative = pricingState === "ready";
+	const pricingPreviewError = pricingState === "error"
 		? getBookingPricingPreviewErrorMessage(previewQuery.error)
 		: null;
 
@@ -155,6 +152,7 @@ export function useCarDetailPricing({
 		totalDays,
 		pricingPreview,
 		pricingPreviewError,
+		pricingIsLoading,
 		pricingIsAuthoritative,
 		authoritativeTotal: pricingIsAuthoritative
 			? (pricingPreview?.totalAmount ?? null)

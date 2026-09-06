@@ -12,20 +12,6 @@ export interface CarDetail extends SearchCar {
 /** Response shape for GET /api/cars/:id - returns car directly */
 export type CarDetailResponse = CarDetail;
 
-/** Platform rates from API */
-export interface PlatformRates {
-  vatRatePercent: number;
-  platformServiceFeeRatePercent: number;
-  securityDetailRate?: number;
-}
-
-/** Response shape for GET /api/rates */
-export interface RatesResponse {
-  vatRatePercent: number;
-  platformCustomerServiceFeeRatePercent: number;
-  securityDetailRate: number;
-}
-
 /** Booking form data for guest checkout */
 export interface GuestBookingFormData {
   carId: string;
