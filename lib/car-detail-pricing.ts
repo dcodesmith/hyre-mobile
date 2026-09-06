@@ -13,7 +13,7 @@ import type {
 import { normalizeBookingTimeWindow } from "./booking-utils";
 import type { CostBreakdownData } from "./car-detail-types";
 
-export const DEFAULT_PLATFORM_FEE_RATE = 5;
+export const DEFAULT_PLATFORM_FEE_RATE = 0;
 export const DEFAULT_VAT_RATE = 7.5;
 
 type BookingRates = {
