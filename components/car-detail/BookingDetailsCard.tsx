@@ -80,7 +80,7 @@ export function BookingDetailsCard({
   } = values;
 
   return (
-    <View className="mt-4" collapsable={false}>
+    <View collapsable={false}>
       <View
         className="overflow-visible rounded border border-neutral-200 bg-white shadow-xl"
         style={{ overflow: "visible" }}

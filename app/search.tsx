@@ -1,11 +1,14 @@
 import { CompactSearchBar, SearchSheet } from "@/components/booking-search";
+import { SearchTabBar } from "@/components/custom-tab-bar";
 import { PromotionalPriceRow, PromotionBadge } from "@/components/promotion";
 import { CarCardRatingBadge } from "@/components/reviews";
 import { SearchFilters } from "@/components/search-filters";
+import { TabBarVisibilityProvider, useTabBarVisibility } from "@/context/tab-bar-visibility-context";
 import { useCarSearch } from "@/hooks/use-car-search";
 import type { CarSearchParams, SearchCar } from "@/lib/car-types";
 import { hasActivePromotion } from "@/lib/promotion-utils";
 import {
+  buildResultsHeading,
   countActiveSearchFilters,
   parseSearchFilters,
   routeParamsToSearchParams,
@@ -15,12 +18,13 @@ import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { ArrowLeft } from "lucide-react-native";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import {
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
   Pressable,
   ScrollView,
   Text,
-  useWindowDimensions,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -45,10 +49,6 @@ function VehicleCard({
   readonly bookingType?: string;
   readonly onPress: () => void;
 }) {
-  const { width } = useWindowDimensions();
-  const cardWidth = width - 32; // px-4 = 16 each side
-  const imageHeight = (cardWidth * 3) / 4; // 4:3 aspect
-
   // Get rate based on booking type
   const getRate = () => {
     switch (bookingType) {
@@ -86,11 +86,8 @@ function VehicleCard({
       <View className="relative">
         <Image
           source={{ uri: car.images[0]?.url }}
-          style={{
-            width: cardWidth,
-            height: imageHeight,
-            backgroundColor: "#E5E7EB",
-          }}
+          className="w-full bg-gray-200"
+          style={{ aspectRatio: 4 / 3 }}
           contentFit="cover"
         />
         {hasActivePromotion(car.promotion) ? (
@@ -140,15 +137,11 @@ function VehicleCard({
 }
 
 function VehicleCardSkeleton() {
-  const { width } = useWindowDimensions();
-  const cardWidth = width - 32;
-  const imageHeight = (cardWidth * 3) / 4;
-
   return (
     <View className="animate-pulse">
       <View
-        className="rounded-xl bg-gray-200/80"
-        style={{ width: cardWidth, height: imageHeight }}
+        className="w-full rounded-xl bg-gray-200/80"
+        style={{ aspectRatio: 4 / 3 }}
       />
       <View className="mt-3 gap-2">
         <View className="h-4 w-52 rounded bg-gray-200/80" />
@@ -159,8 +152,9 @@ function VehicleCardSkeleton() {
   );
 }
 
-export default function SearchScreen() {
+function SearchScreen() {
   const router = useRouter();
+  const { onScroll } = useTabBarVisibility();
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const params = useLocalSearchParams<{
     from?: string;
@@ -228,26 +222,27 @@ export default function SearchScreen() {
   const { data, isLoading, error, refetch, isRefetching } =
     useCarSearch(searchPayload);
 
+  const handleScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      onScroll(event.nativeEvent.contentOffset.y);
+    },
+    [onScroll],
+  );
+
   const cars = data?.cars ?? [];
   const pagination = data?.pagination;
   const facets = data?.facets ?? null;
 
   const renderResultsContent = () => {
-    if (isLoading) {
-      return (
-        <View className="gap-6 py-2">
-          <View className="h-6 w-36 rounded bg-gray-200/80 animate-pulse" />
-          <View className="gap-6">
-            {SEARCH_SKELETON_IDS.map((id) => (
-              <VehicleCardSkeleton key={`search-skeleton-${id}`} />
-            ))}
-          </View>
-        </View>
-      );
-    }
+    const vehicleCount = pagination?.total ?? cars.length;
+    const vehicleLabel = buildResultsHeading(
+      vehicleCount,
+      data?.filters.vehicleTypes ?? appliedFilters.vehicleTypes,
+    );
 
+    let resultsBody: ReactNode;
     if (error) {
-      return (
+      resultsBody = (
         <View className="items-center justify-center gap-3 py-12">
           <Text className="text-sm text-red-500">
             Failed to search vehicles
@@ -263,31 +258,24 @@ export default function SearchScreen() {
           </Pressable>
         </View>
       );
-    }
-
-    const vehicleCount = pagination?.total ?? cars.length;
-    const vehicleLabel = `${vehicleCount} vehicle${vehicleCount === 1 ? "" : "s"} found`;
-
-    if (cars.length === 0) {
-      return (
-        <>
-          <Text className="mb-4 text-base font-medium text-gray-900">
-            {vehicleLabel}
-          </Text>
-          <View className="items-center justify-center py-12">
-            <Text className="text-sm text-gray-500">
-              No vehicles match your search
-            </Text>
-          </View>
-        </>
+    } else if (isLoading) {
+      resultsBody = (
+        <View className="gap-6">
+          {SEARCH_SKELETON_IDS.map((id) => (
+            <VehicleCardSkeleton key={`search-skeleton-${id}`} />
+          ))}
+        </View>
       );
-    }
-
-    return (
-      <>
-        <Text className="mb-4 text-base font-medium text-gray-900">
-          {vehicleLabel}
-        </Text>
+    } else if (cars.length === 0) {
+      resultsBody = (
+        <View className="items-center justify-center py-12">
+          <Text className="text-sm text-gray-500">
+            No vehicles match your search
+          </Text>
+        </View>
+      );
+    } else {
+      resultsBody = (
         <View className="gap-6">
           {cars.map((car) => (
             <VehicleCard
@@ -310,55 +298,86 @@ export default function SearchScreen() {
             />
           ))}
         </View>
+      );
+    }
+
+    return (
+      <>
+        <View className="mb-4 w-full flex-row items-center justify-between gap-4">
+          {isLoading ? (
+            <View className="h-6 flex-1 rounded bg-gray-200/80 animate-pulse" />
+          ) : (
+            <Text className="flex-1 text-sm font-semibold text-gray-900">
+              {vehicleLabel}
+            </Text>
+          )}
+          <SearchFilters
+            facets={facets}
+            baseParams={baseParams}
+            bookingType={baseParams.bookingType}
+            activeFilterCount={activeFilterCount}
+          />
+        </View>
+        {resultsBody}
       </>
     );
   };
 
   return (
-    <SafeAreaView
-      className="flex-1 bg-white"
-      edges={["top", "left", "right", "bottom"]}
-    >
-      <StatusBar style="dark" />
-      {/* Header with back button and compact search */}
-      <View className="flex-row items-center gap-3 border-b border-gray-200 px-4 py-3">
-        <Pressable
-          onPress={() => router.back()}
-          className="p-1"
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-        >
-          <ArrowLeft color="#374151" size={24} strokeWidth={2} />
-        </Pressable>
-        <View className="flex-1">
-          <CompactSearchBar
-            onPress={() => setIsSearchModalOpen(true)}
-            appliedSearch={{
-              from: params.from,
-              to: params.to,
-              bookingType: params.bookingType,
-              pickupTime: params.pickupTime,
-              flightNumber: params.flightNumber,
-            }}
-          />
+    <View className="flex-1 bg-white">
+      <SafeAreaView
+        className="flex-1 bg-white"
+        edges={["top", "left", "right", "bottom"]}
+      >
+        <StatusBar style="dark" />
+        {/* Header with back button and compact search */}
+        <View className="flex-row items-center gap-3 border-b border-gray-200 px-4 py-3">
+          <Pressable
+            onPress={() => router.back()}
+            className="p-1"
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <ArrowLeft color="#374151" size={24} strokeWidth={2} />
+          </Pressable>
+          <View className="flex-1">
+            <CompactSearchBar
+              onPress={() => setIsSearchModalOpen(true)}
+              appliedSearch={{
+                from: params.from,
+                to: params.to,
+                bookingType: params.bookingType,
+                pickupTime: params.pickupTime,
+                flightNumber: params.flightNumber,
+              }}
+            />
+          </View>
         </View>
-        <SearchFilters
-          facets={facets}
-          baseParams={baseParams}
-          bookingType={baseParams.bookingType}
-          activeFilterCount={activeFilterCount}
+
+        <SearchSheet
+          open={isSearchModalOpen}
+          onOpenChange={setIsSearchModalOpen}
         />
-      </View>
 
-      <SearchSheet
-        open={isSearchModalOpen}
-        onOpenChange={setIsSearchModalOpen}
-      />
+        {/* Results */}
+        <ScrollView
+          className="flex-1"
+          contentContainerClassName="px-4 py-4 pb-28"
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+        >
+          {renderResultsContent()}
+        </ScrollView>
+      </SafeAreaView>
+      <SearchTabBar />
+    </View>
+  );
+}
 
-      {/* Results */}
-      <ScrollView className="flex-1 px-4 py-4">
-        {renderResultsContent()}
-      </ScrollView>
-    </SafeAreaView>
+export default function SearchScreenRoute() {
+  return (
+    <TabBarVisibilityProvider>
+      <SearchScreen />
+    </TabBarVisibilityProvider>
   );
 }

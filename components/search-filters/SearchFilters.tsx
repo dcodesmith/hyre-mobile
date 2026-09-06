@@ -225,7 +225,7 @@ export function SearchFilters({
       : `Show ${resultCount} ${vehicleNoun}`;
 
   return (
-    <>
+    <DialogPrimitive.Root open={open} onOpenChange={handleOpenChange}>
       <Pressable
         onPress={() => handleOpenChange(true)}
         accessibilityRole="button"
@@ -242,8 +242,7 @@ export function SearchFilters({
         ) : null}
       </Pressable>
 
-      <DialogPrimitive.Root open={open} onOpenChange={handleOpenChange}>
-        <DialogPrimitive.Portal>
+      <DialogPrimitive.Portal>
           <DialogPrimitive.Overlay
             className={cn(
               "absolute inset-0 z-50 flex-1 items-center justify-end bg-black/50",
@@ -448,8 +447,7 @@ export function SearchFilters({
               </DialogPrimitive.Content>
             </NativeOnlyAnimatedView>
           </DialogPrimitive.Overlay>
-        </DialogPrimitive.Portal>
-      </DialogPrimitive.Root>
-    </>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 }
