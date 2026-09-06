@@ -5,7 +5,11 @@ import {
   NIGHT_BOOKING_TYPE,
 } from "@/lib/booking-types";
 import { getFuelTankNote } from "@/lib/booking-utils";
-import { getListRateForBookingType } from "@/lib/car-detail-pricing";
+import {
+  DEFAULT_PLATFORM_FEE_RATE,
+  DEFAULT_VAT_RATE,
+  getListRateForBookingType,
+} from "@/lib/car-detail-pricing";
 import type { CostBreakdownData } from "@/lib/car-detail-types";
 import type { CarPromotion } from "@/lib/car-types";
 import {
@@ -14,6 +18,7 @@ import {
 } from "@/lib/promotion-utils";
 import { useMemo } from "react";
 
+export { DEFAULT_PLATFORM_FEE_RATE, DEFAULT_VAT_RATE };
 const roundMoney = (value: number) => Math.round(value * 100) / 100;
 
 interface UseBookingPricingParams {
@@ -42,8 +47,8 @@ export function useBookingPricing({
   airportPickupRate,
   bookingType,
   totalDays,
-  platformFeeRate = 0,
-  vatRate = 0,
+  platformFeeRate = DEFAULT_PLATFORM_FEE_RATE,
+  vatRate = DEFAULT_VAT_RATE,
   requiresFullTank = false,
   fullTankUpgradeFee = 0,
   pricingIncludesFuel = false,

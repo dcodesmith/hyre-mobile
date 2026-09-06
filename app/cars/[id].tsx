@@ -16,12 +16,7 @@ import { useCarBookingForm } from "@/hooks/use-car-booking-form";
 import { useCarDetailPricing } from "@/hooks/use-car-detail-pricing";
 import { useCarDetail } from "@/hooks/use-car-detail";
 import { useGuestCheckoutForm } from "@/hooks/use-guest-checkout-form";
-import type { BookingPricingPreviewResponse } from "@/lib/booking-pricing-preview-types";
-import {
-  AIRPORT_PICKUP_BOOKING_TYPE,
-  type BookingType,
-} from "@/lib/booking-types";
-import type { CostBreakdownData } from "@/lib/car-detail-types";
+import { AIRPORT_PICKUP_BOOKING_TYPE } from "@/lib/booking-types";
 import { isExpoIos } from "@/lib/expo-platform";
 import { hasActivePromotion } from "@/lib/promotion-utils";
 import { buildCarSignInRedirectPath } from "@/lib/sign-in-redirect";
@@ -93,54 +88,6 @@ function CarDetailSkeleton() {
   );
 }
 
-function BookingPricingSection({
-  bookingType,
-  isLoading,
-  preview,
-  pricing,
-}: {
-  readonly bookingType: BookingType;
-  readonly isLoading: boolean;
-  readonly preview?: BookingPricingPreviewResponse;
-  readonly pricing: CostBreakdownData;
-}) {
-  if (!isLoading && !preview) return null;
-
-  return (
-    <View>
-      <Text className="mb-2 text-sm font-semibold text-gray-950">
-        Cost Breakdown
-      </Text>
-      {isLoading ? (
-        <View
-          accessible
-          className="rounded border border-neutral-200 bg-white p-4 shadow-xl"
-          accessibilityLabel="Calculating price"
-          accessibilityRole="progressbar"
-          accessibilityState={{ busy: true }}
-        >
-          {[0, 1, 2].map((row) => (
-            <View
-              key={row}
-              className="mb-3 flex-row items-center justify-between last:mb-0"
-            >
-              <View className="h-4 w-28 rounded bg-gray-200/80 animate-pulse" />
-              <View className="h-4 w-20 rounded bg-gray-200/80 animate-pulse" />
-            </View>
-          ))}
-        </View>
-      ) : (
-        <CostBreakdown
-          pricing={pricing}
-          bookingType={bookingType}
-          pricingPreview={preview}
-          hideTotal
-        />
-      )}
-    </View>
-  );
-}
-
 export default function CarDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -185,7 +132,6 @@ export default function CarDetailScreen() {
     totalDays,
     pricingPreview,
     pricingPreviewError,
-    pricingIsLoading,
     pricingIsAuthoritative,
     authoritativeTotal,
     handlePriceChanged,
@@ -292,16 +238,6 @@ export default function CarDetailScreen() {
 
   const carName = `${car.make} ${car.model} (${car.year})`;
   const statusBarScrimHeight = Math.max(insets.top, 24);
-  const showPricingFooter = pricingIsLoading || pricingIsAuthoritative;
-  let bookingContentBottomPadding = "pb-8";
-  if (showPricingFooter) {
-    bookingContentBottomPadding = isAuthenticated ? "pb-40" : "pb-48";
-  }
-  const originalPreviewTotal =
-    pricingPreview &&
-    pricingPreview.compareAtTotalAmount > pricingPreview.totalAmount
-      ? pricingPreview.compareAtTotalAmount
-      : undefined;
 
   return (
     <SafeAreaView
@@ -366,7 +302,7 @@ export default function CarDetailScreen() {
           <View
             className={cn(
               "flex-col px-4 mt-4 gap-4",
-              bookingContentBottomPadding,
+              isAuthenticated ? "pb-40" : "pb-48",
             )}
           >
             {!isAuthenticated && (
@@ -409,9 +345,7 @@ export default function CarDetailScreen() {
               <View>
                 {airportPickup.isCalculatingDuration ? (
                   <AirportTripDetailsSkeleton />
-                ) : null}
-                {!airportPickup.isCalculatingDuration &&
-                airportPickup.tripEstimation ? (
+                ) : airportPickup.tripEstimation ? (
                   <AirportTripDetails
                     estimation={airportPickup.tripEstimation}
                   />
@@ -419,61 +353,37 @@ export default function CarDetailScreen() {
               </View>
             ) : null}
 
-            <BookingPricingSection
-              bookingType={booking.values.bookingType}
-              isLoading={pricingIsLoading}
-              preview={pricingPreview}
-              pricing={effectivePricing}
-            />
-            {!pricingIsLoading && pricingPreviewError ? (
-              <View
-                accessible
-                className="rounded-md border border-red-200 bg-red-50 p-3"
-                accessibilityLiveRegion="polite"
-                accessibilityRole="alert"
-              >
-                <Text className="text-sm text-red-800">
-                  {pricingPreviewError}
-                </Text>
-              </View>
-            ) : null}
+            <View>
+              <Text className="mb-2 text-sm font-semibold text-gray-950">
+                Cost Breakdown
+              </Text>
+              <CostBreakdown
+                pricing={effectivePricing}
+                bookingType={booking.values.bookingType}
+                pricingPreview={pricingPreview}
+                hideTotal
+              />
+            </View>
           </View>
         </ScrollView>
 
-        {pricingIsLoading ? (
-          <View
-            accessible
-            className="absolute bottom-0 left-0 right-0 z-50 rounded-t-xl border-t border-gray-200 bg-white p-4"
-            style={{ paddingBottom: insets.bottom }}
-            accessibilityLabel="Calculating total"
-            accessibilityRole="progressbar"
-            accessibilityState={{ busy: true }}
-          >
-            <View className="flex-row items-center justify-between gap-2">
-              <View className="h-4 w-10 rounded bg-gray-200/80 animate-pulse" />
-              <View className="h-5 w-20 rounded bg-gray-200/80 animate-pulse" />
-            </View>
-            <View className="mt-3 h-10 w-full rounded-full bg-gray-200/80 animate-pulse" />
-          </View>
-        ) : null}
-        {pricingIsAuthoritative && pricingPreview ? (
-          <StickyBottomBar
-            total={pricingPreview.totalAmount}
-            originalTotal={originalPreviewTotal}
-            savingsAmount={pricingPreview.savingsAmount}
-            isSubmitting={
-              isSubmitting ||
-              airportPickup.isValidatingFlight ||
-              airportPickup.isCalculatingDuration
-            }
-            onPayNow={submit}
-            onSignIn={handleSignIn}
-            error={
-              paymentError ?? airportPickup.flightError
-            }
-            isAuthenticated={isAuthenticated}
-          />
-        ) : null}
+        <StickyBottomBar
+          total={effectivePricing.finalTotal}
+          originalTotal={effectivePricing.originalGrandTotal}
+          savingsAmount={effectivePricing.savingsAmount}
+          isSubmitting={
+            isSubmitting ||
+            airportPickup.isValidatingFlight ||
+            airportPickup.isCalculatingDuration
+          }
+          disabled={!pricingIsAuthoritative}
+          onPayNow={submit}
+          onSignIn={handleSignIn}
+          error={
+            paymentError ?? airportPickup.flightError ?? pricingPreviewError
+          }
+          isAuthenticated={isAuthenticated}
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
