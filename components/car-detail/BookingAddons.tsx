@@ -36,26 +36,27 @@ export function BookingAddons({
               !selected && selectedIds.size >= MAX_BOOKING_ADDONS;
 
             return (
-              <View key={addon.id} className="flex-row items-start gap-3">
+              <Pressable
+                key={addon.id}
+                disabled={atLimit}
+                onPress={() => onSelectionChange(addon.id, !selected)}
+                className="min-h-11 flex-row items-start gap-3"
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: selected, disabled: atLimit }}
+                accessibilityLabel={`${addon.name}, ${formatCurrency(addon.unitPrice)}`}
+              >
                 <Checkbox
                   checked={selected}
                   disabled={atLimit}
-                  onCheckedChange={(value) =>
-                    onSelectionChange(addon.id, !!value)
-                  }
+                  onCheckedChange={() => undefined}
                   className="mt-0.5 border-neutral-900 shadow-none"
                   checkedClassName="border-neutral-900"
                   indicatorClassName="bg-neutral-900"
                   iconClassName="text-white"
+                  accessible={false}
+                  pointerEvents="none"
                 />
-                <Pressable
-                  disabled={atLimit}
-                  onPress={() => onSelectionChange(addon.id, !selected)}
-                  className="min-w-0 flex-1"
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: selected, disabled: atLimit }}
-                  accessibilityLabel={`${addon.name}, ${formatCurrency(addon.unitPrice)}`}
-                >
+                <View className="min-w-0 flex-1">
                   <View className="flex-row items-start justify-between gap-3">
                     <Text className="min-w-0 flex-1 text-sm font-medium leading-5 text-foreground">
                       {addon.name}
@@ -69,8 +70,8 @@ export function BookingAddons({
                       {addon.description}
                     </Text>
                   ) : null}
-                </Pressable>
-              </View>
+                </View>
+              </Pressable>
             );
           })
         )}
