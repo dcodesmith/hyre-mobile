@@ -19,7 +19,7 @@ export type CreateBookingCheckoutPayload = {
   dropOffAddress?: string;
   pickupTime: string;
   flightNumber?: string;
-  includeSecurityDetail?: boolean;
+  addonIds?: string[];
   requiresFullTank?: boolean;
   specialRequests?: string;
   useCredits?: number;

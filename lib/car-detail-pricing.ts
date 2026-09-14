@@ -71,6 +71,7 @@ export function buildBookingPricingPreviewRequest({
 	pickupTime,
 	requiresFullTank,
 	useCredits,
+	addonIds = [],
 }: {
 	carId: string | undefined;
 	bookingType: BookingType;
@@ -79,6 +80,7 @@ export function buildBookingPricingPreviewRequest({
 	pickupTime: string | undefined;
 	requiresFullTank: boolean;
 	useCredits: number;
+	addonIds?: readonly string[];
 }): BookingPricingPreviewRequest | null {
 	if (!carId || !from || !to) return null;
 
@@ -100,7 +102,7 @@ export function buildBookingPricingPreviewRequest({
 		startDate: window.startDate.toISOString(),
 		endDate: window.endDate.toISOString(),
 		pickupTime: resolvedPickupTime,
-		includeSecurityDetail: false,
+		addonIds: [...addonIds],
 		requiresFullTank:
 			bookingType === DAY_BOOKING_TYPE ? requiresFullTank : false,
 		useCredits,
@@ -144,5 +146,27 @@ export function mergeBookingPricingPreview(
 				: undefined,
 		savingsAmount:
 			preview.savingsAmount > 0 ? preview.savingsAmount : undefined,
+	};
+}
+
+const roundMoney = (value: number) => Math.round(value * 100) / 100;
+
+export function addEstimatedAddonPricing(
+	pricing: CostBreakdownData,
+	addonTotal: number,
+): CostBreakdownData {
+	if (addonTotal <= 0) return pricing;
+
+	const vatIncrease = roundMoney((addonTotal * pricing.vatRate) / 100);
+	const totalIncrease = roundMoney(addonTotal + vatIncrease);
+
+	return {
+		...pricing,
+		vat: roundMoney(pricing.vat + vatIncrease),
+		finalTotal: roundMoney(pricing.finalTotal + totalIncrease),
+		originalGrandTotal:
+			pricing.originalGrandTotal === undefined
+				? undefined
+				: roundMoney(pricing.originalGrandTotal + totalIncrease),
 	};
 }

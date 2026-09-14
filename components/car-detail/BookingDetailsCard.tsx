@@ -1,5 +1,6 @@
 import { BookingTypeInput } from "@/components/booking-search/BookingTypeInput";
 import { BookingTypeTabs } from "@/components/booking-search/BookingTypeTabs";
+import { BookingCreditsToggle } from "@/components/car-detail/BookingCreditsToggle";
 import { AddressAutocompleteInput } from "@/components/ui/address-autocomplete-input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -44,7 +45,7 @@ interface BookingDetailsCardProps {
 
 /**
  * The full in-page booking card: price header, booking-type tabs, date range,
- * pickup time/flight number, pickup & drop-off addresses, fuel note, and the
+ * pickup time/flight number, pickup & drop-off addresses, fuel note, and
  * optional full-tank upgrade. Reads from `useCarBookingForm` and renders
  * inline errors from RHF.
  */
@@ -361,34 +362,11 @@ export function BookingDetailsCard({
               </View>
             )}
 
-          {creditsToUse > 0 ? (
-            <Pressable
-              onPress={() => onApplyCreditsChange(!applyCredits)}
-              className="mt-4 min-h-11 flex-row items-center gap-2"
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: applyCredits }}
-              accessibilityLabel={`Apply up to ${formatCurrency(creditsToUse)} in referral credits`}
-            >
-              <Checkbox
-                checked={applyCredits}
-                onCheckedChange={() => undefined}
-                className="border-neutral-900 shadow-none"
-                checkedClassName="border-neutral-900"
-                indicatorClassName="bg-neutral-900"
-                iconClassName="text-white"
-                accessible={false}
-                pointerEvents="none"
-              />
-              <View className="min-h-11 flex-1 justify-center">
-                <Text selectable className="text-sm font-medium leading-5 text-gray-900">
-                  Apply up to {formatCurrency(creditsToUse)} in referral credits
-                </Text>
-                <Text selectable className="text-xs leading-4 text-gray-500">
-                  Your total will update before payment.
-                </Text>
-              </View>
-            </Pressable>
-          ) : null}
+          <BookingCreditsToggle
+            creditsToUse={creditsToUse}
+            applyCredits={applyCredits}
+            onApplyCreditsChange={onApplyCreditsChange}
+          />
         </View>
       </View>
     </View>

@@ -58,6 +58,7 @@ type BuildPayloadArgs = {
   callbackUrl: string;
   requiresFullTank: boolean;
   useCredits: number;
+  addonIds: readonly string[];
   expectedTotalAmount: string;
   guest: GuestPayload | null;
 };
@@ -97,7 +98,7 @@ function buildCheckoutPayload(
     pickupAddress: booking.pickupAddress,
     sameLocation,
     pickupTime,
-    includeSecurityDetail: false,
+    addonIds: [...args.addonIds],
     requiresFullTank:
       booking.bookingType === DAY_BOOKING_TYPE ? requiresFullTank : false,
     expectedTotalAmount,
@@ -182,6 +183,7 @@ export type UseBookingCheckoutArgs = {
   isAuthenticated: boolean;
   requiresFullTank: boolean;
   useCredits: number;
+  addonIds: readonly string[];
   authoritativeTotal: number | null;
   validate: () => Promise<boolean>;
   getBookingValues: () => CarBookingFormValues;
@@ -223,6 +225,7 @@ export function useBookingCheckout(
     isAuthenticated,
     requiresFullTank,
     useCredits,
+    addonIds,
     authoritativeTotal,
     validate,
     getBookingValues,
@@ -287,6 +290,7 @@ export function useBookingCheckout(
         callbackUrl,
         requiresFullTank,
         useCredits,
+        addonIds,
         expectedTotalAmount: authoritativeTotal.toFixed(2),
         guest: guestPayload,
       });
@@ -429,6 +433,7 @@ export function useBookingCheckout(
     isAuthenticated,
     requiresFullTank,
     useCredits,
+    addonIds,
     authoritativeTotal,
     getBookingValues,
     getGuestValues,

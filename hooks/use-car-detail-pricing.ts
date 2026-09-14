@@ -6,19 +6,28 @@ import {
 	useBookingPricingPreview,
 } from "@/hooks/use-booking-pricing-preview";
 import type { CarBookingFormReturn } from "@/hooks/use-car-booking-form";
+import { usePublicAddons } from "@/hooks/use-public-addons";
 import { useRates } from "@/hooks/use-rates";
 import { useReferralSummary } from "@/hooks/use-referrals";
+import {
+	addonCatalogKey,
+	selectedBookingPricingAddons,
+	toggleSelectedAddonId,
+} from "@/lib/booking-addons";
 import { getBookingCreditsToUse } from "@/lib/booking-credits";
 import type { BookingPricingPreviewResponse } from "@/lib/booking-pricing-preview-types";
 import { calculateBookingUnits } from "@/lib/booking-utils";
 import type { CarDetail } from "@/lib/car-detail-types";
 import {
+	addEstimatedAddonPricing,
 	buildBookingPricingPreviewRequest,
 	mergeBookingPricingPreview,
 	resolvePlatformFeeRate,
 	resolveVatRate,
 } from "@/lib/car-detail-pricing";
 import { getBookingPricingPreviewErrorMessage } from "@/services/booking-pricing-preview";
+
+const EMPTY_ADDON_IDS: readonly string[] = [];
 
 export function useCarDetailPricing({
 	car,
@@ -32,6 +41,17 @@ export function useCarDetailPricing({
 	const queryClient = useQueryClient();
 	const { data: rates } = useRates();
 	const { data: referralSummary } = useReferralSummary(isAuthenticated);
+	const addonsQuery = usePublicAddons(booking.values.bookingType);
+	const addons = addonsQuery.data ?? [];
+	const catalogKey = addonCatalogKey(addons);
+	const [addonSelection, setAddonSelection] = useState({
+		catalogKey: "",
+		ids: [] as string[],
+	});
+	const selectedAddonIds =
+		addonSelection.catalogKey === catalogKey
+			? addonSelection.ids
+			: EMPTY_ADDON_IDS;
 	const [requiresFullTank, setRequiresFullTank] = useState(false);
 	const [applyCredits, setApplyCredits] = useState(false);
 
@@ -85,6 +105,31 @@ export function useCarDetailPricing({
 		pricingIncludesFuel: car?.pricingIncludesFuel ?? false,
 		promotion: car?.promotion ?? null,
 	});
+	const estimatedAddons = useMemo(
+		() => selectedBookingPricingAddons(addons, selectedAddonIds, totalDays),
+		[addons, selectedAddonIds, totalDays],
+	);
+	const estimatedPricing = useMemo(
+		() =>
+			addEstimatedAddonPricing(
+				pricing,
+				estimatedAddons.reduce((total, addon) => total + addon.totalPrice, 0),
+			),
+		[estimatedAddons, pricing],
+	);
+
+	const toggleAddon = useCallback(
+		(addonId: string, selected: boolean) => {
+			setAddonSelection((current) => {
+				const ids = current.catalogKey === catalogKey ? current.ids : [];
+				return {
+					catalogKey,
+					ids: toggleSelectedAddonId(ids, addonId, selected),
+				};
+			});
+		},
+		[catalogKey],
+	);
 
 	const pricingPreviewRequest = useMemo(
 		() =>
@@ -96,6 +141,7 @@ export function useCarDetailPricing({
 				pickupTime: booking.values.pickupTime,
 				requiresFullTank,
 				useCredits,
+				addonIds: selectedAddonIds,
 			}),
 		[
 			booking.values.bookingType,
@@ -104,6 +150,7 @@ export function useCarDetailPricing({
 			booking.values.pickupTime,
 			car?.id,
 			requiresFullTank,
+			selectedAddonIds,
 			useCredits,
 		],
 	);
@@ -135,7 +182,7 @@ export function useCarDetailPricing({
 	const effectivePricing = useMemo(
 		() =>
 			mergeBookingPricingPreview(
-				pricing,
+				estimatedPricing,
 				pricingPreview,
 				booking.values.bookingType,
 				car
@@ -147,7 +194,7 @@ export function useCarDetailPricing({
 						}
 					: undefined,
 			),
-		[booking.values.bookingType, car, pricing, pricingPreview],
+		[booking.values.bookingType, car, estimatedPricing, pricingPreview],
 	);
 
 	return {
@@ -160,6 +207,11 @@ export function useCarDetailPricing({
 			? (pricingPreview?.totalAmount ?? null)
 			: null,
 		handlePriceChanged,
+		addons,
+		addonsLoading: addonsQuery.isPending && addonsQuery.data === undefined,
+		estimatedAddons,
+		selectedAddonIds,
+		toggleAddon,
 		requiresFullTank,
 		setRequiresFullTank,
 		applyCredits,

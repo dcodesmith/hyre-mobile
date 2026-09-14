@@ -4,6 +4,7 @@ import {
   patchJsonWithAuth,
   postJsonWithAuth,
 } from "@/lib/api-client";
+import type { BookingAddonSnapshot } from "@/lib/booking-addons";
 import type { BookingType } from "@/lib/booking-types";
 
 const BOOKINGS_ENDPOINT = "/api/bookings";
@@ -78,7 +79,7 @@ export type BookingDetail = Omit<BookingSummary, "car"> & {
   platformCustomerServiceFeeRatePercent?: number | null;
   vatAmount?: number | null;
   vatRatePercent?: number | null;
-  securityDetailCost?: number | null;
+  addons?: BookingAddonSnapshot[];
   fuelUpgradeCost?: number | null;
   referralDiscountAmount?: number | null;
   referralCreditsUsed?: number | null;

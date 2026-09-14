@@ -1,3 +1,5 @@
+import type { BookingPricingAddon } from "./booking-addons";
+
 export type PricingPreviewDiscountCoverage = "NONE" | "PARTIAL" | "FULL";
 
 export type PricingPreviewSegmentKind = "PROMO" | "STANDARD";
@@ -27,7 +29,8 @@ export interface BookingPricingPreviewResponse {
   readonly segments: PricingPreviewSegment[];
   readonly baseTotal: number;
   readonly compareAtBaseTotal: number;
-  readonly securityDetailCost: number;
+  readonly addons: BookingPricingAddon[];
+  readonly addonTotal: number;
   readonly fuelUpgradeCost: number;
   readonly platformFeeRatePercent: number;
   readonly platformFeeAmount: number;
@@ -51,7 +54,7 @@ export interface BookingPricingPreviewRequest {
   readonly startDate: string;
   readonly endDate: string;
   readonly pickupTime: string;
-  readonly includeSecurityDetail: boolean;
+  readonly addonIds: readonly string[];
   readonly requiresFullTank: boolean;
   readonly useCredits: number;
 }
