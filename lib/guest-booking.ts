@@ -49,7 +49,7 @@ export function guestBookingAsDetail(
     platformCustomerServiceFeeRatePercent: null,
     vatAmount: null,
     vatRatePercent: null,
-    securityDetailCost: null,
+    addons: booking.addons,
     fuelUpgradeCost: null,
     referralDiscountAmount: null,
     referralCreditsUsed: null,

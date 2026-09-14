@@ -14,7 +14,7 @@ export const bookingPricingPreviewQueryKey = (
     request.startDate,
     request.endDate,
     request.pickupTime,
-    request.includeSecurityDetail,
+    [...request.addonIds].sort().join(","),
     request.requiresFullTank,
     request.useCredits,
     authenticated,

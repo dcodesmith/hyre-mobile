@@ -20,7 +20,11 @@ export function createBookingPaymentSummary(booking: BookingDetail) {
       { netTotal: 0, hours: 0 },
     );
   const netTotal = money(booking.netTotal);
-  const securityDetailCost = money(booking.securityDetailCost);
+  const addons = booking.addons ?? [];
+  const addonTotal = addons.reduce(
+    (total, addon) => total + money(addon.totalPrice),
+    0,
+  );
   const fuelUpgradeCost = money(booking.fuelUpgradeCost);
   const referralDiscountAmount = money(booking.referralDiscountAmount);
   const referralCreditsUsed = money(booking.referralCreditsUsed);
@@ -37,7 +41,7 @@ export function createBookingPaymentSummary(booking: BookingDetail) {
       netTotal,
       extensionNetTotal: 0,
       extendedHours: 0,
-      securityDetailCost,
+      addons,
       fuelUpgradeCost,
       referralDiscountAmount,
       referralCreditsUsed,
@@ -59,7 +63,7 @@ export function createBookingPaymentSummary(booking: BookingDetail) {
     netTotal,
     extensionNetTotal: extension.netTotal,
     extendedHours: extension.hours,
-    securityDetailCost,
+    addons,
     fuelUpgradeCost,
     referralDiscountAmount,
     referralCreditsUsed,
@@ -75,8 +79,8 @@ export function createBookingPaymentSummary(booking: BookingDetail) {
       extensionPlatformFee +
       baseVat +
       extensionVat +
-      fuelUpgradeCost +
-      securityDetailCost -
+      addonTotal +
+      fuelUpgradeCost -
       referralDiscountAmount -
       referralCreditsUsed,
   };

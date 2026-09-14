@@ -1,4 +1,5 @@
 import { getUnitLabel } from "@/hooks/use-booking-pricing";
+import type { BookingPricingAddon } from "@/lib/booking-addons";
 import type { BookingPricingPreviewResponse } from "@/lib/booking-pricing-preview-types";
 import {
   AIRPORT_PICKUP_BOOKING_TYPE,
@@ -14,6 +15,7 @@ interface CostBreakdownProps {
   readonly pricing: CostBreakdownData;
   readonly bookingType: BookingType;
   readonly pricingPreview?: BookingPricingPreviewResponse | null;
+  readonly estimatedAddons?: readonly BookingPricingAddon[];
   /** Hide the in-card total. Sticky footer renders the (promotional) total. */
   readonly hideTotal?: boolean;
 }
@@ -74,6 +76,7 @@ export function CostBreakdown({
   pricing,
   bookingType,
   pricingPreview = null,
+  estimatedAddons = [],
   hideTotal = true,
 }: CostBreakdownProps) {
   const {
@@ -156,6 +159,22 @@ export function CostBreakdown({
           </Text>
         </View>
       )}
+
+      {(pricingPreview?.addons ?? estimatedAddons).map((addon) => (
+        <View
+          key={addon.id}
+          className="mb-1.5 flex-row items-baseline justify-between gap-2"
+        >
+          <Text className="min-w-0 flex-1 pr-2 text-sm text-gray-600">
+            {addon.quantity > 1
+              ? `${addon.name} × ${addon.quantity}`
+              : addon.name}
+          </Text>
+          <Text className="shrink-0 text-right text-sm font-medium text-gray-950">
+            {formatCurrency(addon.totalPrice, { fractionDigits: 2 })}
+          </Text>
+        </View>
+      ))}
 
       {fuelUpgradeCost > 0 && bookingType !== AIRPORT_PICKUP_BOOKING_TYPE ? (
         <View className="mb-1.5 flex-row items-baseline justify-between gap-2">

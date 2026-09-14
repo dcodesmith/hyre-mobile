@@ -1,4 +1,5 @@
 import { ApiError, getJson, postJson } from "@/lib/api-client";
+import type { BookingAddonSnapshot } from "@/lib/booking-addons";
 import type { BookingType } from "@/lib/booking-types";
 import type { BookingStatus } from "@/services/bookings";
 
@@ -29,6 +30,7 @@ export type GuestBookingDetailsResponse = {
   totalAmount: number;
   currency: "NGN";
   accessExpiresAt: string;
+  addons: BookingAddonSnapshot[];
   car: {
     make: string;
     model: string;
