@@ -2,6 +2,7 @@ import {
   AirportTripDetails,
   AirportTripDetailsSkeleton,
   BookingAddons,
+  BookingCreditsToggle,
   BookingDetailsCard,
   CarDetailSkeleton,
   CarImageCarousel,
@@ -88,6 +89,7 @@ export default function CarDetailScreen() {
     setRequiresFullTank,
     applyCredits,
     setApplyCredits,
+    availableCredits,
     creditLimit,
     useCredits,
   } = useCarDetailPricing({ car, booking, isAuthenticated });
@@ -237,9 +239,6 @@ export default function CarDetailScreen() {
               totalDays={totalDays}
               requiresFullTank={requiresFullTank}
               onRequiresFullTankChange={setRequiresFullTank}
-              creditsToUse={creditLimit}
-              applyCredits={applyCredits}
-              onApplyCreditsChange={setApplyCredits}
               flightError={airportPickup.flightError}
               isValidatingFlight={airportPickup.isValidatingFlight}
               onDropOffAddressSelected={(address) => {
@@ -295,6 +294,13 @@ export default function CarDetailScreen() {
               addonsLoading={addonsLoading}
               selectedAddonIds={selectedAddonIds}
               onSelectionChange={toggleAddon}
+            />
+
+            <BookingCreditsToggle
+              availableCredits={availableCredits}
+              creditLimit={creditLimit}
+              applyCredits={applyCredits}
+              onApplyCreditsChange={setApplyCredits}
             />
 
             {booking.values.bookingType === AIRPORT_PICKUP_BOOKING_TYPE &&

@@ -55,9 +55,10 @@ export function useCarDetailPricing({
 	const [requiresFullTank, setRequiresFullTank] = useState(false);
 	const [applyCredits, setApplyCredits] = useState(false);
 
+	const availableCredits = referralSummary?.stats.availableCredits ?? 0;
 	const creditLimit = getBookingCreditsToUse(
 		isAuthenticated,
-		referralSummary?.stats.availableCredits ?? 0,
+		availableCredits,
 		referralSummary?.stats.maxCreditsPerBooking ?? 0,
 	);
 	const useCredits = applyCredits ? creditLimit : 0;
@@ -216,6 +217,7 @@ export function useCarDetailPricing({
 		setRequiresFullTank,
 		applyCredits,
 		setApplyCredits,
+		availableCredits,
 		creditLimit,
 		useCredits,
 	};
