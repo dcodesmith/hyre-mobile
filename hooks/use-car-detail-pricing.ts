@@ -56,18 +56,12 @@ export function useCarDetailPricing({
 	const [applyCredits, setApplyCredits] = useState(false);
 
 	const availableCredits = referralSummary?.stats.availableCredits ?? 0;
-	const creditLimit = getBookingCreditsToUse(
+	const walletCreditLimit = getBookingCreditsToUse(
 		isAuthenticated,
 		availableCredits,
 		referralSummary?.stats.maxCreditsPerBooking ?? 0,
 	);
-	const useCredits = applyCredits ? creditLimit : 0;
-
-	useEffect(() => {
-		if (!isAuthenticated || creditLimit <= 0) {
-			setApplyCredits(false);
-		}
-	}, [creditLimit, isAuthenticated]);
+	const useCredits = applyCredits ? walletCreditLimit : 0;
 
 	const bookingTypeRef = useRef(booking.values.bookingType);
 	useEffect(() => {
@@ -160,6 +154,26 @@ export function useCarDetailPricing({
 		isAuthenticated,
 	);
 	const pricingPreview = previewQuery.data;
+	const lastApplicableCreditsRef = useRef(0);
+	if (pricingPreview) {
+		lastApplicableCreditsRef.current = pricingPreview.creditsApplicable ?? 0;
+	}
+	const thisBookingCredits = pricingPreview
+		? (pricingPreview.creditsApplicable ?? 0)
+		: previewQuery.isFetching
+			? lastApplicableCreditsRef.current
+			: 0;
+
+	useEffect(() => {
+		if (
+			!isAuthenticated ||
+			walletCreditLimit <= 0 ||
+			(pricingPreview && thisBookingCredits <= 0)
+		) {
+			setApplyCredits(false);
+		}
+	}, [isAuthenticated, pricingPreview, thisBookingCredits, walletCreditLimit]);
+
 	const pricingIsAuthoritative =
 		pricingPreviewRequest !== null &&
 		pricingPreview !== undefined &&
@@ -218,7 +232,7 @@ export function useCarDetailPricing({
 		applyCredits,
 		setApplyCredits,
 		availableCredits,
-		creditLimit,
+		creditLimit: thisBookingCredits,
 		useCredits,
 	};
 }

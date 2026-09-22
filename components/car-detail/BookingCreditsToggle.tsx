@@ -13,7 +13,7 @@ export function BookingCreditsToggle({
   readonly applyCredits: boolean;
   readonly onApplyCreditsChange: (next: boolean) => void;
 }) {
-  if (creditLimit <= 0) return null;
+  if (availableCredits <= 0 || creditLimit <= 0) return null;
 
   return (
     <View>
@@ -48,8 +48,8 @@ export function BookingCreditsToggle({
               </Text>
             </View>
             <Text className="mt-0.5 text-xs leading-4 text-muted-foreground">
-              {formatCurrency(availableCredits)} available (Up to{" "}
-              {formatCurrency(creditLimit)} can be used on this booking)
+              Your available credit is {formatCurrency(availableCredits)}. You
+              can use {formatCurrency(creditLimit)} for this booking.
             </Text>
           </View>
         </Pressable>

@@ -39,6 +39,7 @@ export interface BookingPricingPreviewResponse {
   readonly compareAtSubtotalBeforeDiscounts: number;
   readonly referralDiscountAmount: number;
   readonly creditsUsed: number;
+  readonly creditsApplicable?: number;
   readonly subtotalAfterDiscounts: number;
   readonly vatRatePercent: number;
   readonly vatAmount: number;
