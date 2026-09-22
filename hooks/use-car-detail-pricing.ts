@@ -154,14 +154,37 @@ export function useCarDetailPricing({
 		isAuthenticated,
 	);
 	const pricingPreview = previewQuery.data;
-	const lastApplicableCreditsRef = useRef(0);
-	if (pricingPreview) {
-		lastApplicableCreditsRef.current = pricingPreview.creditsApplicable ?? 0;
+	const applicableCreditsKey = pricingPreviewRequest
+		? [
+				pricingPreviewRequest.carId,
+				pricingPreviewRequest.bookingType,
+				pricingPreviewRequest.startDate,
+				pricingPreviewRequest.endDate,
+				pricingPreviewRequest.pickupTime,
+				[...pricingPreviewRequest.addonIds].sort().join(","),
+				String(pricingPreviewRequest.requiresFullTank),
+			].join("|")
+		: "";
+	const [lastApplicableCredits, setLastApplicableCredits] = useState({
+		key: "",
+		amount: 0,
+	});
+	const previewCreditsApplicable = pricingPreview?.creditsApplicable ?? 0;
+	if (
+		pricingPreview &&
+		applicableCreditsKey &&
+		(lastApplicableCredits.key !== applicableCreditsKey ||
+			lastApplicableCredits.amount !== previewCreditsApplicable)
+	) {
+		setLastApplicableCredits({
+			key: applicableCreditsKey,
+			amount: previewCreditsApplicable,
+		});
 	}
 	const thisBookingCredits = pricingPreview
-		? (pricingPreview.creditsApplicable ?? 0)
-		: previewQuery.isFetching
-			? lastApplicableCreditsRef.current
+		? previewCreditsApplicable
+		: previewQuery.isFetching && lastApplicableCredits.key === applicableCreditsKey
+			? lastApplicableCredits.amount
 			: 0;
 
 	useEffect(() => {
