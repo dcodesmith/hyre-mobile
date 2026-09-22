@@ -191,11 +191,18 @@ export function useCarDetailPricing({
 		if (
 			!isAuthenticated ||
 			walletCreditLimit <= 0 ||
+			previewQuery.isError ||
 			(pricingPreview && thisBookingCredits <= 0)
 		) {
 			setApplyCredits(false);
 		}
-	}, [isAuthenticated, pricingPreview, thisBookingCredits, walletCreditLimit]);
+	}, [
+		isAuthenticated,
+		previewQuery.isError,
+		pricingPreview,
+		thisBookingCredits,
+		walletCreditLimit,
+	]);
 
 	const pricingIsAuthoritative =
 		pricingPreviewRequest !== null &&
