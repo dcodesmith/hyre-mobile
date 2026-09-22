@@ -3,42 +3,57 @@ import { formatCurrency } from "@/lib/currency";
 import { Pressable, Text, View } from "react-native";
 
 export function BookingCreditsToggle({
-  creditsToUse,
+  availableCredits,
+  creditLimit,
   applyCredits,
   onApplyCreditsChange,
 }: {
-  readonly creditsToUse: number;
+  readonly availableCredits: number;
+  readonly creditLimit: number;
   readonly applyCredits: boolean;
   readonly onApplyCreditsChange: (next: boolean) => void;
 }) {
-  if (creditsToUse <= 0) return null;
+  if (availableCredits <= 0 || creditLimit <= 0) return null;
 
   return (
-    <Pressable
-      onPress={() => onApplyCreditsChange(!applyCredits)}
-      className="mt-4 min-h-11 flex-row items-center gap-2"
-      accessibilityRole="checkbox"
-      accessibilityState={{ checked: applyCredits }}
-      accessibilityLabel={`Apply up to ${formatCurrency(creditsToUse)} in referral credits`}
-    >
-      <Checkbox
-        checked={applyCredits}
-        onCheckedChange={() => undefined}
-        className="border-neutral-900 shadow-none"
-        checkedClassName="border-neutral-900"
-        indicatorClassName="bg-neutral-900"
-        iconClassName="text-white"
-        accessible={false}
-        pointerEvents="none"
-      />
-      <View className="min-h-11 flex-1 justify-center">
-        <Text selectable className="text-sm font-medium leading-5 text-gray-900">
-          Apply up to {formatCurrency(creditsToUse)} in referral credits
-        </Text>
-        <Text selectable className="text-xs leading-4 text-gray-500">
-          Your total will update before payment.
-        </Text>
+    <View>
+      <Text className="mb-2 text-sm font-semibold text-foreground">
+        Referral credit
+      </Text>
+      <View className="gap-3 rounded border border-neutral-200 bg-white px-4 py-4 shadow-xl">
+        <Pressable
+          onPress={() => onApplyCreditsChange(!applyCredits)}
+          className="min-h-11 flex-row items-start gap-3"
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: applyCredits }}
+          accessibilityLabel={`Apply referral credit, -${formatCurrency(creditLimit)}`}
+        >
+          <Checkbox
+            checked={applyCredits}
+            onCheckedChange={() => undefined}
+            className="mt-0.5 border-neutral-900 shadow-none"
+            checkedClassName="border-neutral-900"
+            indicatorClassName="bg-neutral-900"
+            iconClassName="text-white"
+            accessible={false}
+            pointerEvents="none"
+          />
+          <View className="min-w-0 flex-1">
+            <View className="flex-row items-start justify-between gap-3">
+              <Text className="min-w-0 flex-1 text-sm font-medium leading-5 text-foreground">
+                Apply referral credit
+              </Text>
+              <Text className="shrink-0 text-sm font-medium leading-5 text-foreground">
+                -{formatCurrency(creditLimit)}
+              </Text>
+            </View>
+            <Text className="mt-0.5 text-xs leading-4 text-muted-foreground">
+              Your available credit is {formatCurrency(availableCredits)}. You
+              can use {formatCurrency(creditLimit)} for this booking.
+            </Text>
+          </View>
+        </Pressable>
       </View>
-    </Pressable>
+    </View>
   );
 }

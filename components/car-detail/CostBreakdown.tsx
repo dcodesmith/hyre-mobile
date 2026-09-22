@@ -209,7 +209,7 @@ export function CostBreakdown({
 
       {creditsUsed > 0 ? (
         <View className="mb-1.5 flex-row items-baseline justify-between gap-2">
-          <Text className="text-sm text-green-600">Booking Credits</Text>
+          <Text className="text-sm text-green-600">Referral credit</Text>
           <Text className="text-sm font-medium text-green-600">
             -{formatCurrency(creditsUsed, { fractionDigits: 2 })}
           </Text>

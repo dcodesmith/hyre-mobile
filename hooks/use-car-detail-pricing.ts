@@ -55,18 +55,13 @@ export function useCarDetailPricing({
 	const [requiresFullTank, setRequiresFullTank] = useState(false);
 	const [applyCredits, setApplyCredits] = useState(false);
 
-	const creditLimit = getBookingCreditsToUse(
+	const availableCredits = referralSummary?.stats.availableCredits ?? 0;
+	const walletCreditLimit = getBookingCreditsToUse(
 		isAuthenticated,
-		referralSummary?.stats.availableCredits ?? 0,
+		availableCredits,
 		referralSummary?.stats.maxCreditsPerBooking ?? 0,
 	);
-	const useCredits = applyCredits ? creditLimit : 0;
-
-	useEffect(() => {
-		if (!isAuthenticated || creditLimit <= 0) {
-			setApplyCredits(false);
-		}
-	}, [creditLimit, isAuthenticated]);
+	const useCredits = applyCredits ? walletCreditLimit : 0;
 
 	const bookingTypeRef = useRef(booking.values.bookingType);
 	useEffect(() => {
@@ -159,6 +154,56 @@ export function useCarDetailPricing({
 		isAuthenticated,
 	);
 	const pricingPreview = previewQuery.data;
+	const applicableCreditsKey = pricingPreviewRequest
+		? [
+				pricingPreviewRequest.carId,
+				pricingPreviewRequest.bookingType,
+				pricingPreviewRequest.startDate,
+				pricingPreviewRequest.endDate,
+				pricingPreviewRequest.pickupTime,
+				[...pricingPreviewRequest.addonIds].sort().join(","),
+				String(pricingPreviewRequest.requiresFullTank),
+			].join("|")
+		: "";
+	const [lastApplicableCredits, setLastApplicableCredits] = useState({
+		key: "",
+		amount: 0,
+	});
+	const previewCreditsApplicable = pricingPreview?.creditsApplicable ?? 0;
+	if (
+		pricingPreview &&
+		applicableCreditsKey &&
+		(lastApplicableCredits.key !== applicableCreditsKey ||
+			lastApplicableCredits.amount !== previewCreditsApplicable)
+	) {
+		setLastApplicableCredits({
+			key: applicableCreditsKey,
+			amount: previewCreditsApplicable,
+		});
+	}
+	const thisBookingCredits = pricingPreview
+		? previewCreditsApplicable
+		: previewQuery.isFetching && lastApplicableCredits.key === applicableCreditsKey
+			? lastApplicableCredits.amount
+			: 0;
+
+	useEffect(() => {
+		if (
+			!isAuthenticated ||
+			walletCreditLimit <= 0 ||
+			previewQuery.isError ||
+			(pricingPreview && thisBookingCredits <= 0)
+		) {
+			setApplyCredits(false);
+		}
+	}, [
+		isAuthenticated,
+		previewQuery.isError,
+		pricingPreview,
+		thisBookingCredits,
+		walletCreditLimit,
+	]);
+
 	const pricingIsAuthoritative =
 		pricingPreviewRequest !== null &&
 		pricingPreview !== undefined &&
@@ -216,7 +261,8 @@ export function useCarDetailPricing({
 		setRequiresFullTank,
 		applyCredits,
 		setApplyCredits,
-		creditLimit,
+		availableCredits,
+		creditLimit: thisBookingCredits,
 		useCredits,
 	};
 }

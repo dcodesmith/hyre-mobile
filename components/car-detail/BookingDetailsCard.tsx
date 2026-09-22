@@ -1,6 +1,5 @@
 import { BookingTypeInput } from "@/components/booking-search/BookingTypeInput";
 import { BookingTypeTabs } from "@/components/booking-search/BookingTypeTabs";
-import { BookingCreditsToggle } from "@/components/car-detail/BookingCreditsToggle";
 import { AddressAutocompleteInput } from "@/components/ui/address-autocomplete-input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -35,9 +34,6 @@ interface BookingDetailsCardProps {
   readonly totalDays: number;
   readonly requiresFullTank: boolean;
   readonly onRequiresFullTankChange: (next: boolean) => void;
-  readonly creditsToUse: number;
-  readonly applyCredits: boolean;
-  readonly onApplyCreditsChange: (next: boolean) => void;
   readonly flightError?: string | null;
   readonly isValidatingFlight?: boolean;
   readonly onDropOffAddressSelected?: (address: string) => void;
@@ -56,9 +52,6 @@ export function BookingDetailsCard({
   totalDays,
   requiresFullTank,
   onRequiresFullTankChange,
-  creditsToUse,
-  applyCredits,
-  onApplyCreditsChange,
   flightError,
   isValidatingFlight = false,
   onDropOffAddressSelected,
@@ -361,12 +354,6 @@ export function BookingDetailsCard({
                 </View>
               </View>
             )}
-
-          <BookingCreditsToggle
-            creditsToUse={creditsToUse}
-            applyCredits={applyCredits}
-            onApplyCreditsChange={onApplyCreditsChange}
-          />
         </View>
       </View>
     </View>

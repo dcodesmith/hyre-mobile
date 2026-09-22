@@ -3,6 +3,7 @@ export {
   AirportTripDetailsSkeleton,
 } from "./AirportTripDetails";
 export { BookingAddons } from "./BookingAddons";
+export { BookingCreditsToggle } from "./BookingCreditsToggle";
 export { BookingDetailsCard } from "./BookingDetailsCard";
 export { CarDetailSkeleton } from "./CarDetailSkeleton";
 export { CarImageCarousel } from "./CarImageCarousel";
