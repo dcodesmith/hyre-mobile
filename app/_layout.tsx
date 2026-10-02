@@ -261,6 +261,14 @@ function RootLayout() {
                   options={{ headerShown: false, title: "Payment Status" }}
                 />
                 <Stack.Screen
+                  name="phone-verification"
+                  options={{
+                    gestureEnabled: false,
+                    headerShown: false,
+                    title: "Verify phone",
+                  }}
+                />
+                <Stack.Screen
                   name="modal"
                   options={{ presentation: "modal", title: "Modal" }}
                 />

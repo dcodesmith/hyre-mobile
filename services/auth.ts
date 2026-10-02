@@ -8,7 +8,6 @@ import {
 import {
   type AuthenticatedUser,
   requireAuthenticatedUser,
-  resolveAuthenticatedSession,
 } from "@/lib/auth-session";
 
 /** Maps backend errors to the same user-facing copy as web. */
@@ -44,10 +43,27 @@ export type RequestOtpResponse = {
   success: boolean;
 };
 
-export type UserProfile = AuthenticatedUser;
+type CurrentUserProfile = {
+  name: string | null;
+  phoneNumber: string | null;
+  city: string | null;
+  address: string | null;
+  marketingConsent: boolean;
+  phoneVerified: boolean;
+};
+
+export type UserProfile = Pick<
+  AuthenticatedUser,
+  "id" | "email" | "roles"
+> &
+  CurrentUserProfile;
+
+export type PhoneVerificationResponse = {
+  status: "PENDING" | "VERIFIED";
+  phoneNumber: string;
+};
 
 export type VerifyOtpResponse = {
-  user?: UserProfile;
   token?: string;
 };
 
@@ -78,13 +94,23 @@ type SessionResponse = {
 };
 
 export const fetchCurrentUser = async (token: string) => {
-  const { user } = await getJsonWithAuth<SessionResponse>(
-    API_ENDPOINTS.session,
-    undefined,
-    { token },
-  );
+  const [{ user }, profile] = await Promise.all([
+    getJsonWithAuth<SessionResponse>(API_ENDPOINTS.session, undefined, {
+      token,
+    }),
+    getJsonWithAuth<CurrentUserProfile>(
+      API_ENDPOINTS.currentUser,
+      undefined,
+      { token },
+    ),
+  ]);
+  const sessionUser = requireAuthenticatedUser(user);
 
-  return requireAuthenticatedUser(user);
+  if (typeof profile.phoneVerified !== "boolean") {
+    throw new Error("The server did not return phone verification status.");
+  }
+
+  return { ...sessionUser, ...profile };
 };
 
 export const verifyOtp = async ({
@@ -104,8 +130,27 @@ export const verifyOtp = async ({
     role,
   });
 
-  return resolveAuthenticatedSession(response, fetchCurrentUser);
+  if (typeof response.token !== "string" || !response.token) {
+    throw new Error("The server did not return a valid access token.");
+  }
+
+  return {
+    token: response.token,
+    user: await fetchCurrentUser(response.token),
+  };
 };
+
+export const requestPhoneVerification = (phoneNumber: string) =>
+  postJsonWithAuth<
+    PhoneVerificationResponse,
+    { phoneNumber: string }
+  >(API_ENDPOINTS.phoneVerifications, { phoneNumber });
+
+export const checkPhoneVerification = (phoneNumber: string, code: string) =>
+  postJsonWithAuth<
+    PhoneVerificationResponse,
+    { phoneNumber: string; code: string }
+  >(API_ENDPOINTS.phoneVerificationChecks, { phoneNumber, code });
 
 export const logout = (token: string) => {
   return postJsonWithAuth<{ success: boolean }, Record<string, never>>(
