@@ -24,6 +24,15 @@ function firstString(value: unknown): string | undefined {
   return undefined;
 }
 
+export function shouldAutoFinishPhoneVerification(input: {
+  phoneVerified: boolean | undefined;
+  reason: unknown;
+}): boolean {
+  return (
+    input.phoneVerified === true && firstString(input.reason) !== "booking"
+  );
+}
+
 export function readPhoneVerificationContinuation(params: {
   redirectTo?: unknown;
   resumePrevious?: unknown;

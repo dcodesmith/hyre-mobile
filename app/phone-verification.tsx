@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import {
   normalizePhoneOtpInput,
   readPhoneVerificationContinuation,
+  shouldAutoFinishPhoneVerification,
 } from "@/lib/phone-verification-continuation";
 import {
   PHONE_OTP_MAX_LENGTH,
@@ -27,6 +28,7 @@ export default function PhoneVerificationScreen() {
   const params = useLocalSearchParams<{
     redirectTo?: string | string[];
     resumePrevious?: string | string[];
+    reason?: string | string[];
   }>();
   const { redirectTo, resumePrevious } =
     readPhoneVerificationContinuation(params);
@@ -76,7 +78,12 @@ export default function PhoneVerificationScreen() {
       openLoginModal();
       return;
     }
-    if (user?.phoneVerified) {
+    if (
+      shouldAutoFinishPhoneVerification({
+        phoneVerified: user?.phoneVerified,
+        reason: params.reason,
+      })
+    ) {
       void finishVerification().catch((verificationError) => {
         setError(getAuthErrorMessage(verificationError));
       });
@@ -87,6 +94,7 @@ export default function PhoneVerificationScreen() {
     isHydrating,
     isLoggingOut,
     openLoginModal,
+    params.reason,
     user?.phoneVerified,
   ]);
 

@@ -173,12 +173,12 @@ export function bookingCheckoutPhoneVerificationRoute(
   isAuthenticated: boolean,
 ): {
   pathname: "/phone-verification";
-  params: { resumePrevious: "true" };
+  params: { resumePrevious: "true"; reason: "booking" };
 } | null {
   if (!isAuthenticated || !isPhoneVerificationRequired(error)) return null;
   return {
     pathname: "/phone-verification",
-    params: { resumePrevious: "true" },
+    params: { resumePrevious: "true", reason: "booking" },
   };
 }
 
