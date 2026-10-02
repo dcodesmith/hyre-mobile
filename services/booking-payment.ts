@@ -161,6 +161,27 @@ export function isIdempotencyKeyReused(error: unknown): boolean {
   return error instanceof ApiError && error.code === "IDEMPOTENCY_KEY_REUSED";
 }
 
+export function isPhoneVerificationRequired(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    error.code === "BOOKING_PHONE_VERIFICATION_REQUIRED"
+  );
+}
+
+export function bookingCheckoutPhoneVerificationRoute(
+  error: unknown,
+  isAuthenticated: boolean,
+): {
+  pathname: "/phone-verification";
+  params: { resumePrevious: "true"; reason: "booking" };
+} | null {
+  if (!isAuthenticated || !isPhoneVerificationRequired(error)) return null;
+  return {
+    pathname: "/phone-verification",
+    params: { resumePrevious: "true", reason: "booking" },
+  };
+}
+
 export async function fetchBookingPaymentStatus(
   request: BookingPaymentStatusRequest,
   init?: RequestInit,

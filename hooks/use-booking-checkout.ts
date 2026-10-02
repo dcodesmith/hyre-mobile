@@ -36,6 +36,7 @@ import {
   type GuestCheckoutFormValues,
 } from "@/lib/validations/booking";
 import {
+  bookingCheckoutPhoneVerificationRoute,
   type CreateBookingCheckoutPayload,
   type CreateBookingCheckoutResponse,
   createBookingCheckout,
@@ -421,6 +422,14 @@ export function useBookingCheckout(
       if (isIdempotencyKeyReused(error)) {
         checkoutAttempt.current = null;
       }
+      const phoneVerificationRoute = bookingCheckoutPhoneVerificationRoute(
+        error,
+        isAuthenticated,
+      );
+      if (phoneVerificationRoute) {
+        router.push(phoneVerificationRoute as never);
+        return;
+      }
       setPaymentError(getBookingPaymentErrorMessage(error));
     } finally {
       if (isMounted.current) {
@@ -440,6 +449,7 @@ export function useBookingCheckout(
     navigateToPaymentStatus,
     onPriceChanged,
     queryClient,
+    router,
   ]);
 
   return { submit, isSubmitting, paymentError };

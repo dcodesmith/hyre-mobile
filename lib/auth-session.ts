@@ -1,7 +1,7 @@
 export type AuthenticatedUser = {
   id: string;
   email: string;
-  name?: string;
+  name?: string | null;
   roles?: string[];
   [key: string]: unknown;
 };

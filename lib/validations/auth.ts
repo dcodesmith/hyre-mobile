@@ -25,6 +25,21 @@ export const otpCodeSchema = z
   .string({ error: OTP_CODE_ERROR })
   .regex(/^\d{6}$/, OTP_CODE_ERROR);
 
+export const PHONE_NUMBER_ERROR =
+  "Enter a phone number in E.164 format, for example +2348012345678.";
+export const PHONE_OTP_CODE_ERROR = "Code must be 4 to 10 digits.";
+export const PHONE_OTP_MIN_LENGTH = 4;
+export const PHONE_OTP_MAX_LENGTH = 10;
+
+export const phoneNumberSchema = z
+  .string({ error: PHONE_NUMBER_ERROR })
+  .trim()
+  .regex(/^\+[1-9]\d{7,14}$/, PHONE_NUMBER_ERROR);
+
+export const phoneOtpCodeSchema = z
+  .string({ error: PHONE_OTP_CODE_ERROR })
+  .regex(/^\d{4,10}$/, PHONE_OTP_CODE_ERROR);
+
 export const emailFormSchema = z.object({
   email: authEmailSchema,
   referralCode: referralCodeSchema,

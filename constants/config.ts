@@ -84,6 +84,9 @@ export const API_ENDPOINTS = {
   verifyOtp: "/api/auth/sign-in/email-otp",
   session: "/auth/session",
   logout: "/api/auth/sign-out",
+  currentUser: "/api/users/me",
+  phoneVerifications: "/api/users/me/phone-verifications",
+  phoneVerificationChecks: "/api/users/me/phone-verification-checks",
   pushTokens: "/api/users/me/push-tokens",
   referralsUser: "/api/referrals/user",
 } as const;

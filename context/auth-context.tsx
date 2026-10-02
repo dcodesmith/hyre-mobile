@@ -11,6 +11,10 @@ export type AuthContextValue = {
   user: UserProfile | null;
   userEmail: string | null;
   openLoginModal: () => void;
+  completePhoneVerification: (
+    redirectTo?: string,
+    resumePrevious?: boolean,
+  ) => Promise<void>;
   logout: () => Promise<void>;
   isLoggingOut: boolean;
   /** True while restoring auth state from storage on app launch */

@@ -19,7 +19,14 @@ import {
   initialAuthSessionState,
   patchState,
 } from "@/providers/auth-modal-state";
-import { resolvePostLoginHref } from "@/lib/sign-in-redirect";
+import {
+  PHONE_VERIFICATION_PATHNAME,
+  type PhoneVerificationContinuation,
+  completedPhoneVerificationContinuation,
+  phoneVerificationRouteDecision,
+  postLoginContinuation,
+  shouldRequirePhoneVerification,
+} from "@/lib/phone-verification-continuation";
 import {
   AUTH_DEFAULTS,
   type UserProfile,
@@ -39,7 +46,7 @@ import { clearGuestBookingSession } from "@/storage/guest-booking-session";
 import { deleteAllPaymentStatusTokens } from "@/storage/payment-status-token";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
+import { usePathname, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 import { useForm } from "react-hook-form";
 
@@ -47,7 +54,14 @@ type EmailOnlyFormValues = Pick<EmailFormValues, "email">;
 
 export function useAuthModalController() {
   const router = useRouter();
+  const pathname = usePathname();
   const queryClient = useQueryClient();
+  const pathnameRef = useRef(pathname);
+  pathnameRef.current = pathname;
+  const phoneContinuationRef = useRef<PhoneVerificationContinuation | null>(
+    null,
+  );
+  const isRoutingToPhoneRef = useRef(false);
   const logoutInFlightRef = useRef(false);
   const authTokenRef = useRef<string | null>(null);
   const [uiState, dispatchUiState] = useReducer(
@@ -249,11 +263,34 @@ export function useAuthModalController() {
         clearExtensionPaymentSession(),
         clearGuestBookingSession(),
       ]);
-      if (activeToken) {
+      if (
+        activeToken &&
+        pathnameRef.current !== PHONE_VERIFICATION_PATHNAME
+      ) {
         router.replace("/");
       }
     });
   }, [clearInMemoryAuthSession, router]);
+
+  const routeToPhoneVerification = useCallback(
+    (continuation: PhoneVerificationContinuation) => {
+      const decision = phoneVerificationRouteDecision({
+        pathname: pathnameRef.current,
+        isAlreadyRouting: isRoutingToPhoneRef.current,
+        continuation,
+      });
+      if (!decision) return;
+
+      isRoutingToPhoneRef.current = true;
+      const route = { pathname: decision.pathname, params: decision.params };
+      if (decision.method === "push") {
+        router.push(route as never);
+      } else {
+        router.replace(route as never);
+      }
+    },
+    [router],
+  );
 
   useEffect(() => {
     let isCancelled = false;
@@ -293,6 +330,35 @@ export function useAuthModalController() {
       isCancelled = true;
     };
   }, [setAuthToken, setIsHydrating, setUser]);
+
+  useEffect(() => {
+    if (pathname === PHONE_VERIFICATION_PATHNAME) {
+      isRoutingToPhoneRef.current = false;
+      phoneContinuationRef.current = null;
+      return;
+    }
+    if (
+      !shouldRequirePhoneVerification({
+        isHydrating,
+        hasAuthToken: Boolean(authToken),
+        phoneVerified: user?.phoneVerified,
+      })
+    ) {
+      return;
+    }
+
+    const continuation = phoneContinuationRef.current ?? {
+      resumePrevious: true,
+    };
+    phoneContinuationRef.current = null;
+    routeToPhoneVerification(continuation);
+  }, [
+    authToken,
+    isHydrating,
+    pathname,
+    routeToPhoneVerification,
+    user?.phoneVerified,
+  ]);
 
   const closeLoginModal = useCallback(() => {
     setIsEmailModalVisible(false);
@@ -407,7 +473,11 @@ export function useAuthModalController() {
   );
 
   const authenticateWithOtp = useCallback(
-    async (otpCode: string) => {
+    async (
+      otpCode: string,
+      redirectTo?: string,
+      resumePrevious = false,
+    ) => {
       if (!pendingEmail) {
         throw new Error("Request a new code to continue.");
       }
@@ -418,7 +488,18 @@ export function useAuthModalController() {
           otpCode,
           role: AUTH_DEFAULTS.role,
         });
+        if (!session.user.phoneVerified) {
+          phoneContinuationRef.current = { redirectTo, resumePrevious };
+        }
         await completeLogin(session.token, session.user);
+        const navigation = postLoginContinuation({
+          phoneVerified: session.user.phoneVerified,
+          resumePrevious,
+          redirectTo,
+        });
+        if (navigation) {
+          router.replace(navigation.href);
+        }
       } catch (error) {
         reportHandledException(error, {
           area: "auth",
@@ -427,15 +508,14 @@ export function useAuthModalController() {
         throw error;
       }
     },
-    [completeLogin, pendingEmail],
+    [completeLogin, pendingEmail, router],
   );
 
   const verifyLoginOtp = useCallback(
     async (otpCode: string, redirectTo?: string) => {
-      await authenticateWithOtp(otpCode);
-      router.replace(resolvePostLoginHref(redirectTo));
+      await authenticateWithOtp(otpCode, redirectTo);
     },
-    [authenticateWithOtp, router],
+    [authenticateWithOtp],
   );
 
   const handleVerifyOtp = useCallback(
@@ -444,7 +524,7 @@ export function useAuthModalController() {
       setIsVerifyingOtp(true);
 
       try {
-        await authenticateWithOtp(data.otpCode);
+        await authenticateWithOtp(data.otpCode, undefined, true);
       } catch (error) {
         setOtpError(
           getAuthErrorMessage(error, "We could not verify that code."),
@@ -454,6 +534,32 @@ export function useAuthModalController() {
       }
     },
     [authenticateWithOtp, setIsVerifyingOtp, setOtpError],
+  );
+
+  const completePhoneVerification = useCallback(
+    async (redirectTo?: string, resumePrevious = false) => {
+      if (!authToken) {
+        throw new Error("Sign in again to verify your phone number.");
+      }
+
+      const profile = await fetchCurrentUser(authToken);
+      if (!profile.phoneVerified) {
+        throw new Error("Your phone number has not been verified yet.");
+      }
+
+      setUser(profile);
+      const navigation = completedPhoneVerificationContinuation({
+        resumePrevious,
+        canGoBack: router.canGoBack(),
+        redirectTo,
+      });
+      if (navigation.method === "back") {
+        router.back();
+        return;
+      }
+      router.replace(navigation.href);
+    },
+    [authToken, router, setUser],
   );
 
   const handleLogout = useCallback(async () => {
@@ -564,11 +670,20 @@ export function useAuthModalController() {
       user,
       userEmail: user?.email ?? null,
       openLoginModal,
+      completePhoneVerification,
       logout: handleLogout,
       isLoggingOut,
       isHydrating,
     }),
-    [authToken, handleLogout, isHydrating, isLoggingOut, openLoginModal, user],
+    [
+      authToken,
+      completePhoneVerification,
+      handleLogout,
+      isHydrating,
+      isLoggingOut,
+      openLoginModal,
+      user,
+    ],
   );
 
   const modalContextValue = useMemo<AuthModalContextValue>(

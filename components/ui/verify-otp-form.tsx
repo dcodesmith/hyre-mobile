@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
+import { DEFAULT_OTP_CODE_LENGTH, canSubmitOtpCode } from "@/lib/otp-code";
 import * as React from "react";
 import { type TextStyle, View } from "react-native";
 
@@ -19,6 +20,10 @@ type VerifyOtpFormProps = {
   isSubmitting: boolean;
   error: string | null;
   previewCode?: string | null;
+  minCodeLength?: number;
+  maxCodeLength?: number;
+  cancelLabel?: string;
+  codePlaceholder?: string;
 };
 
 export function VerifyOtpForm({
@@ -32,6 +37,10 @@ export function VerifyOtpForm({
   isSubmitting,
   error,
   previewCode,
+  minCodeLength = DEFAULT_OTP_CODE_LENGTH,
+  maxCodeLength = DEFAULT_OTP_CODE_LENGTH,
+  cancelLabel = "Cancel",
+  codePlaceholder = "000000",
 }: Readonly<VerifyOtpFormProps>) {
   const { countdown, restartCountdown } = useCountdown(
     RESEND_CODE_INTERVAL_SECONDS,
@@ -67,13 +76,15 @@ export function VerifyOtpForm({
           autoCapitalize="none"
           returnKeyType="done"
           keyboardType="number-pad"
-          maxLength={6}
+          inputMode="numeric"
+          maxLength={maxCodeLength}
           autoComplete="one-time-code"
           textContentType="oneTimeCode"
           editable={!isSubmitting}
           aria-invalid={!!error}
+          accessibilityLabel="Verification code"
           className="w-full"
-          placeholder="000000"
+          placeholder={codePlaceholder}
         />
         {!!previewCode && (
           <Text variant="small" className="text-muted-foreground">
@@ -81,7 +92,12 @@ export function VerifyOtpForm({
           </Text>
         )}
         {!!error && (
-          <Text variant="small" className="text-destructive">
+          <Text
+            variant="small"
+            className="text-destructive"
+            accessibilityRole="alert"
+            accessibilityLiveRegion="polite"
+          >
             {error}
           </Text>
         )}
@@ -105,7 +121,10 @@ export function VerifyOtpForm({
         <Button
           className="w-full"
           onPress={onSubmit}
-          disabled={isSubmitting || otpCode.length !== 6}
+          disabled={
+            isSubmitting ||
+            !canSubmitOtpCode(otpCode, minCodeLength, maxCodeLength)
+          }
         >
           <Text>{isSubmitting ? "Verifying..." : "Continue"}</Text>
         </Button>
@@ -115,7 +134,7 @@ export function VerifyOtpForm({
           onPress={onCancel}
           disabled={isSubmitting}
         >
-          <Text>Cancel</Text>
+          <Text>{cancelLabel}</Text>
         </Button>
       </View>
     </View>
