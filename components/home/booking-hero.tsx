@@ -1,7 +1,7 @@
 import { BookingSearch } from "@/components/booking-search";
 import { useCarCategories } from "@/hooks/use-car-categories";
 import type { PublicCar } from "@/lib/car-types";
-import { buildCategorySearchQuery } from "@/lib/category-search-query";
+import { buildHomeCarSections } from "@/lib/home-car-sections";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Fingerprint, ShieldCheck } from "lucide-react-native";
@@ -130,18 +130,27 @@ function BookingHero() {
   const { data, isPending, refetch, isRefetching } = useCarCategories();
   let carouselContent: ReactNode;
   if (data) {
-    carouselContent = (
-      <View className="gap-6">
-        {data.categories.map((category) => (
-          <VehicleCarouselSection
-            key={category.name}
-            title={category.title}
-            searchQuery={buildCategorySearchQuery(category)}
-            vehicles={category.cars.map(toVehicleItem)}
-          />
-        ))}
-      </View>
-    );
+    const sections = buildHomeCarSections(data);
+
+    carouselContent =
+      sections.length > 0 ? (
+        <View className="gap-6">
+          {sections.map((section) => (
+            <VehicleCarouselSection
+              key={section.key}
+              title={section.title}
+              searchQuery={section.searchQuery}
+              vehicles={section.cars.map(toVehicleItem)}
+            />
+          ))}
+        </View>
+      ) : (
+        <View className="items-center justify-center py-12">
+          <Text className="text-sm text-gray-600">
+            No vehicles available right now
+          </Text>
+        </View>
+      );
   } else if (isPending) {
     carouselContent = (
       <View className="gap-6 py-2">
@@ -229,27 +238,29 @@ function BookingHero() {
       {/* Main content: -mt-20 overlap, pt-28 pushes pills below hero with more spacing */}
       <View className="relative z-0 -mt-20 bg-white px-4 pt-28 pb-28">
         {/* Category pills: px-3 py-1.5 gap-2, text-xs font-medium */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: 8 }}
-          className="-mx-4 px-4 mb-6"
-        >
-          {data?.categories.map((category) => (
-            <Pressable
-              key={category.name}
-              className="shrink-0 flex-row items-center justify-center rounded-full border border-gray-300 bg-white px-3"
-              style={styles.pillPressable}
-            >
-              <Text
-                className="whitespace-nowrap text-gray-700"
-                style={styles.pill}
+        {data && data.categories.length > 0 ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 8 }}
+            className="-mx-4 px-4 mb-6"
+          >
+            {data.categories.map((category) => (
+              <Pressable
+                key={category.name}
+                className="shrink-0 flex-row items-center justify-center rounded-full border border-gray-300 bg-white px-3"
+                style={styles.pillPressable}
               >
-                {category.title} ({category.cars.length})
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
+                <Text
+                  className="whitespace-nowrap text-gray-700"
+                  style={styles.pill}
+                >
+                  {category.title} ({category.cars.length})
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        ) : null}
 
         {/* Carousel sections - dynamically rendered from API */}
         {carouselContent}
