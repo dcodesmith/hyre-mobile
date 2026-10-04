@@ -1,7 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/currency";
 import { Loader2 } from "lucide-react-native";
-import { Pressable, Text, View } from "react-native";
+import {
+  type LayoutChangeEvent,
+  Pressable,
+  Text,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const SAVINGS_GREEN = "#16a34a";
@@ -19,6 +24,7 @@ interface StickyBottomBarProps {
   readonly error?: string | null;
   /** When true, primary CTA is "Pay Now" and the guest sign-in row is hidden. */
   readonly isAuthenticated?: boolean;
+  readonly onLayout?: (event: LayoutChangeEvent) => void;
 }
 
 export function StickyBottomBar({
@@ -31,6 +37,7 @@ export function StickyBottomBar({
   onSignIn,
   error,
   isAuthenticated = false,
+  onLayout,
 }: StickyBottomBarProps) {
   const insets = useSafeAreaInsets();
   const showStrikethrough =
@@ -39,6 +46,7 @@ export function StickyBottomBar({
 
   return (
     <View
+      onLayout={onLayout}
       className="absolute bottom-0 left-0 right-0 z-50 rounded-t-xl border-t border-gray-200 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.1)]"
       style={{ paddingBottom: insets.bottom }}
     >

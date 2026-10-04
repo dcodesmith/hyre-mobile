@@ -80,7 +80,7 @@ export default function LoginScreen() {
         className="flex-1"
         contentContainerClassName="flex-grow justify-center px-6 py-8"
         contentInsetAdjustmentBehavior="automatic"
-        keyboardShouldPersistTaps="handled"
+        keyboardShouldPersistTaps="always"
       >
         <Animated.View
           className="mx-auto w-full max-w-sm"
