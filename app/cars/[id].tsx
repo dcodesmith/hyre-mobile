@@ -23,11 +23,15 @@ import { AIRPORT_PICKUP_BOOKING_TYPE } from "@/lib/booking-types";
 import { isExpoIos } from "@/lib/expo-platform";
 import { hasActivePromotion } from "@/lib/promotion-utils";
 import { buildCarSignInRedirectPath } from "@/lib/sign-in-redirect";
-import { cn } from "@/lib/utils";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useCallback } from "react";
-import { KeyboardAvoidingView, ScrollView, Text, View } from "react-native";
+import { useCallback, useState } from "react";
+import {
+  KeyboardAvoidingView,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -37,6 +41,7 @@ export default function CarDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isAuthenticated } = useAuth();
+  const [stickyBottomBarHeight, setStickyBottomBarHeight] = useState(0);
   const params = useLocalSearchParams<{
     id: string;
     from?: string;
@@ -249,13 +254,18 @@ export default function CarDetailScreen() {
             />
           </View>
 
-          {/* hireApp parity: outer column has `space-y-4` (16px) and a section bottom-pad
-              sized to clear the sticky footer (pb-40 auth / pb-48 guest). */}
+          {/* hireApp parity: outer column has `space-y-4` (16px) and enough
+              bottom padding to clear every sticky-footer variant. */}
           <View
-            className={cn(
-              "flex-col px-4 mt-4 gap-4",
-              isAuthenticated ? "pb-40" : "pb-48",
-            )}
+            className="flex-col px-4 mt-4 gap-4"
+            style={{
+              paddingBottom:
+                stickyBottomBarHeight > 0
+                  ? stickyBottomBarHeight + 16
+                  : isAuthenticated
+                    ? 160
+                    : 192,
+            }}
           >
             {!isAuthenticated && (
               <View>
@@ -350,6 +360,9 @@ export default function CarDetailScreen() {
             paymentError ?? airportPickup.flightError ?? pricingPreviewError
           }
           isAuthenticated={isAuthenticated}
+          onLayout={(event) =>
+            setStickyBottomBarHeight(event.nativeEvent.layout.height)
+          }
         />
       </KeyboardAvoidingView>
     </SafeAreaView>
