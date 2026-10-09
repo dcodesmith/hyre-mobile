@@ -3,6 +3,7 @@ import { useCarCategories } from "@/hooks/use-car-categories";
 import type { PublicCar } from "@/lib/car-types";
 import { buildHomeCarSections } from "@/lib/home-car-sections";
 import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
 import { Fingerprint, ShieldCheck } from "lucide-react-native";
 import type { ReactNode } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -59,6 +60,13 @@ const styles = StyleSheet.create({
     minHeight: 32,
   },
   heroImageFill: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+  },
+  gradientFill: {
     position: "absolute",
     left: 0,
     right: 0,
@@ -166,6 +174,11 @@ function BookingHero() {
             contentFit="cover"
             style={styles.heroImageFill}
             transition={0}
+          />
+          <LinearGradient
+            colors={["rgba(0,0,0,0.5)", "rgba(0,0,0,0.3)", "rgba(0,0,0,0.6)"]}
+            locations={[0, 0.5, 1]}
+            style={styles.gradientFill}
           />
         </View>
 
