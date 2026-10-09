@@ -190,8 +190,7 @@ function BookingHero() {
               letterSpacing: -0.43,
             }}
           >
-            Find the right car for every journey. Browse a range of cars, choose
-            when you need it, and book with ease.
+            Comfort. Safety. Professional. Every ride.
           </Text>
         </View>
 
