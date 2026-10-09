@@ -29,6 +29,16 @@ import { BookingTypeInput } from "./BookingTypeInput";
 import { BookingTypeTabs } from "./BookingTypeTabs";
 import { SearchDateRangePicker } from "./SearchDateRangePicker";
 
+const searchStyles = {
+  shell: {
+    boxShadow: "inset 0 0 0 1px #E5E7EB",
+  },
+  button: {
+    backgroundColor: "#18181B",
+    boxShadow: "0 1px 1px rgba(0, 0, 0, 0.05)",
+  },
+} as const;
+
 interface BookingSearchProps {
   readonly context?: "hero" | "modal";
   /** Called after search is triggered (e.g. to close modals) */
@@ -289,7 +299,10 @@ export function BookingSearch({ onSearchComplete }: BookingSearchProps) {
   };
 
   return (
-    <View className="h-[326px] w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-6">
+    <View
+      className="h-[326px] w-full rounded-lg bg-gray-50 px-4 py-6"
+      style={searchStyles.shell}
+    >
       <BookingTypeTabs
         value={BOOKING_TYPE_OPTIONS_MAP[bookingType].value}
         onValueChange={handleBookingTypeChange}
@@ -318,20 +331,21 @@ export function BookingSearch({ onSearchComplete }: BookingSearchProps) {
       </View>
 
       <Button
-        className="mt-6 h-[52px] w-full rounded-md bg-neutral-900 px-6"
+        className="mt-6 h-[52px] w-full rounded-md px-4"
+        style={searchStyles.button}
         onPress={() => {
           void handleSearch();
         }}
         disabled={isSearching || (isAirport && isFlightUnbookable)}
       >
         {isSearching ? (
-          <Loader2 color="#FFFFFF" size={16} strokeWidth={2} />
+          <Loader2 color="#FAFAFA" size={16} strokeWidth={2} />
         ) : (
           <>
-            <Search color="#FFFFFF" size={16} strokeWidth={2} />
+            <Search color="#FAFAFA" size={16} strokeWidth={2} />
             <Text
-              className="text-sm leading-5 text-white"
-              style={{ fontFamily: "Geist-Medium" }}
+              className="text-sm leading-5"
+              style={{ color: "#FAFAFA", fontFamily: "Geist-Medium" }}
             >
               Search
             </Text>

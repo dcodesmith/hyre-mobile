@@ -184,11 +184,11 @@ export function FlightAutocompleteInput({
               "flex-1 border-0 p-0 text-sm leading-[14px] text-gray-900",
               inputClassName,
             )}
-            style={{ fontFamily: "Geist-Regular" }}
+            style={{ color: "#1E2939", fontFamily: "Geist-Regular" }}
             value={value}
             onChangeText={handleChangeText}
             placeholder={placeholder}
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor="#99A1AF"
             editable={!disabled}
             autoCapitalize="none"
             autoCorrect={false}

@@ -8,17 +8,20 @@ import { cn } from "@/lib/utils";
 
 const styles = StyleSheet.create({
   tabLabel: {
+    color: "#09090B",
     fontFamily: "Geist-SemiBold",
     fontSize: 12,
     lineHeight: 12,
   },
   tabDuration: {
+    color: "#4A5565",
     fontFamily: "Geist-Regular",
     fontSize: 12,
     lineHeight: 12,
   },
   selected: {
-    boxShadow: "0 4px 10px rgba(0, 0, 0, 0.09)",
+    boxShadow:
+      "inset 0 0 0 1px #99A1AF, 0 4px 10px rgba(0, 0, 0, 0.09)",
   },
 });
 
@@ -100,9 +103,7 @@ export function BookingTypeTabs({
               onPress={() => onValueChange(option.value)}
               className={cn(
                 "h-12 min-w-0 flex-1 items-center justify-center rounded px-1",
-                isActive
-                  ? "border border-gray-400 bg-white"
-                  : "border border-transparent",
+                isActive && "bg-white",
               )}
               style={isActive ? styles.selected : undefined}
               accessibilityRole="tab"
@@ -110,14 +111,13 @@ export function BookingTypeTabs({
             >
               <Text
                 style={styles.tabLabel}
-                className="text-gray-950"
                 numberOfLines={1}
               >
                 {option.label}
               </Text>
               <Text
                 style={styles.tabDuration}
-                className="mt-2 text-gray-600"
+                className="mt-2"
                 numberOfLines={1}
               >
                 {option.duration}

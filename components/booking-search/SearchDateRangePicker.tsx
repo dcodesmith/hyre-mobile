@@ -229,28 +229,28 @@ export function SearchDateRangePicker({
           setIsStartingNewRange(Boolean(fromDate && toDate));
           setOpen(true);
         }}
-        className="min-h-11 w-full flex-row items-center justify-between gap-4 py-3"
+        className="h-10 w-full flex-row items-center justify-between gap-4 py-3"
         accessibilityRole="button"
         accessibilityLabel={single ? "When" : "Select booking dates"}
       >
         <Text
-          className="shrink-0 text-sm leading-[14px] text-gray-800"
-          style={{ fontFamily: "Geist-SemiBold" }}
+          className="shrink-0 text-sm leading-[14px]"
+          style={{ color: "#1E2939", fontFamily: "Geist-SemiBold" }}
         >
           When
         </Text>
         <View className="min-w-0 flex-row items-center gap-1">
           <Text
-            className={cn(
-              "shrink text-right text-sm leading-[14px]",
-              rangeLabel ? "text-gray-800" : "text-gray-400",
-            )}
+            className="shrink text-right text-sm leading-[14px]"
             numberOfLines={1}
-            style={{ fontFamily: "Geist-Regular" }}
+            style={{
+              color: rangeLabel ? "#1E2939" : "#99A1AF",
+              fontFamily: "Geist-Regular",
+            }}
           >
             {rangeLabel ?? (single ? "Add date" : "Add dates")}
           </Text>
-          <ChevronRight size={16} color="#9CA3AF" strokeWidth={1.75} />
+          <ChevronRight size={16} color="#99A1AF" strokeWidth={2} />
         </View>
       </Pressable>
 

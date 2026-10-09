@@ -93,16 +93,16 @@ export function BookingTypeInput({
 
   if (isNight) {
     return (
-      <View className="w-full flex-row items-center justify-between gap-4 py-3">
+      <View className="h-10 w-full flex-row items-center justify-between gap-4 py-3">
         <Text
-          className="text-sm leading-[14px] text-gray-800"
-          style={{ fontFamily: "Geist-SemiBold" }}
+          className="text-sm leading-[14px]"
+          style={{ color: "#1E2939", fontFamily: "Geist-SemiBold" }}
         >
           Time
         </Text>
         <Text
-          className="text-sm leading-[14px] text-gray-800"
-          style={{ fontFamily: "Geist-Regular" }}
+          className="text-sm leading-[14px]"
+          style={{ color: "#1E2939", fontFamily: "Geist-Regular" }}
         >
           11:00 PM
         </Text>
@@ -135,10 +135,10 @@ export function BookingTypeInput({
 
   return (
     <View className="w-full" collapsable={false}>
-      <View className="w-full flex-row items-center justify-between gap-4 py-3">
+      <View className="h-10 w-full flex-row items-center justify-between gap-4 py-3">
         <Text
-          className="shrink-0 text-sm leading-[14px] text-gray-800"
-          style={{ fontFamily: "Geist-SemiBold" }}
+          className="shrink-0 text-sm leading-[14px]"
+          style={{ color: "#1E2939", fontFamily: "Geist-SemiBold" }}
         >
           Flight number
         </Text>
@@ -150,7 +150,7 @@ export function BookingTypeInput({
           isValidating={isValidatingFlight}
           variant="inline"
           className="min-w-0 flex-1"
-          inputClassName="text-right text-gray-800"
+          inputClassName="text-right"
         />
       </View>
       {validationContent ? (
