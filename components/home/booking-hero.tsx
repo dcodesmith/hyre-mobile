@@ -159,8 +159,8 @@ function BookingHero() {
 
   return (
     <View className="relative w-full">
-      <View className="relative h-[707px] w-full">
-        <View style={styles.heroImage}>
+      <View className="relative min-h-[707px] w-full">
+        <View className="absolute top-0 right-0 left-0" style={styles.heroImage}>
           <Image
             source={HERO_IMAGE}
             contentFit="cover"
@@ -169,7 +169,7 @@ function BookingHero() {
           />
         </View>
 
-        <View className="absolute top-[122px] left-4 right-4 items-center">
+        <View className="items-center px-4 pt-[122px]">
           <Text
             className="text-center text-white"
             style={{
@@ -195,11 +195,11 @@ function BookingHero() {
           </Text>
         </View>
 
-        <View className="absolute top-[301px] right-4 left-4">
-          <BookingSearch context="hero" />
+        <View className="mx-4 mt-[93px]">
+          <BookingSearch />
         </View>
 
-        <View className="absolute top-[639px] self-center h-8 flex-row items-center gap-5 rounded-full px-4 py-2">
+        <View className="mt-3 self-center h-8 flex-row items-center gap-5 rounded-full px-4 py-2">
           {FEATURES.map(({ key, label, Icon, color }) => (
             <View className="flex-row items-center gap-1" key={key}>
               <Icon color={color} size={16} strokeWidth={2} />

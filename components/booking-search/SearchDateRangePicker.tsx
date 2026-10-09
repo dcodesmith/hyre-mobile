@@ -1,6 +1,6 @@
 import dayjs, { type Dayjs } from "dayjs";
 import { ChevronLeft, ChevronRight, X } from "lucide-react-native";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import type { DateType } from "react-native-ui-datepicker";
 import DateTimePicker, {
@@ -112,7 +112,7 @@ export function SearchDateRangePicker({
   const [draftFromDate, setDraftFromDate] = useState(fromDate);
   const [draftToDate, setDraftToDate] = useState(toDate);
   const [isStartingNewRange, setIsStartingNewRange] = useState(false);
-  const minDate = useMemo(() => getFromDateMinDate(bookingType), [bookingType]);
+  const minDate = getFromDateMinDate(bookingType);
   const initialMonth = dayjs(fromDate ?? minDate).startOf("month");
   const [visibleMonth, setVisibleMonth] = useState(initialMonth);
   const secondMonth = visibleMonth.add(1, "month");

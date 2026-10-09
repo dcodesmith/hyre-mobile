@@ -40,7 +40,6 @@ const searchStyles = {
 } as const;
 
 interface BookingSearchProps {
-  readonly context?: "hero" | "modal";
   /** Called after search is triggered (e.g. to close modals) */
   readonly onSearchComplete?: () => void;
 }
