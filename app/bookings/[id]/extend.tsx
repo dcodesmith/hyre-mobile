@@ -318,7 +318,7 @@ export default function ExtendBookingScreen() {
 		<SafeAreaView className="flex-1 bg-white">
 			<ScrollView
 				className="flex-1"
-				contentInsetAdjustmentBehavior="automatic"
+				contentInsetAdjustmentBehavior="never"
 				contentContainerClassName="gap-4 px-4 py-6"
 			>
 				<Pressable

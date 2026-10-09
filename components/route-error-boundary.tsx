@@ -16,7 +16,7 @@ export function RouteErrorBoundary({
 
   return (
     <ScrollView
-      contentInsetAdjustmentBehavior="automatic"
+      contentInsetAdjustmentBehavior="never"
       className="flex-1 bg-background"
       contentContainerStyle={{ flexGrow: 1 }}
     >

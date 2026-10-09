@@ -259,7 +259,7 @@ export default function ReferralsScreen() {
       <StatusBar style="dark" />
       <ScrollView
         className="flex-1"
-        contentInsetAdjustmentBehavior="automatic"
+        contentInsetAdjustmentBehavior="never"
         onScroll={handleScroll}
         scrollEventThrottle={16}
       >
