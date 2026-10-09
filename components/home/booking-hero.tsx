@@ -167,7 +167,7 @@ function BookingHero() {
 
   return (
     <View className="relative w-full">
-      <View className="relative min-h-[707px] w-full">
+      <View className="relative w-full pb-[22px]">
         <View className="absolute top-0 right-0 left-0" style={styles.heroImage}>
           <Image
             source={HERO_IMAGE}
