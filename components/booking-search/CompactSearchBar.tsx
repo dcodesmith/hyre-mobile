@@ -1,4 +1,5 @@
 import dayjs from "dayjs";
+import { Search } from "lucide-react-native";
 import { Pressable, Text, View } from "react-native";
 import {
   BOOKING_TYPE_OPTIONS_MAP,
@@ -6,6 +7,12 @@ import {
   NIGHT_BOOKING_TYPE,
 } from "@/lib/booking-types";
 import { useBookingSearchDraft } from "./BookingSearchDraftProvider";
+
+// hyre-web compact search bar: shadow-sm
+const COMPACT_BAR_SHADOW = {
+  boxShadow:
+    "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)",
+} as const;
 
 type AppliedSearchSummary = {
   readonly from?: string;
@@ -148,9 +155,10 @@ export function CompactSearchBar({
 
   const content = (
     <>
+      <Search size={16} color="#111827" strokeWidth={2} />
       {shouldShowState ? (
         <Text
-          className="flex-1 text-center text-sm leading-5 text-gray-900"
+          className="min-w-0 shrink text-center text-sm leading-5 text-gray-900"
           numberOfLines={1}
           style={{ fontFamily: "Geist-Medium" }}
         >
@@ -172,7 +180,7 @@ export function CompactSearchBar({
                 {" "}
                 •{" "}
               </Text>
-              {additionalInfo}
+              <Text className="text-gray-600">{additionalInfo}</Text>
             </>
           )}
         </Text>
@@ -190,7 +198,8 @@ export function CompactSearchBar({
   if (asChild) {
     return (
       <View
-        className="h-11 w-full flex-row items-center justify-center rounded-lg border border-gray-300 bg-white px-4"
+        className="h-11 w-full flex-row items-center justify-center gap-4 rounded-lg border border-gray-200 bg-white px-4"
+        style={COMPACT_BAR_SHADOW}
         accessibilityRole="button"
         accessibilityLabel="Edit search parameters"
       >
@@ -203,7 +212,8 @@ export function CompactSearchBar({
     <Pressable
       onPress={onPress}
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      className="h-11 w-full flex-row items-center justify-center rounded-lg border border-gray-300 bg-white px-4"
+      className="h-11 w-full flex-row items-center justify-center gap-4 rounded-lg border border-gray-200 bg-white px-4"
+      style={COMPACT_BAR_SHADOW}
       accessibilityRole="button"
       accessibilityLabel="Edit search parameters"
     >
