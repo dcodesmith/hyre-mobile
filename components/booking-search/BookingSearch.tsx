@@ -321,8 +321,9 @@ export function BookingSearch({ onSearchComplete }: BookingSearchProps) {
           onChange={handleDateRangeChange}
           single={isAirport}
         />
+        <View className="border-t border-gray-200" />
         <View
-          className="flex-col justify-center border-t border-gray-200"
+          className="flex-col justify-center"
           style={{ overflow: "visible", zIndex: isAirport ? 30 : 0 }}
           collapsable={false}
         >
