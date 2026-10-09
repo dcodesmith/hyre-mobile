@@ -70,7 +70,6 @@ export function SearchSheet({ open, onOpenChange }: SearchSheetProps) {
                 >
                   <View className="w-full">
                     <BookingSearch
-                      context="modal"
                       onSearchComplete={() => onOpenChange(false)}
                     />
 

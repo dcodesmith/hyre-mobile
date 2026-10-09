@@ -1,4 +1,9 @@
 import {
+  Geist_400Regular,
+  Geist_500Medium,
+  Geist_600SemiBold,
+} from "@expo-google-fonts/geist";
+import {
   NunitoSans_400Regular,
   NunitoSans_500Medium,
   NunitoSans_600SemiBold,
@@ -14,7 +19,6 @@ import {
 import NetInfo from "@react-native-community/netinfo";
 import { ThemeProvider } from "@react-navigation/native";
 import * as Sentry from "@sentry/react-native";
-import { AutocompletePortalHostProvider } from "@/providers/autocomplete-portal-host-provider";
 import {
   focusManager,
   onlineManager,
@@ -28,6 +32,7 @@ import * as WebBrowser from "expo-web-browser";
 import { useEffect } from "react";
 import type { TextStyle } from "react-native";
 import { AppState, LogBox, StyleSheet, Text, TextInput } from "react-native";
+import { AutocompletePortalHostProvider } from "@/providers/autocomplete-portal-host-provider";
 import "react-native-reanimated";
 import "../global.css";
 
@@ -195,6 +200,9 @@ function RootLayout() {
   const { colorScheme } = useColorScheme();
   const navigationRef = useNavigationContainerRef();
   const [fontsLoaded, fontError] = useFonts({
+    "Geist-Regular": Geist_400Regular,
+    "Geist-Medium": Geist_500Medium,
+    "Geist-SemiBold": Geist_600SemiBold,
     "NunitoSans-Regular": NunitoSans_400Regular,
     "NunitoSans-Medium": NunitoSans_500Medium,
     "NunitoSans-SemiBold": NunitoSans_600SemiBold,

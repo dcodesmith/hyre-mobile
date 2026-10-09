@@ -67,7 +67,7 @@ export default function HomeScreen() {
           onScroll={handleScroll}
           onScrollBeginDrag={handleScrollBeginDrag}
           scrollEventThrottle={16}
-          contentInsetAdjustmentBehavior="automatic"
+          contentInsetAdjustmentBehavior="never"
           style={{ backgroundColor: "#FFFFFF" }}
           contentContainerStyle={{ backgroundColor: "#FFFFFF" }}
         >

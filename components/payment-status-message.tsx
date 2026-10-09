@@ -50,7 +50,7 @@ export function PaymentStatusMessage({
     >
       <ScrollView
         contentContainerClassName="flex-grow justify-center px-6"
-        contentInsetAdjustmentBehavior="automatic"
+        contentInsetAdjustmentBehavior="never"
       >
         <View className="items-center" accessibilityState={{ busy: loading }}>
           {loading ? (

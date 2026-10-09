@@ -79,7 +79,7 @@ export default function LoginScreen() {
       <ScrollView
         className="flex-1"
         contentContainerClassName="flex-grow justify-center px-6 py-8"
-        contentInsetAdjustmentBehavior="automatic"
+        contentInsetAdjustmentBehavior="never"
         keyboardShouldPersistTaps="always"
       >
         <Animated.View

@@ -203,7 +203,7 @@ export default function BookingDetailScreen() {
 			edges={["top", "left", "right", "bottom"]}
 		>
 			<StatusBar style="dark" />
-			<ScrollView className="flex-1" contentInsetAdjustmentBehavior="automatic">
+			<ScrollView className="flex-1" contentInsetAdjustmentBehavior="never">
 				<View className="px-4 py-4">
 					<BookingDetailHeader
 						booking={booking}

@@ -147,7 +147,7 @@ export default function VerifyScreen() {
       <ScrollView
         className="flex-1"
         contentContainerClassName="flex-grow justify-center px-6 py-8"
-        contentInsetAdjustmentBehavior="automatic"
+        contentInsetAdjustmentBehavior="never"
         keyboardShouldPersistTaps="handled"
       >
         <Animated.View

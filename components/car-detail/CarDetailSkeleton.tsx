@@ -3,7 +3,7 @@ import { ScrollView, View } from "react-native";
 export function CarDetailSkeleton() {
   return (
     <View className="flex-1 bg-white">
-      <ScrollView className="flex-1" contentInsetAdjustmentBehavior="automatic">
+      <ScrollView className="flex-1" contentInsetAdjustmentBehavior="never">
         <View className="h-64 w-full bg-gray-200/80 animate-pulse" />
         <View className="mt-3 mb-2 px-4">
           <View className="h-7 w-56 rounded bg-gray-200/80 animate-pulse" />

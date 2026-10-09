@@ -69,7 +69,7 @@ export default function GuestBookingLookupScreen() {
       <ScrollView
         className="flex-1"
         contentContainerClassName="flex-grow justify-center px-6 py-8"
-        contentInsetAdjustmentBehavior="automatic"
+        contentInsetAdjustmentBehavior="never"
         keyboardShouldPersistTaps="handled"
       >
         <View className="mx-auto w-full max-w-sm gap-6">

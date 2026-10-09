@@ -23,7 +23,6 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
           keyboardShouldPersistTaps="handled"
         >
           <BookingSearch
-            context="modal"
             onSearchComplete={() => onOpenChange(false)}
           />
         </ScrollView>
