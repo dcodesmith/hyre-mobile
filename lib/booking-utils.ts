@@ -94,6 +94,73 @@ export function getToDateMinDate(
   return fromDate;
 }
 
+/** Compact label for the redesigned search date trigger. */
+export function formatSearchDateRangeLabel(
+  fromDate: Date | undefined,
+  toDate: Date | undefined,
+): string | null {
+  if (!fromDate) {
+    return null;
+  }
+
+  const from = dayjs(fromDate).format("MMM D");
+  if (!toDate) {
+    return from;
+  }
+  if (dayjs(fromDate).isSame(toDate, "day")) {
+    return from;
+  }
+
+  const to = dayjs(toDate).format("MMM D");
+  return dayjs(fromDate).format("MMM") === dayjs(toDate).format("MMM")
+    ? `${from} - ${dayjs(toDate).format("D")}`
+    : `${from} - ${to}`;
+}
+
+/** Applies booking-type rules when the search UI updates From/To together. */
+export function resolveSearchDateRangeChange(
+  bookingType: BookingType,
+  from: Date | undefined,
+  to: Date | undefined,
+): { from: Date | undefined; to: Date | undefined } {
+  return {
+    from,
+    to: bookingType === AIRPORT_PICKUP_BOOKING_TYPE ? from : to,
+  };
+}
+
+/** Minimum span (days) for range mode in the search calendar picker. */
+export function getSearchCalendarMinRangeDays(
+  bookingType: BookingType,
+  single = false,
+): number {
+  if (single) {
+    return 0;
+  }
+
+  if (requiresOvernightSpan(bookingType)) {
+    return 1;
+  }
+
+  return 0;
+}
+
+/** Identifies the first date tapped when replacing an existing completed range. */
+export function getFreshRangeStart(
+  currentFrom: Date,
+  currentTo: Date,
+  nextFrom: Date | undefined,
+  nextTo: Date | undefined,
+): Date {
+  if (nextFrom && !dayjs(nextFrom).isSame(currentFrom, "day")) {
+    return nextFrom;
+  }
+  if (nextTo && !dayjs(nextTo).isSame(currentTo, "day")) {
+    return nextTo;
+  }
+  return currentFrom;
+}
+
 /**
  * Resolves From/To when the user picks a To date.
  * - DAY: To-first sets From = To

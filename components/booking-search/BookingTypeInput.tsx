@@ -1,4 +1,6 @@
+import { Text, View } from "react-native";
 import { FlightAutocompleteInput } from "@/components/ui/flight-autocomplete-input";
+import { formatFlightSearchInlineSuccess } from "@/lib/airport-pickup";
 import type { BookingType } from "@/lib/booking-types";
 import {
   AIRPORT_PICKUP_BOOKING_TYPE,
@@ -6,10 +8,8 @@ import {
   FULL_DAY_BOOKING_TYPE,
   NIGHT_BOOKING_TYPE,
 } from "@/lib/booking-types";
-import { formatFlightSearchInlineSuccess } from "@/lib/airport-pickup";
 import { cn } from "@/lib/utils";
 import type { ValidatedFlight } from "@/services/flights";
-import { Text, View } from "react-native";
 import { TimePicker } from "./TimePicker";
 
 interface BookingTypeInputProps {
@@ -91,101 +91,79 @@ export function BookingTypeInput({
     );
   }
 
-  return (
-    <View className="relative w-full min-h-[38px]" collapsable={false}>
-      {/* Night booking - static 11:00 PM */}
-      <View
-        className="absolute inset-0 flex-col justify-center"
-        style={{
-          opacity: isNight ? 1 : 0,
-          pointerEvents: isNight ? "auto" : "none",
-        }}
-      >
-        <Text className="text-xs font-semibold text-gray-700 leading-tight">
-          Pickup Time
+  if (isNight) {
+    return (
+      <View className="w-full flex-row items-center justify-between gap-4 py-3">
+        <Text
+          className="text-sm leading-[14px] text-gray-800"
+          style={{ fontFamily: "Geist-SemiBold" }}
+        >
+          Time
         </Text>
-        <Text className="mt-1 text-sm text-gray-900 leading-tight">
+        <Text
+          className="text-sm leading-[14px] text-gray-800"
+          style={{ fontFamily: "Geist-Regular" }}
+        >
           11:00 PM
         </Text>
       </View>
+    );
+  }
 
-      {/* Day/Full Day booking - time picker */}
-      <View
-        className="absolute inset-0 flex-col justify-center"
-        style={{
-          opacity: isTimePicker ? 1 : 0,
-          pointerEvents: isTimePicker ? "auto" : "none",
-        }}
-      >
-        <TimePicker
-          date={dateRange.from}
-          value={pickupTime}
-          onValueChange={onPickupTimeChange}
-          bookingType={bookingType}
-          label="Pickup Time"
-          placeholder={isCompact ? "Select time" : "Select pickup time"}
+  if (isTimePicker) {
+    return (
+      <TimePicker
+        date={dateRange.from}
+        value={pickupTime}
+        onValueChange={onPickupTimeChange}
+        bookingType={bookingType}
+        label="Time"
+        placeholder={isCompact ? "Select time" : "Select pickup time"}
+        variant="inline"
+      />
+    );
+  }
+
+  let validationContent: string | null = null;
+  let validationClassName = "text-gray-500";
+  if (validatedFlight && !isValidatingFlight) {
+    validationContent = formatFlightSearchInlineSuccess(validatedFlight);
+    validationClassName = "text-green-600";
+  } else if (validationMessage && !isValidatingFlight) {
+    validationContent = shortValidationMessage ?? validationMessage;
+  }
+
+  return (
+    <View className="w-full" collapsable={false}>
+      <View className="w-full flex-row items-center justify-between gap-4 py-3">
+        <Text
+          className="shrink-0 text-sm leading-[14px] text-gray-800"
+          style={{ fontFamily: "Geist-SemiBold" }}
+        >
+          Flight number
+        </Text>
+        <FlightAutocompleteInput
+          value={flightNumber ?? ""}
+          onChangeText={onFlightNumberChange}
+          onFlightSelected={onFlightSelected}
+          placeholder="E.g BA123"
+          isValidating={isValidatingFlight}
           variant="inline"
+          className="min-w-0 flex-1"
+          inputClassName="text-right text-gray-800"
         />
       </View>
-
-      {/* Airport pickup - flight number (same row height as pickup time) */}
-      <View
-        className="absolute inset-0 flex-col justify-center"
-        style={{
-          opacity: isAirport ? 1 : 0,
-          pointerEvents: isAirport ? "auto" : "none",
-        }}
-      >
-        {(() => {
-          let validationContent: string | null = null;
-          let validationClassName = "text-gray-500";
-
-          if (validatedFlight && !isValidatingFlight) {
-            validationContent = formatFlightSearchInlineSuccess(validatedFlight);
-            validationClassName = "text-green-600";
-          } else if (validationMessage && !isValidatingFlight) {
-            validationContent =
-              shortValidationMessage ?? validationMessage;
-          }
-
-          return (
-            <View className="w-full flex-row items-start gap-2">
-              <View
-                className={cn(
-                  "min-w-0 flex-col",
-                  validationContent ? "w-[45%]" : "flex-1",
-                )}
-              >
-                <Text className="text-xs font-semibold text-gray-700 leading-tight">
-                  Flight Number
-                </Text>
-                <FlightAutocompleteInput
-                  value={flightNumber ?? ""}
-                  onChangeText={onFlightNumberChange}
-                  onFlightSelected={onFlightSelected}
-                  placeholder="e.g. BA123"
-                  isValidating={isValidatingFlight}
-                  variant="inline"
-                  className="w-full"
-                />
-              </View>
-              {validationContent ? (
-                <View className="min-w-0 flex-1 pt-0.5">
-                  <Text
-                    selectable
-                    className={cn(
-                      "text-right text-xs leading-tight",
-                      validationClassName,
-                    )}
-                  >
-                    {validationContent}
-                  </Text>
-                </View>
-              ) : null}
-            </View>
-          );
-        })()}
-      </View>
+      {validationContent ? (
+        <Text
+          selectable
+          className={cn(
+            "pb-2 text-right text-xs leading-tight",
+            validationClassName,
+          )}
+        >
+          {validationContent}
+        </Text>
+      ) : null}
     </View>
   );
 }

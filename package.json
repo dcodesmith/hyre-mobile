@@ -31,6 +31,7 @@
     "setup:simulator:hosted": "node scripts/setup-simulator-env.js --hosted"
   },
   "dependencies": {
+    "@expo-google-fonts/geist": "^0.4.2",
     "@expo-google-fonts/nunito-sans": "^0.4.2",
     "@expo-google-fonts/plus-jakarta-sans": "^0.4.2",
     "@expo/metro-runtime": "~55.0.12",

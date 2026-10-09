@@ -3,7 +3,6 @@ import { useCarCategories } from "@/hooks/use-car-categories";
 import type { PublicCar } from "@/lib/car-types";
 import { buildHomeCarSections } from "@/lib/home-car-sections";
 import { Image } from "expo-image";
-import { LinearGradient } from "expo-linear-gradient";
 import { Fingerprint, ShieldCheck } from "lucide-react-native";
 import type { ReactNode } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -15,24 +14,25 @@ import {
 // Hero from hireApp: hero-640.webp (mobile), height 540px (matches web useHeroScroll)
 const HERO_IMAGE = require("@/assets/images/hero.webp");
 
-// Web: h-4 w-4 text-green-400, text-orange-400 (no rounded bg wrapper)
+// hyre-web mobile hero: size-4 (16px), default Lucide stroke, Tailwind v4 green-400 / orange-400
 const FEATURES = [
   {
     key: "fleetOwners",
     label: "Vetted fleet owners",
     Icon: ShieldCheck,
-    color: "#4ade80",
-  }, // green-400
+    color: "#05df72",
+  },
   {
     key: "booking",
     label: "Secure booking",
     Icon: Fingerprint,
-    color: "#fb923c",
-  }, // orange-400
+    color: "#ff8904",
+  },
 ];
 
 // hireApp uses Plus Jakarta Sans - Expo font names for StyleSheet typography
 const FONT = {
+  bold: "PlusJakartaSans-Bold" as const,
   semiBold: "PlusJakartaSans-SemiBold" as const,
   medium: "PlusJakartaSans-Medium" as const,
   regular: "PlusJakartaSans-Regular" as const,
@@ -41,12 +41,13 @@ const VEHICLE_SKELETON_IDS = ["one", "two", "three"] as const;
 
 const styles = StyleSheet.create({
   heroImage: {
-    minHeight: 540,
+    height: 411,
     overflow: "hidden" as const,
   },
-  badge: {
-    fontFamily: FONT.medium,
+  featureLabel: {
+    fontFamily: "Geist-Medium",
     fontSize: 14,
+    lineHeight: 14,
   },
   pill: {
     fontFamily: FONT.medium,
@@ -56,25 +57,6 @@ const styles = StyleSheet.create({
   },
   pillPressable: {
     minHeight: 32,
-  },
-  aiButton: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
-    gap: 8,
-    borderRadius: 999,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: "#404040", // neutral-700/900 approximate
-  },
-  subtitleColor: { color: "rgba(255,255,255,0.9)" },
-  /** Replaces deprecated `StyleSheet.absoluteFillObject` (RN parity: full-bleed overlay). */
-  gradientFill: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
   },
   heroImageFill: {
     position: "absolute",
@@ -177,66 +159,59 @@ function BookingHero() {
 
   return (
     <View className="relative w-full">
-      <View style={[styles.heroImage, { zIndex: 10 }]}>
-        <Image
-          source={HERO_IMAGE}
-          contentFit="cover"
-          style={styles.heroImageFill}
-          transition={0}
-        />
-        {/* Gradient overlay: from-black/50 via-black/30 to-black/60 */}
-        <LinearGradient
-          colors={["rgba(0,0,0,0.5)", "rgba(0,0,0,0.3)", "rgba(0,0,0,0.6)"]}
-          locations={[0, 0.5, 1]}
-          style={styles.gradientFill}
-        />
+      <View className="relative h-[707px] w-full">
+        <View style={styles.heroImage}>
+          <Image
+            source={HERO_IMAGE}
+            contentFit="cover"
+            style={styles.heroImageFill}
+            transition={0}
+          />
+        </View>
 
-        {/* Hero content: px-4 pt-16, max-w-4xl (web: max-w-4xl mx-auto) */}
-        <View className="relative z-10 w-full max-w-4xl self-center px-4 pt-16 pb-6">
-          {/* Title - matches web: text-3xl font-bold text-white text-center mb-3 */}
-          <View className="mb-6">
-            <Text className="text-3xl font-bold text-white text-center mb-3">
-              Your Ride, Your Choice
-            </Text>
-            <Text
-              className="text-center text-base leading-relaxed"
-              style={styles.subtitleColor}
-            >
-              Comfort. Safety. Professional. Every ride.
-            </Text>
-          </View>
+        <View className="absolute top-[122px] left-4 right-4 items-center">
+          <Text
+            className="text-center text-white"
+            style={{
+              fontFamily: FONT.bold,
+              fontSize: 30,
+              lineHeight: 30,
+              letterSpacing: -0.43,
+            }}
+          >
+            Your Ride, Your Choice
+          </Text>
+          <Text
+            className="mt-2 w-full max-w-[337px] text-center text-white"
+            style={{
+              fontFamily: FONT.semiBold,
+              fontSize: 14,
+              lineHeight: 24,
+              letterSpacing: -0.43,
+            }}
+          >
+            Find the right car for every journey. Browse a range of cars, choose
+            when you need it, and book with ease.
+          </Text>
+        </View>
 
-          {/* Search box wrapper: z-20 so it stays above the overlapping -mt-20 white section */}
-          <View className="relative z-20 w-full max-w-2xl gap-3">
-            <BookingSearch context="hero" />
+        <View className="absolute top-[301px] right-4 left-4">
+          <BookingSearch context="hero" />
+        </View>
 
-            {/* AISearchModal trigger: gap-2 px-4 py-2 text-sm font-medium */}
-            {/* <View className="items-center">
-              <Pressable style={styles.aiButton}>
-                <Sparkles color="#FFFFFF" size={16} strokeWidth={1.75} />
-                <Text className="text-white" style={styles.badge}>
-                  Search by AI
-                </Text>
-              </Pressable>
-            </View> */}
-          </View>
-
-          {/* Trust badges: flex-wrap gap-4 mt-6, icons h-4 w-4 (web: no rounded bg) */}
-          <View className="mt-6 flex-row flex-wrap items-center justify-center gap-4">
-            {FEATURES.map(({ key, label, Icon, color }) => (
-              <View className="flex-row items-center gap-2" key={key}>
-                <Icon color={color} size={16} strokeWidth={1.75} />
-                <Text className="text-white" style={styles.badge}>
-                  {label}
-                </Text>
-              </View>
-            ))}
-          </View>
+        <View className="absolute top-[639px] self-center h-8 flex-row items-center gap-5 rounded-full px-4 py-2">
+          {FEATURES.map(({ key, label, Icon, color }) => (
+            <View className="flex-row items-center gap-1" key={key}>
+              <Icon color={color} size={16} strokeWidth={2} />
+              <Text className="text-gray-700" style={styles.featureLabel}>
+                {label}
+              </Text>
+            </View>
+          ))}
         </View>
       </View>
 
-      {/* Main content: -mt-20 overlap, pt-28 pushes pills below hero with more spacing */}
-      <View className="relative z-0 -mt-20 bg-white px-4 pt-28 pb-28">
+      <View className="bg-white px-4 pb-28">
         {/* Category pills: px-3 py-1.5 gap-2, text-xs font-medium */}
         {data && data.categories.length > 0 ? (
           <ScrollView

@@ -1,7 +1,4 @@
-import { type BookingType, DAY_BOOKING_TYPE } from "@/lib/booking-types";
-import { getFromDateMinDate } from "@/lib/booking-utils";
-import { cn } from "@/lib/utils";
-import { Check } from "lucide-react-native";
+import { Check, ChevronRight } from "lucide-react-native";
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
   Modal,
@@ -11,6 +8,9 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import { type BookingType, DAY_BOOKING_TYPE } from "@/lib/booking-types";
+import { getFromDateMinDate } from "@/lib/booking-utils";
+import { cn } from "@/lib/utils";
 
 const hasTimePassed = (selectedDate: Date, hour: number): boolean => {
   const now = new Date();
@@ -126,12 +126,7 @@ export function TimePicker({
     : 100;
 
   return (
-    <View
-      className={cn(
-        "w-full",
-        !isForm && "min-h-[38px] flex-col justify-center",
-      )}
-    >
+    <View className={cn("w-full", !isForm && "flex-col justify-center")}>
       <View ref={triggerRef} collapsable={false} style={{ width: "100%" }}>
         <Pressable
           onPress={() => (open ? handleClose() : handleOpen())}
@@ -139,7 +134,7 @@ export function TimePicker({
             "w-full flex-row items-center",
             isForm
               ? "h-10 justify-between rounded-md border border-neutral-200 bg-white px-3"
-              : "min-h-[38px] justify-start gap-0",
+              : "justify-between gap-4 py-3",
             triggerClassName,
           )}
           accessibilityRole="button"
@@ -156,20 +151,27 @@ export function TimePicker({
               {value ?? placeholder}
             </Text>
           ) : (
-            <View className="flex-1 min-w-0 flex-col justify-center">
-              <Text className="text-xs font-semibold text-gray-700 leading-tight">
+            <>
+              <Text
+                className="shrink-0 text-sm leading-[14px] text-gray-800"
+                style={{ fontFamily: "Geist-SemiBold" }}
+              >
                 {label}
               </Text>
-              <Text
-                className={cn(
-                  "mt-1 leading-tight text-sm",
-                  value ? "text-gray-900" : "text-gray-500",
-                )}
-                numberOfLines={1}
-              >
-                {value ?? placeholder}
-              </Text>
-            </View>
+              <View className="min-w-0 flex-row items-center gap-1">
+                <Text
+                  className={cn(
+                    "shrink text-right text-sm leading-[14px]",
+                    value ? "text-gray-800" : "text-gray-400",
+                  )}
+                  numberOfLines={1}
+                  style={{ fontFamily: "Geist-Regular" }}
+                >
+                  {value ?? placeholder}
+                </Text>
+                <ChevronRight size={16} color="#9CA3AF" strokeWidth={1.75} />
+              </View>
+            </>
           )}
         </Pressable>
       </View>

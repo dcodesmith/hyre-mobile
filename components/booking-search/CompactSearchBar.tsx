@@ -1,10 +1,10 @@
+import dayjs from "dayjs";
+import { Pressable, Text, View } from "react-native";
 import {
   BOOKING_TYPE_OPTIONS_MAP,
   type BookingType,
   NIGHT_BOOKING_TYPE,
 } from "@/lib/booking-types";
-import dayjs from "dayjs";
-import { Pressable, Text, View } from "react-native";
 import { useBookingSearchDraft } from "./BookingSearchDraftProvider";
 
 type AppliedSearchSummary = {
@@ -150,21 +150,37 @@ export function CompactSearchBar({
     <>
       {shouldShowState ? (
         <Text
-          className="flex-1 text-center text-sm font-medium text-gray-900"
+          className="flex-1 text-center text-sm leading-5 text-gray-900"
           numberOfLines={1}
+          style={{ fontFamily: "Geist-Medium" }}
         >
           {dateText}
-          <Text className="text-sm text-gray-300"> • </Text>
+          <Text
+            className="text-sm text-gray-300"
+            style={{ fontFamily: "Geist-Regular" }}
+          >
+            {" "}
+            •{" "}
+          </Text>
           {bookingTypeText}
           {additionalInfo && (
             <>
-              <Text className="text-sm text-gray-300"> • </Text>
+              <Text
+                className="text-sm text-gray-300"
+                style={{ fontFamily: "Geist-Regular" }}
+              >
+                {" "}
+                •{" "}
+              </Text>
               {additionalInfo}
             </>
           )}
         </Text>
       ) : (
-        <Text className="text-sm font-semibold text-gray-900">
+        <Text
+          className="text-sm leading-5 text-gray-900"
+          style={{ fontFamily: "Geist-Medium" }}
+        >
           When do you need a ride?
         </Text>
       )}
@@ -174,7 +190,7 @@ export function CompactSearchBar({
   if (asChild) {
     return (
       <View
-        className="w-full flex-row items-center justify-center gap-3 rounded-full border border-gray-200 bg-white px-4 py-3 shadow-lg"
+        className="h-11 w-full flex-row items-center justify-center rounded-lg border border-gray-300 bg-white px-4"
         accessibilityRole="button"
         accessibilityLabel="Edit search parameters"
       >
@@ -187,7 +203,7 @@ export function CompactSearchBar({
     <Pressable
       onPress={onPress}
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      className="w-full flex-row items-center justify-center gap-3 rounded-full border border-gray-200 bg-white px-4 py-3 shadow-lg"
+      className="h-11 w-full flex-row items-center justify-center rounded-lg border border-gray-300 bg-white px-4"
       accessibilityRole="button"
       accessibilityLabel="Edit search parameters"
     >

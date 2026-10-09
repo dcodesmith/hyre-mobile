@@ -1,3 +1,11 @@
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Pressable,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { AutocompletePortalDropdown } from "@/components/ui/autocomplete-portal-dropdown";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,14 +18,6 @@ import {
 import { FLIGHT_AUTOCOMPLETE_POPOVER_STYLE } from "@/lib/autocomplete-popover-style";
 import { useAutocompleteAnchor } from "@/lib/use-autocomplete-anchor";
 import { cn } from "@/lib/utils";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
 
 /** hireApp --radix-popper-anchor-height (form input) */
 const INPUT_HEIGHT = 40;
@@ -59,7 +59,11 @@ export function FlightAutocompleteInput({
   const shouldOpenSuggestions =
     isFocused && suggestions.length > 0 && query.length >= 2;
 
-  const { ref: anchorRef, anchor, measure } = useAutocompleteAnchor({
+  const {
+    ref: anchorRef,
+    anchor,
+    measure,
+  } = useAutocompleteAnchor({
     open: shouldOpenSuggestions,
     minHeight: variant === "form" ? INPUT_HEIGHT : 0,
   });
@@ -177,9 +181,10 @@ export function FlightAutocompleteInput({
         >
           <TextInput
             className={cn(
-              "mt-1 flex-1 p-0 text-sm leading-tight text-gray-900 border-0",
+              "flex-1 border-0 p-0 text-sm leading-[14px] text-gray-900",
               inputClassName,
             )}
+            style={{ fontFamily: "Geist-Regular" }}
             value={value}
             onChangeText={handleChangeText}
             placeholder={placeholder}
