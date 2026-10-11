@@ -181,7 +181,7 @@ export function FlightAutocompleteInput({
         >
           <TextInput
             className={cn(
-              "flex-1 border-0 p-0 text-sm leading-[14px] text-gray-900",
+              "h-4 flex-1 border-0 p-0 text-sm leading-4 text-gray-900",
               inputClassName,
             )}
             style={{ color: "#1E2939", fontFamily: "Geist-Regular" }}

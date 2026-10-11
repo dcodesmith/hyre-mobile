@@ -134,7 +134,7 @@ export function TimePicker({
             "w-full flex-row items-center",
             isForm
               ? "h-10 justify-between rounded-md border border-neutral-200 bg-white px-3"
-              : "h-10 justify-between gap-4 py-3",
+              : "justify-between gap-4 py-2",
             triggerClassName,
           )}
           accessibilityRole="button"
@@ -153,14 +153,14 @@ export function TimePicker({
           ) : (
             <>
               <Text
-                className="shrink-0 text-sm leading-[14px]"
+                className="h-4 shrink-0 text-sm leading-4"
                 style={{ color: "#1E2939", fontFamily: "Geist-SemiBold" }}
               >
                 {label}
               </Text>
               <View className="min-w-0 flex-row items-center gap-1">
                 <Text
-                  className="shrink text-right text-sm leading-[14px]"
+                  className="h-4 shrink text-right text-sm leading-4"
                   numberOfLines={1}
                   style={{
                     color: value ? "#1E2939" : "#71717A",

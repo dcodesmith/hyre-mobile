@@ -299,7 +299,7 @@ export function BookingSearch({ onSearchComplete }: BookingSearchProps) {
 
   return (
     <View
-      className="h-[326px] w-full rounded-lg bg-gray-50 px-4 py-6"
+      className="w-full rounded-md bg-gray-50 p-4"
       style={searchStyles.shell}
     >
       <BookingTypeTabs
@@ -309,8 +309,8 @@ export function BookingSearch({ onSearchComplete }: BookingSearchProps) {
 
       <View
         className={cn(
-          "mt-6 h-[130px] w-full overflow-visible rounded-lg border border-gray-200 bg-white px-4",
-          hasFlightFeedback ? "gap-1.5 py-1.5" : "gap-3 py-3",
+          "mt-2 w-full overflow-visible rounded-md border border-gray-200 bg-white px-4",
+          hasFlightFeedback ? "gap-1.5 py-1.5" : "gap-2 py-2",
         )}
       >
         <SearchDateRangePicker
@@ -331,7 +331,7 @@ export function BookingSearch({ onSearchComplete }: BookingSearchProps) {
       </View>
 
       <Button
-        className="mt-6 h-[52px] w-full rounded-md px-4"
+        className="mt-2 h-[52px] w-full rounded-md px-4"
         style={searchStyles.button}
         onPress={() => {
           void handleSearch();
