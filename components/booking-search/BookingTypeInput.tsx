@@ -93,15 +93,15 @@ export function BookingTypeInput({
 
   if (isNight) {
     return (
-      <View className="h-10 w-full flex-row items-center justify-between gap-4 py-3">
+      <View className="w-full flex-row items-center justify-between gap-4 py-2">
         <Text
-          className="text-sm leading-[14px]"
+          className="h-4 text-sm leading-4"
           style={{ color: "#1E2939", fontFamily: "Geist-SemiBold" }}
         >
           Time
         </Text>
         <Text
-          className="text-sm leading-[14px]"
+          className="h-4 text-sm leading-4"
           style={{ color: "#1E2939", fontFamily: "Geist-Regular" }}
         >
           11:00 PM
@@ -135,9 +135,9 @@ export function BookingTypeInput({
 
   return (
     <View className="w-full" collapsable={false}>
-      <View className="h-10 w-full flex-row items-center justify-between gap-4 py-3">
+      <View className="w-full flex-row items-center justify-between gap-4 py-2">
         <Text
-          className="shrink-0 text-sm leading-[14px]"
+          className="h-4 shrink-0 text-sm leading-4"
           style={{ color: "#1E2939", fontFamily: "Geist-SemiBold" }}
         >
           Flight number

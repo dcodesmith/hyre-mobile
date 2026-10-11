@@ -211,7 +211,7 @@ function BookingHero() {
           <BookingSearch />
         </View>
 
-        <View className="mt-3 self-center h-8 flex-row items-center gap-5 rounded-full px-4 py-2">
+        <View className="mt-2 self-center h-8 flex-row items-center gap-5 rounded-full px-4 py-2">
           {FEATURES.map(({ key, label, Icon, color }) => (
             <View className="flex-row items-center gap-1" key={key}>
               <Icon color={color} size={16} strokeWidth={2} />

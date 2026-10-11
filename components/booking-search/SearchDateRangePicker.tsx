@@ -229,19 +229,19 @@ export function SearchDateRangePicker({
           setIsStartingNewRange(Boolean(fromDate && toDate));
           setOpen(true);
         }}
-        className="h-10 w-full flex-row items-center justify-between gap-4 py-3"
+        className="w-full flex-row items-center justify-between gap-4 py-2"
         accessibilityRole="button"
         accessibilityLabel={single ? "When" : "Select booking dates"}
       >
         <Text
-          className="shrink-0 text-sm leading-[14px]"
+          className="h-4 shrink-0 text-sm leading-4"
           style={{ color: "#1E2939", fontFamily: "Geist-SemiBold" }}
         >
           When
         </Text>
         <View className="min-w-0 flex-row items-center gap-1">
           <Text
-            className="shrink text-right text-sm leading-[14px]"
+            className="h-4 shrink text-right text-sm leading-4"
             numberOfLines={1}
             style={{
               color: rangeLabel ? "#1E2939" : "#99A1AF",
