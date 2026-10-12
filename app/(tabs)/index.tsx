@@ -87,7 +87,10 @@ export default function HomeScreen() {
           <View
             className="absolute left-0 right-0 top-0 z-[999] overflow-hidden border-b border-gray-200 bg-gray-100"
             pointerEvents="box-none"
-            style={{ height: SCROLLED_TOP_BACKGROUND_HEIGHT }}
+            style={{
+              height: SCROLLED_TOP_BACKGROUND_HEIGHT,
+              boxSizing: "border-box",
+            }}
           >
             <View
               pointerEvents="none"
