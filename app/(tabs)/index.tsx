@@ -23,6 +23,8 @@ import {
 const SCROLL_COLLAPSE_THRESHOLD = 100;
 const SCROLLED_TOP_BACKGROUND_HEIGHT = 112;
 const COMPACT_SEARCH_CONTROL_HEIGHT = 44;
+const COMPACT_SEARCH_BOTTOM_PADDING = 12;
+const SCROLLED_TOP_BORDER_HEIGHT = 1;
 
 export default function HomeScreen() {
   const { onScroll } = useTabBarVisibility();
@@ -56,10 +58,14 @@ export default function HomeScreen() {
 
   const statusBarStyle = hasScrolledPastHero ? "dark" : "light";
   const topStatusAreaHeight = Math.max(insets.top, 24);
-  const scrolledStatusHeight = Math.min(
-    topStatusAreaHeight,
-    SCROLLED_TOP_BACKGROUND_HEIGHT - COMPACT_SEARCH_CONTROL_HEIGHT,
+  const scrolledTopBackgroundHeight = Math.max(
+    SCROLLED_TOP_BACKGROUND_HEIGHT,
+    topStatusAreaHeight +
+      COMPACT_SEARCH_CONTROL_HEIGHT +
+      COMPACT_SEARCH_BOTTOM_PADDING +
+      SCROLLED_TOP_BORDER_HEIGHT,
   );
+  const scrolledStatusHeight = topStatusAreaHeight;
 
   return (
     <SafeAreaView
@@ -88,7 +94,7 @@ export default function HomeScreen() {
             className="absolute left-0 right-0 top-0 z-[999] overflow-hidden border-b border-gray-200 bg-gray-100"
             pointerEvents="box-none"
             style={{
-              height: SCROLLED_TOP_BACKGROUND_HEIGHT,
+              height: scrolledTopBackgroundHeight,
               boxSizing: "border-box",
             }}
           >
