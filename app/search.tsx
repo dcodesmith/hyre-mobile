@@ -27,7 +27,10 @@ import {
   Text,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 const SEARCH_SKELETON_IDS = [1, 2, 3];
 
@@ -154,6 +157,7 @@ function VehicleCardSkeleton() {
 
 function SearchScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { onScroll } = useTabBarVisibility();
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const params = useLocalSearchParams<{
@@ -327,11 +331,14 @@ function SearchScreen() {
     <View className="flex-1 bg-white">
       <SafeAreaView
         className="flex-1 bg-white"
-        edges={["top", "left", "right", "bottom"]}
+        edges={["left", "right", "bottom"]}
       >
         <StatusBar style="dark" />
-        {/* Header with back button and compact search */}
-        <View className="flex-row items-center gap-3 border-b border-gray-200 px-4 py-3">
+        {/* Header paints through the top inset, same gray as the home scrolled bar. */}
+        <View
+          className="flex-row items-center gap-3 border-b border-gray-200 bg-gray-100 px-4 pb-3"
+          style={{ paddingTop: Math.max(insets.top, 24) + 12 }}
+        >
           <Pressable
             onPress={() => router.back()}
             className="p-1"
