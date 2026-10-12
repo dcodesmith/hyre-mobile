@@ -21,6 +21,8 @@ import {
 } from "react-native-safe-area-context";
 
 const SCROLL_COLLAPSE_THRESHOLD = 100;
+const SCROLLED_TOP_BACKGROUND_HEIGHT = 112;
+const COMPACT_SEARCH_CONTROL_HEIGHT = 44;
 
 export default function HomeScreen() {
   const { onScroll } = useTabBarVisibility();
@@ -54,6 +56,10 @@ export default function HomeScreen() {
 
   const statusBarStyle = hasScrolledPastHero ? "dark" : "light";
   const topStatusAreaHeight = Math.max(insets.top, 24);
+  const scrolledStatusHeight = Math.min(
+    topStatusAreaHeight,
+    SCROLLED_TOP_BACKGROUND_HEIGHT - COMPACT_SEARCH_CONTROL_HEIGHT,
+  );
 
   return (
     <SafeAreaView
@@ -79,22 +85,28 @@ export default function HomeScreen() {
         {/* Sticky compact search bar - rendered after ScrollView with pointerEvents to ensure touch works */}
         {hasScrolledPastHero && (
           <View
-            className="absolute left-0 right-0 top-0 z-[999]"
+            className="absolute left-0 right-0 top-0 z-[999] overflow-hidden border-b border-gray-200 bg-gray-100"
             pointerEvents="box-none"
+            style={{ height: SCROLLED_TOP_BACKGROUND_HEIGHT }}
           >
             <View
               pointerEvents="none"
-              style={{ height: topStatusAreaHeight, backgroundColor: "#FFFFFF" }}
+              style={{ height: scrolledStatusHeight }}
             />
-            <Pressable
-              onPress={() => setIsSearchModalOpen(true)}
-              className="border-b border-gray-200 bg-white px-4 py-3 shadow-md"
+            <View
+              className="min-h-0 flex-1 justify-end"
+              pointerEvents="box-none"
             >
-              <CompactSearchBar
-                asChild
+              <Pressable
                 onPress={() => setIsSearchModalOpen(true)}
-              />
-            </Pressable>
+                className="px-4 pb-3"
+              >
+                <CompactSearchBar
+                  asChild
+                  onPress={() => setIsSearchModalOpen(true)}
+                />
+              </Pressable>
+            </View>
           </View>
         )}
 
