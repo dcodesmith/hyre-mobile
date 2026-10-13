@@ -217,7 +217,13 @@ export function FlightAutocompleteInput({
           ref={anchorRef}
           collapsable={false}
           onLayout={measure}
-          className="w-full flex-row items-center justify-end gap-2"
+          className="w-full flex-row flex-nowrap items-center justify-end gap-2"
+          style={{
+            flexDirection: "row",
+            flexWrap: "nowrap",
+            alignItems: "center",
+            justifyContent: "flex-end",
+          }}
         >
           <Text
             selectable
