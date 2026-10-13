@@ -288,37 +288,6 @@ export function FlightAutocompleteInput({
   if (variant === "inline") {
     const detail = inlineDetail?.trim() ? inlineDetail.trim() : null;
     const showSlot = Boolean(detail) || isValidating;
-
-    if (!showSlot) {
-      return (
-        <View className={cn("w-full", className)} collapsable={false}>
-          <View
-            ref={rowAnchorRef ? undefined : anchorRef}
-            collapsable={false}
-            onLayout={rowAnchorRef ? undefined : measure}
-            className="w-full flex-row items-center"
-          >
-            <TextInput
-              className={cn(
-                "h-4 flex-1 border-0 p-0 text-sm leading-4 text-gray-900",
-                inputClassName,
-              )}
-              style={{ color: "#1E2939", fontFamily: "Geist-Regular" }}
-              value={value}
-              onChangeText={handleChangeText}
-              placeholder={placeholder}
-              placeholderTextColor="#99A1AF"
-              editable={!disabled}
-              autoCapitalize="none"
-              autoCorrect={false}
-              {...focusHandlers}
-            />
-          </View>
-          {suggestionPortal}
-        </View>
-      );
-    }
-
     const shown = value.length > 0 ? value : placeholder;
 
     return (
@@ -327,31 +296,33 @@ export function FlightAutocompleteInput({
           ref={rowAnchorRef ? undefined : anchorRef}
           collapsable={false}
           onLayout={rowAnchorRef ? undefined : measure}
-          className="w-full flex-row flex-nowrap items-center justify-end gap-2"
-          style={{
-            flexDirection: "row",
-            flexWrap: "nowrap",
-            alignItems: "center",
-            justifyContent: "flex-end",
-          }}
-        >
-          {isValidating ? (
-            <InlineSlotLoader visible />
-          ) : (
-            <Text
-              selectable
-              numberOfLines={1}
-              ellipsizeMode="tail"
-              className={cn(
-                "h-4 min-w-0 shrink text-right text-sm leading-4",
-                inlineTone === "error" ? "text-gray-500" : "text-green-600",
-              )}
-              style={{ fontFamily: "Geist-Regular" }}
-            >
-              {detail}
-            </Text>
+          className={cn(
+            "w-full flex-row flex-nowrap items-center",
+            showSlot && "justify-end gap-2",
           )}
-          <View className="relative shrink-0" collapsable={false}>
+        >
+          {showSlot ? (
+            isValidating ? (
+              <InlineSlotLoader visible />
+            ) : (
+              <Text
+                selectable
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                className={cn(
+                  "h-4 min-w-0 shrink text-right text-sm leading-4",
+                  inlineTone === "error" ? "text-gray-500" : "text-green-600",
+                )}
+                style={{ fontFamily: "Geist-Regular" }}
+              >
+                {detail}
+              </Text>
+            )
+          ) : null}
+          <View
+            className={cn("relative", showSlot ? "shrink-0" : "min-w-0 flex-1")}
+            collapsable={false}
+          >
             <Text
               accessible={false}
               numberOfLines={1}
