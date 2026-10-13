@@ -1,12 +1,20 @@
 import dayjs, { type Dayjs } from "dayjs";
 import { ChevronLeft, ChevronRight, X } from "lucide-react-native";
+import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
-import { Modal, Pressable, ScrollView, Text, View } from "react-native";
+import {
+  Modal,
+  Pressable,
+  ScrollView,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import type { DateType } from "react-native-ui-datepicker";
 import DateTimePicker, {
   useDefaultClassNames,
 } from "react-native-ui-datepicker";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { BookingType } from "@/lib/booking-types";
 import {
   formatSearchDateRangeLabel,
@@ -80,7 +88,7 @@ function CalendarMonthHeader({
         accessibilityRole="button"
         accessibilityLabel="Previous month"
       >
-        <ChevronLeft size={16} color="#6B7280" strokeWidth={1.75} />
+        <ChevronLeft size={16} color="#111827" strokeWidth={2} />
       </Pressable>
       <Text
         className="absolute inset-x-9 top-2 text-center text-sm leading-5 text-gray-900"
@@ -94,7 +102,7 @@ function CalendarMonthHeader({
         accessibilityRole="button"
         accessibilityLabel="Next month"
       >
-        <ChevronRight size={16} color="#6B7280" strokeWidth={1.75} />
+        <ChevronRight size={16} color="#111827" strokeWidth={2} />
       </Pressable>
     </View>
   );
@@ -108,7 +116,10 @@ export function SearchDateRangePicker({
   onChange,
 }: SearchDateRangePickerProps) {
   const defaults = useDefaultClassNames();
+  const insets = useSafeAreaInsets();
+  const { height: screenHeight, width: screenWidth } = useWindowDimensions();
   const [open, setOpen] = useState(false);
+  const [calendarHeight, setCalendarHeight] = useState(0);
   const [draftFromDate, setDraftFromDate] = useState(fromDate);
   const [draftToDate, setDraftToDate] = useState(toDate);
   const [isStartingNewRange, setIsStartingNewRange] = useState(false);
@@ -116,6 +127,12 @@ export function SearchDateRangePicker({
   const initialMonth = dayjs(fromDate ?? minDate).startOf("month");
   const [visibleMonth, setVisibleMonth] = useState(initialMonth);
   const secondMonth = visibleMonth.add(1, "month");
+  const cardWidth = Math.min(353, screenWidth - 40);
+  const closeTop = insets.top + 8;
+  const cardTop = closeTop + 40;
+  const cardMaxHeight = screenHeight - cardTop - insets.bottom;
+  const cardHeight =
+    calendarHeight > 0 ? Math.min(calendarHeight, cardMaxHeight) : undefined;
   const rangeLabel = formatSearchDateRangeLabel(fromDate, toDate);
   const displayedFromDate = open ? draftFromDate : fromDate;
   const displayedToDate = open ? draftToDate : toDate;
@@ -256,41 +273,62 @@ export function SearchDateRangePicker({
 
       <Modal
         visible={open}
-        animationType="slide"
-        presentationStyle="fullScreen"
+        animationType="fade"
+        transparent
+        presentationStyle="overFullScreen"
+        statusBarTranslucent
         onRequestClose={() => setOpen(false)}
       >
-        <SafeAreaView className="flex-1 bg-white">
-          <View className="flex-1">
-            <Pressable
-              onPress={() => setOpen(false)}
-              hitSlop={10}
-              className="absolute top-6 right-0 z-10 size-6 items-center justify-center"
-              accessibilityRole="button"
-              accessibilityLabel="Close date picker"
-            >
-              <X size={16} color="#4B5563" strokeWidth={1.75} />
-            </Pressable>
+        <StatusBar style="dark" />
+        <View className="flex-1" style={{ backgroundColor: "#c8c9ce" }}>
+          <Pressable
+            onPress={() => setOpen(false)}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Close date picker"
+            className="absolute z-10 size-8 items-center justify-center rounded-full border border-[#e5e7eb] bg-white"
+            style={{ top: closeTop, right: (screenWidth - cardWidth) / 2 }}
+          >
+            <X size={16} color="#111827" strokeWidth={2} />
+          </Pressable>
+          <View
+            className="overflow-hidden rounded-2xl bg-white"
+            style={{
+              marginTop: cardTop,
+              width: cardWidth,
+              alignSelf: "center",
+              height: cardHeight,
+              maxHeight: cardMaxHeight,
+              borderCurve: "continuous",
+            }}
+          >
             <ScrollView
-              className="flex-1"
+              style={{ flex: cardHeight ? 1 : undefined, maxHeight: cardMaxHeight }}
               showsVerticalScrollIndicator={false}
-              contentContainerClassName="px-6 py-6"
+              contentInsetAdjustmentBehavior="never"
+              scrollEnabled={calendarHeight > cardMaxHeight}
+              onContentSizeChange={(_width, height) => {
+                if (Math.abs(height - calendarHeight) > 1) setCalendarHeight(height);
+              }}
+              contentContainerStyle={{ padding: 24, flexGrow: 0 }}
             >
               <View className="mb-[23px] flex-row gap-4">
                 <DateDisplay
                   label={single ? "When" : "Start date"}
                   date={displayedFromDate}
                 />
-                {single ? null : <DateDisplay label="End date" date={displayedToDate} />}
+                {single ? null : (
+                  <DateDisplay label="End date" date={displayedToDate} />
+                )}
               </View>
 
-              <View className="gap-4">
+              <View className="gap-2">
                 {renderCalendar(visibleMonth)}
                 {single ? null : renderCalendar(secondMonth)}
               </View>
             </ScrollView>
           </View>
-        </SafeAreaView>
+        </View>
       </Modal>
     </>
   );
