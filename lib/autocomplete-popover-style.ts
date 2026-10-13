@@ -35,3 +35,27 @@ export const FLIGHT_AUTOCOMPLETE_POPOVER_STYLE: ViewStyle = {
   borderWidth: 1,
   borderColor: "#E5E5E5", // neutral-200
 };
+
+/**
+ * hireApp flight PopoverContent: base `rounded-lg shadow-md ring-1 ring-foreground/10`
+ * plus `p-1`. Options are `p-2 text-sm` (36px row) with `gap-2.5` between them.
+ */
+export const INLINE_FLIGHT_MENU_STYLE: ViewStyle = {
+  backgroundColor: "#FFFFFF",
+  borderRadius: 8,
+  padding: 4,
+  borderWidth: 1,
+  borderColor: "rgba(9, 9, 11, 0.10)",
+  ...Platform.select<ViewStyle>({
+    ios: {
+      shadowColor: "#000000",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.1,
+      shadowRadius: 6,
+    },
+    android: {
+      elevation: 4,
+    },
+    default: {},
+  }),
+};
