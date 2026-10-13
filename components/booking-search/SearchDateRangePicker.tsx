@@ -176,16 +176,18 @@ export function SearchDateRangePicker({
     const nextTo = toNativeDate(endDate);
 
     if (isStartingNewRange && fromDate && toDate) {
-      setDraftFromDate(getFreshRangeStart(fromDate, toDate, nextFrom, nextTo));
+      const freshFromDate = getFreshRangeStart(fromDate, toDate, nextFrom, nextTo);
+      setDraftFromDate(freshFromDate);
       setDraftToDate(undefined);
       setIsStartingNewRange(false);
+      onChange(freshFromDate, undefined);
       return;
     }
 
     setDraftFromDate(nextFrom);
     setDraftToDate(nextTo);
+    onChange(nextFrom, nextTo);
     if (nextFrom && nextTo) {
-      onChange(nextFrom, nextTo);
       setOpen(false);
     }
   };
