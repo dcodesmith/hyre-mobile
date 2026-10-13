@@ -8,7 +8,6 @@ import {
   FULL_DAY_BOOKING_TYPE,
   NIGHT_BOOKING_TYPE,
 } from "@/lib/booking-types";
-import { cn } from "@/lib/utils";
 import type { ValidatedFlight } from "@/services/flights";
 import { TimePicker } from "./TimePicker";
 
@@ -124,14 +123,14 @@ export function BookingTypeInput({
     );
   }
 
-  let validationContent: string | null = null;
-  let validationClassName = "text-gray-500";
-  if (validatedFlight && !isValidatingFlight) {
-    validationContent = formatFlightSearchInlineSuccess(validatedFlight);
-    validationClassName = "text-green-600";
-  } else if (validationMessage && !isValidatingFlight) {
-    validationContent = shortValidationMessage ?? validationMessage;
-  }
+  const flightDetail =
+    validatedFlight && !isValidatingFlight
+      ? formatFlightSearchInlineSuccess(validatedFlight)
+      : null;
+  const errorContent =
+    !flightDetail && validationMessage && !isValidatingFlight
+      ? (shortValidationMessage ?? validationMessage)
+      : null;
 
   return (
     <View className="w-full" collapsable={false}>
@@ -149,19 +148,17 @@ export function BookingTypeInput({
           placeholder="E.g BA123"
           isValidating={isValidatingFlight}
           variant="inline"
+          inlineDetail={flightDetail}
           className="min-w-0 flex-1"
           inputClassName="text-right"
         />
       </View>
-      {validationContent ? (
+      {errorContent ? (
         <Text
           selectable
-          className={cn(
-            "pb-2 text-right text-xs leading-tight",
-            validationClassName,
-          )}
+          className="pb-2 text-right text-xs leading-tight text-gray-500"
         >
-          {validationContent}
+          {errorContent}
         </Text>
       ) : null}
     </View>

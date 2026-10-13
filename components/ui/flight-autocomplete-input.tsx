@@ -35,6 +35,8 @@ type FlightAutocompleteInputProps = {
   isValidating?: boolean;
   nigeriaOnly?: boolean;
   variant?: "inline" | "form";
+  /** API route text shown on the same line, immediately left of the value. */
+  inlineDetail?: string | null;
 };
 
 export function FlightAutocompleteInput({
@@ -49,6 +51,7 @@ export function FlightAutocompleteInput({
   isValidating = false,
   nigeriaOnly = true,
   variant = "form",
+  inlineDetail = null,
 }: Readonly<FlightAutocompleteInputProps>) {
   const [suggestions, setSuggestions] = useState<Airline[]>([]);
   const [isFocused, setIsFocused] = useState(false);
@@ -171,29 +174,84 @@ export function FlightAutocompleteInput({
   );
 
   if (variant === "inline") {
+    const detail = inlineDetail?.trim() ? inlineDetail.trim() : null;
+
+    if (!detail) {
+      return (
+        <View className={cn("w-full", className)} collapsable={false}>
+          <View
+            ref={anchorRef}
+            collapsable={false}
+            onLayout={measure}
+            className="w-full flex-row items-center"
+          >
+            <TextInput
+              className={cn(
+                "h-4 flex-1 border-0 p-0 text-sm leading-4 text-gray-900",
+                inputClassName,
+              )}
+              style={{ color: "#1E2939", fontFamily: "Geist-Regular" }}
+              value={value}
+              onChangeText={handleChangeText}
+              placeholder={placeholder}
+              placeholderTextColor="#99A1AF"
+              editable={!disabled}
+              autoCapitalize="none"
+              autoCorrect={false}
+              {...focusHandlers}
+            />
+            {isValidating ? (
+              <ActivityIndicator size="small" color="#6B7280" />
+            ) : null}
+          </View>
+          {suggestionPortal}
+        </View>
+      );
+    }
+
+    const shown = value.length > 0 ? value : placeholder;
+
     return (
       <View className={cn("w-full", className)} collapsable={false}>
         <View
           ref={anchorRef}
           collapsable={false}
           onLayout={measure}
-          className="w-full flex-row items-center"
+          className="w-full flex-row items-center justify-end gap-2"
         >
-          <TextInput
-            className={cn(
-              "h-4 flex-1 border-0 p-0 text-sm leading-4 text-gray-900",
-              inputClassName,
-            )}
-            style={{ color: "#1E2939", fontFamily: "Geist-Regular" }}
-            value={value}
-            onChangeText={handleChangeText}
-            placeholder={placeholder}
-            placeholderTextColor="#99A1AF"
-            editable={!disabled}
-            autoCapitalize="none"
-            autoCorrect={false}
-            {...focusHandlers}
-          />
+          <Text
+            selectable
+            numberOfLines={1}
+            className="h-4 min-w-0 shrink text-right text-sm leading-4 text-green-600"
+            style={{ fontFamily: "Geist-Regular" }}
+          >
+            {detail}
+          </Text>
+          <View className="relative shrink-0" collapsable={false}>
+            <Text
+              accessible={false}
+              numberOfLines={1}
+              className="h-4 text-sm leading-4"
+              style={{ fontFamily: "Geist-Regular", color: "transparent" }}
+            >
+              {shown || " "}
+            </Text>
+            <TextInput
+              className={cn(
+                "absolute left-0 right-0 top-0 h-4 border-0 p-0 text-right text-sm leading-4 text-gray-900",
+                inputClassName,
+              )}
+              style={{ color: "#1E2939", fontFamily: "Geist-Regular" }}
+              value={value}
+              onChangeText={handleChangeText}
+              placeholder={placeholder}
+              placeholderTextColor="#99A1AF"
+              editable={!disabled}
+              autoCapitalize="none"
+              autoCorrect={false}
+              {...focusHandlers}
+            />
+          </View>
           {isValidating ? (
             <ActivityIndicator size="small" color="#6B7280" />
           ) : null}

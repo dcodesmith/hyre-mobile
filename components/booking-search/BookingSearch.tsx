@@ -279,8 +279,11 @@ export function BookingSearch({ onSearchComplete }: BookingSearchProps) {
   ]);
 
   const isAirport = bookingType === AIRPORT_PICKUP_BOOKING_TYPE;
-  const hasFlightFeedback =
-    isAirport && !isValidatingFlight && Boolean(validatedFlight || flightValidationError);
+  const hasFlightErrorLine =
+    isAirport &&
+    !isValidatingFlight &&
+    !validatedFlight &&
+    Boolean(flightValidationError);
 
   const bookingTypeInputProps = {
     bookingType,
@@ -310,7 +313,7 @@ export function BookingSearch({ onSearchComplete }: BookingSearchProps) {
       <View
         className={cn(
           "mt-2 w-full overflow-visible rounded-md border border-gray-200 bg-white px-4",
-          hasFlightFeedback ? "gap-1.5 py-1.5" : "gap-2 py-2",
+          hasFlightErrorLine ? "gap-1.5 py-1.5" : "gap-2 py-2",
         )}
       >
         <SearchDateRangePicker
