@@ -51,22 +51,20 @@ export function SearchSheet({ open, onOpenChange }: SearchSheetProps) {
                 }}
                 pointerEvents="auto"
               >
-                {/* Close button - absolute right-4 top-4 */}
                 <DialogPrimitive.Close
-                  className="absolute right-4 z-10 rounded-sm opacity-70 active:opacity-100"
-                  style={{ top: Math.max(16, insets.top) }}
+                  className="absolute right-4 z-10 size-8 items-center justify-center rounded-full border border-[#e5e7eb] bg-white"
+                  style={{ top: Math.max(16, insets.top) + 14 }}
                   hitSlop={12}
                 >
-                  <X size={20} strokeWidth={2} color="#525252" />
+                  <X size={16} strokeWidth={2} color="#111827" />
                   <Text className="sr-only">Close</Text>
                 </DialogPrimitive.Close>
 
-                {/* Scrollable content - px-4 py-6 */}
                 <ScrollView
-                  className="flex-1 overflow-y-auto px-4 py-6"
+                  className="flex-1 overflow-y-auto px-4"
                   showsVerticalScrollIndicator={false}
                   keyboardShouldPersistTaps="handled"
-                  contentContainerStyle={{ paddingBottom: 24 }}
+                  contentContainerStyle={{ paddingTop: 59, paddingBottom: 24 }}
                 >
                   <View className="w-full">
                     <BookingSearch
