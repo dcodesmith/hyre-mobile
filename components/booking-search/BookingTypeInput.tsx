@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { Text, View } from "react-native";
 import { FlightAutocompleteInput } from "@/components/ui/flight-autocomplete-input";
 import { formatFlightSearchInlineSuccess } from "@/lib/airport-pickup";
@@ -8,7 +9,6 @@ import {
   FULL_DAY_BOOKING_TYPE,
   NIGHT_BOOKING_TYPE,
 } from "@/lib/booking-types";
-import { cn } from "@/lib/utils";
 import type { ValidatedFlight } from "@/services/flights";
 import { TimePicker } from "./TimePicker";
 
@@ -124,46 +124,72 @@ export function BookingTypeInput({
     );
   }
 
-  let validationContent: string | null = null;
-  let validationClassName = "text-gray-500";
-  if (validatedFlight && !isValidatingFlight) {
-    validationContent = formatFlightSearchInlineSuccess(validatedFlight);
-    validationClassName = "text-green-600";
-  } else if (validationMessage && !isValidatingFlight) {
-    validationContent = shortValidationMessage ?? validationMessage;
-  }
+  const flightDetail =
+    validatedFlight && !isValidatingFlight
+      ? formatFlightSearchInlineSuccess(validatedFlight)
+      : null;
+  const serviceMessage =
+    !flightDetail && validationMessage && !isValidatingFlight
+      ? (shortValidationMessage ?? validationMessage)
+      : null;
 
   return (
-    <View className="w-full" collapsable={false}>
-      <View className="w-full flex-row items-center justify-between gap-4 py-2">
-        <Text
-          className="h-4 shrink-0 text-sm leading-4"
-          style={{ color: "#1E2939", fontFamily: "Geist-SemiBold" }}
-        >
-          Flight number
-        </Text>
-        <FlightAutocompleteInput
-          value={flightNumber ?? ""}
-          onChangeText={onFlightNumberChange}
-          onFlightSelected={onFlightSelected}
-          placeholder="E.g BA123"
-          isValidating={isValidatingFlight}
-          variant="inline"
-          className="min-w-0 flex-1"
-          inputClassName="text-right"
-        />
-      </View>
-      {validationContent ? (
-        <Text
-          selectable
-          className={cn(
-            "pb-2 text-right text-xs leading-tight",
-            validationClassName,
-          )}
-        >
-          {validationContent}
-        </Text>
-      ) : null}
+    <AirportFlightRow
+      flightNumber={flightNumber}
+      onFlightNumberChange={onFlightNumberChange}
+      onFlightSelected={onFlightSelected}
+      isValidatingFlight={isValidatingFlight}
+      inlineDetail={flightDetail ?? serviceMessage}
+      inlineTone={flightDetail ? "success" : "error"}
+    />
+  );
+}
+
+function AirportFlightRow({
+  flightNumber,
+  onFlightNumberChange,
+  onFlightSelected,
+  isValidatingFlight,
+  inlineDetail,
+  inlineTone,
+}: {
+  readonly flightNumber: string | undefined;
+  readonly onFlightNumberChange: (value: string) => void;
+  readonly onFlightSelected?: (flightNumber: string) => void;
+  readonly isValidatingFlight: boolean;
+  readonly inlineDetail: string | null;
+  readonly inlineTone: "success" | "error";
+}) {
+  const rowRef = useRef<View>(null);
+  const measureRow = useRef<(() => void) | null>(null);
+
+  return (
+    <View
+      ref={rowRef}
+      collapsable={false}
+      onLayout={() => measureRow.current?.()}
+      className="w-full flex-row items-center justify-between gap-4 py-2"
+    >
+      <Text
+        className="h-4 shrink-0 text-sm leading-4"
+        style={{ color: "#1E2939", fontFamily: "Geist-SemiBold" }}
+      >
+        Flight number
+      </Text>
+      <FlightAutocompleteInput
+        value={flightNumber ?? ""}
+        onChangeText={onFlightNumberChange}
+        onFlightSelected={onFlightSelected}
+        placeholder="E.g BA123"
+        isValidating={isValidatingFlight}
+        variant="inline"
+        inlineDetail={inlineDetail}
+        inlineTone={inlineTone}
+        rowAnchorRef={rowRef}
+        anchorMeasureRef={measureRow}
+        className="min-w-0 flex-1"
+        inputClassName="text-right"
+      />
     </View>
   );
 }

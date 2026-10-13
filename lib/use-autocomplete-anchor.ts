@@ -1,5 +1,5 @@
 import { useAutocompletePortalHost } from "@/providers/autocomplete-portal-host-provider";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { type View } from "react-native";
 
 export type WindowAnchor = {
@@ -16,6 +16,8 @@ type UseAutocompleteAnchorOptions = {
   open: boolean;
   /** Minimum trigger height when layout reports less (inline TextInput rows). */
   minHeight?: number;
+  /** Measure this view instead of an internally owned one. */
+  anchorRef?: RefObject<View | null>;
 };
 
 /**
@@ -25,8 +27,10 @@ type UseAutocompleteAnchorOptions = {
 export function useAutocompleteAnchor({
   open,
   minHeight = AUTOCOMPLETE_INPUT_MIN_HEIGHT,
+  anchorRef,
 }: UseAutocompleteAnchorOptions) {
-  const ref = useRef<View>(null);
+  const internalRef = useRef<View>(null);
+  const ref = anchorRef ?? internalRef;
   const [anchor, setAnchor] = useState<WindowAnchor | null>(null);
   const { measureRelativeToHost } = useAutocompletePortalHost();
 
