@@ -6,7 +6,10 @@ import { useTabBarVisibility } from "@/context/tab-bar-visibility-context";
 import { useAuth } from "@/hooks/use-auth";
 import { useBookingActionController } from "@/hooks/use-booking-action-controller";
 import { useBookings } from "@/hooks/use-bookings";
-import { formatBookingDateTime } from "@/lib/booking-action-form";
+import {
+  formatBookingListDateRange,
+  formatBookingListTime,
+} from "@/lib/booking-action-form";
 import { formatCurrency } from "@/lib/currency";
 import {
   BOOKING_STATUSES,
@@ -17,6 +20,7 @@ import {
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { Calendar, Clock } from "lucide-react-native";
 import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -37,73 +41,86 @@ function countBookingsByStatus(
 
 function BookingListItem({
   booking,
-  isLast,
   isRefreshing,
 }: Readonly<{
   booking: BookingSummary;
-  isLast: boolean;
   isRefreshing: boolean;
 }>) {
   const router = useRouter();
   const bookingImageUrl = booking.car.images[0]?.url;
   const actions = useBookingActionController(booking, isRefreshing);
+  const title = `${booking.car.make} ${booking.car.model}`;
+  const dateLabel = formatBookingListDateRange(
+    booking.startDate,
+    booking.endDate,
+  );
+  const timeLabel = formatBookingListTime(booking.startDate);
 
   return (
-    <View
-      className={isLast ? "px-3 py-4" : "border-b border-neutral-200 px-3 py-4"}
-    >
+    <View>
       <Pressable
         onPress={() => router.push(`/bookings/${booking.id}`)}
-        className="flex-row items-center gap-3"
+        className="flex-row items-start gap-2"
       >
         {bookingImageUrl ? (
           <Image
             source={{ uri: bookingImageUrl }}
             contentFit="cover"
             style={{
-              width: 60,
-              height: 60,
-              borderRadius: 999,
-              backgroundColor: "#F5F5F5",
+              width: 68,
+              height: 84,
+              borderRadius: 4,
+              backgroundColor: "#E5E7EB",
             }}
           />
         ) : (
           <View
             aria-hidden
             style={{
-              width: 40,
-              height: 40,
-              borderRadius: 999,
-              backgroundColor: "#F5F5F5",
+              width: 68,
+              height: 84,
+              borderRadius: 4,
+              backgroundColor: "#E5E7EB",
             }}
           />
         )}
 
-        <View className="flex-1">
-          <View className="flex-row flex-wrap items-center gap-1">
-            <Text selectable className="text-sm font-semibold text-neutral-900">
-              {booking.car.make} {booking.car.model} ({booking.car.year})
-            </Text>
-            <Text selectable className="text-sm italic text-neutral-500">
-              - {booking.bookingReference}
-            </Text>
-          </View>
-
-          <Text selectable className="mt-1 text-sm text-neutral-600">
-            {formatBookingDateTime(booking.startDate)}
+        <View className="min-w-0 flex-1 gap-1">
+          <Text
+            selectable
+            className="text-xs font-bold leading-none text-green-600"
+          >
+            {booking.bookingReference}
           </Text>
-          <Text selectable className="mt-0.5 text-sm text-neutral-600">
-            {formatBookingDateTime(booking.endDate)}
+          <Text
+            selectable
+            className="text-sm font-semibold leading-5 text-gray-900"
+          >
+            {title} ({booking.car.year})
           </Text>
-
-          <View className="mt-2 flex-row flex-wrap items-center gap-2">
-            <Text selectable className="text-sm font-semibold text-neutral-900">
-              {formatCurrency(Number(booking.totalAmount) || 0)}
-            </Text>
+          <Text
+            selectable
+            className="text-sm font-semibold leading-5 text-gray-900"
+            style={{ fontVariant: ["tabular-nums"] }}
+          >
+            {formatCurrency(Number(booking.totalAmount) || 0)}
+          </Text>
+          <View className="flex-row flex-wrap items-center gap-x-2 gap-y-1">
+            <View className="flex-row items-center gap-1">
+              <Calendar size={16} color="#111827" />
+              <Text selectable className="text-xs leading-5 text-gray-900">
+                {dateLabel}
+              </Text>
+            </View>
+            <View className="h-3.5 w-px bg-gray-400" />
+            <View className="flex-row items-center gap-1">
+              <Clock size={16} color="#111827" />
+              <Text selectable className="text-xs leading-5 text-gray-900">
+                {timeLabel}
+              </Text>
+            </View>
           </View>
         </View>
-
-        {/* <ChevronRight size={16} color="#6B7280" /> */}
       </Pressable>
 
       {actions.canEdit || actions.canCancel ? (
@@ -247,15 +264,14 @@ export default function BookingsScreen() {
         scrollEventThrottle={16}
       >
         <View className="px-4 py-4">
-          <Text className="text-2xl font-bold text-neutral-950">
-            Your Bookings
+          <Text className="mb-4 text-2xl font-semibold leading-9 tracking-tight text-gray-900">
+            Bookings
           </Text>
 
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            className="mt-4"
-            contentContainerClassName="gap-2"
+            contentContainerClassName="gap-4"
           >
             {BOOKING_STATUSES.map((status) => {
               const active = status === activeStatus;
@@ -264,20 +280,22 @@ export default function BookingsScreen() {
                   key={status}
                   onPress={() => setActiveStatus(status)}
                   className={[
-                    "min-h-10 flex-row items-center justify-center rounded-md border px-3",
+                    "shrink-0 flex-row items-center justify-center rounded border px-3 py-1.5",
                     active
-                      ? "border-neutral-900 bg-neutral-900"
-                      : "border-neutral-200 bg-white",
+                      ? "border-gray-900 bg-gray-900"
+                      : "border-gray-300 bg-white",
                   ].join(" ")}
+                  style={{
+                    boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
+                  }}
                 >
                   <Text
                     className={[
-                      "text-sm font-medium",
-                      active ? "text-white" : "text-neutral-700",
+                      "text-xs font-medium leading-5",
+                      active ? "text-white" : "text-gray-900",
                     ].join(" ")}
                     style={{
                       includeFontPadding: false,
-                      lineHeight: 20,
                     }}
                   >
                     {status.charAt(0) + status.slice(1).toLowerCase()} (
@@ -289,27 +307,29 @@ export default function BookingsScreen() {
           </ScrollView>
 
           <View
-            className="mt-4 rounded border border-neutral-200 bg-white"
+            className="mt-4 rounded-lg border border-gray-200 bg-white p-4"
             style={{
-              borderCurve: "continuous",
-              boxShadow:
-                "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)",
+              borderRadius: 8,
+              boxShadow: "0 4px 20px rgba(0, 0, 0, 0.25)",
             }}
           >
             {bookingsForStatus.length === 0 ? (
-              <View className="px-4 py-10">
-                <Text className="text-center text-sm text-neutral-500">
-                  No {activeStatus.toLowerCase()} bookings.
+              <View className="py-8">
+                <Text className="text-center text-sm text-gray-500">
+                  No {activeStatus.toLowerCase()} bookings
                 </Text>
               </View>
             ) : (
               bookingsForStatus.map((booking, index) => (
-                <BookingListItem
-                  key={booking.id}
-                  booking={booking}
-                  isLast={index === bookingsForStatus.length - 1}
-									isRefreshing={bookingsQuery.isFetching}
-                />
+                <View key={booking.id}>
+                  {index > 0 ? (
+                    <View className="my-4 h-px w-full bg-gray-200" />
+                  ) : null}
+                  <BookingListItem
+                    booking={booking}
+                    isRefreshing={bookingsQuery.isFetching}
+                  />
+                </View>
               ))
             )}
           </View>
