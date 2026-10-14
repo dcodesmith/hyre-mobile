@@ -288,7 +288,7 @@ export function FlightAutocompleteInput({
   if (variant === "inline") {
     const detail = inlineDetail?.trim() ? inlineDetail.trim() : null;
     const showSlot = Boolean(detail) || isValidating;
-    const shown = value.length > 0 ? value : placeholder;
+    const hasValue = value.length > 0;
 
     return (
       <View className={cn("w-full", className)} collapsable={false}>
@@ -326,21 +326,26 @@ export function FlightAutocompleteInput({
             <Text
               accessible={false}
               numberOfLines={1}
-              className="h-4 text-sm leading-4"
-              style={{ fontFamily: "Geist-Regular", color: "transparent" }}
+              className="h-4 text-right text-sm leading-4"
+              style={{
+                fontFamily: "Geist-Regular",
+                color: hasValue ? "#1E2939" : "#99A1AF",
+              }}
             >
-              {shown || " "}
+              {hasValue ? value : placeholder || " "}
             </Text>
             <TextInput
               className={cn(
-                "absolute left-0 right-0 top-0 h-4 border-0 p-0 text-right text-sm leading-4 text-gray-900",
+                "absolute left-0 right-0 top-0 h-4 border-0 p-0 text-right text-sm leading-4",
                 inputClassName,
               )}
-              style={{ color: "#1E2939", fontFamily: "Geist-Regular" }}
+              style={{ fontFamily: "Geist-Regular", color: "transparent" }}
+              cursorColor="#1E2939"
+              selectionColor="#99A1AF"
               value={value}
               onChangeText={handleChangeText}
               placeholder={placeholder}
-              placeholderTextColor="#99A1AF"
+              placeholderTextColor="transparent"
               editable={!disabled}
               autoCapitalize="none"
               autoCorrect={false}
