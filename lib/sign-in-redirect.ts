@@ -5,6 +5,7 @@ import {
 } from "./booking-types";
 
 export type CarSignInRedirectValues = {
+  searchId?: string | null;
   bookingType: BookingType;
   fromDate?: Date;
   toDate?: Date;
@@ -41,6 +42,9 @@ export function buildCarSignInRedirectPath(
   const dropOffAddressValue = values.dropOffAddress?.trim() ?? "";
 
   const redirectParams = new URLSearchParams();
+  if (values.searchId) {
+    redirectParams.set("searchId", values.searchId);
+  }
   redirectParams.set("bookingType", values.bookingType);
 
   if (values.fromDate) {

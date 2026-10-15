@@ -14,11 +14,12 @@ import {
   routeParamsToSearchParams,
   searchFiltersToParams,
 } from "@/lib/search-filters";
+import { parseSearchId } from "@/lib/search-id";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { ArrowLeft } from "lucide-react-native";
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
@@ -36,6 +37,7 @@ const SEARCH_SKELETON_IDS = [1, 2, 3];
 
 /** Query keys copied from `/search` onto `/cars/[id]` when opening a vehicle. */
 const CAR_DETAIL_NAV_PARAM_KEYS = [
+  "searchId",
   "bookingType",
   "from",
   "to",
@@ -161,6 +163,7 @@ function SearchScreen() {
   const { onScroll } = useTabBarVisibility();
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const params = useLocalSearchParams<{
+    searchId?: string;
     from?: string;
     to?: string;
     bookingType?: string;
@@ -182,6 +185,7 @@ function SearchScreen() {
     const normalizedBookingType = params.bookingType
       ?.toUpperCase()
       .replace("-", "_");
+    const journeySearchId = parseSearchId(params.searchId);
     const payload: CarSearchParams = {
       from: params.from,
       to: params.to,
@@ -190,6 +194,7 @@ function SearchScreen() {
       flightNumber: params.flightNumber,
       q: params.q,
       limit: 12,
+      ...(journeySearchId ? { searchId: journeySearchId } : {}),
     };
 
     // Night bookings are fixed-start; keep payload explicit if query omitted pickupTime.
@@ -204,6 +209,7 @@ function SearchScreen() {
     params.from,
     params.pickupTime,
     params.q,
+    params.searchId,
     params.to,
   ]);
 
@@ -225,6 +231,14 @@ function SearchScreen() {
 
   const { data, isLoading, error, refetch, isRefetching } =
     useCarSearch(searchPayload);
+
+  useEffect(() => {
+    if (!data?.searchId || parseSearchId(params.searchId) === data.searchId) {
+      return;
+    }
+
+    router.setParams({ searchId: data.searchId });
+  }, [data?.searchId, params.searchId, router]);
 
   const handleScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {

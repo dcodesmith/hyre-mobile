@@ -55,6 +55,7 @@ type GuestPayload = Pick<
 
 type BuildPayloadArgs = {
   carId: string;
+  searchId?: string | null;
   booking: BookingCheckoutDetailsValues;
   callbackUrl: string;
   requiresFullTank: boolean;
@@ -123,6 +124,10 @@ function buildCheckoutPayload(
     payload.useCredits = useCredits;
   }
 
+  if (args.searchId) {
+    payload.searchId = args.searchId;
+  }
+
   return payload;
 }
 
@@ -181,6 +186,7 @@ function handleBookingPriceChange(
 
 export type UseBookingCheckoutArgs = {
   carId: string;
+  searchId?: string | null;
   isAuthenticated: boolean;
   requiresFullTank: boolean;
   useCredits: number;
@@ -223,6 +229,7 @@ export function useBookingCheckout(
 
   const {
     carId,
+    searchId,
     isAuthenticated,
     requiresFullTank,
     useCredits,
@@ -287,6 +294,7 @@ export function useBookingCheckout(
 
       const payload = buildCheckoutPayload({
         carId,
+        searchId,
         booking,
         callbackUrl,
         requiresFullTank,
@@ -439,6 +447,7 @@ export function useBookingCheckout(
   }, [
     validate,
     carId,
+    searchId,
     isAuthenticated,
     requiresFullTank,
     useCredits,
