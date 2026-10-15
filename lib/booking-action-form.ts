@@ -3,6 +3,7 @@ import { DAY_BOOKING_TYPE, type BookingType } from "./booking-types";
 import type { UpdateBookingPayload } from "../services/bookings";
 
 const LAGOS_TIMEZONE = "Africa/Lagos";
+const LAGOS_UTC_OFFSET = "+01:00";
 const INVALID_BOOKING_DATE_LABEL = "Date unavailable";
 
 export type BookingActionFormValues = {
@@ -38,9 +39,6 @@ const bookingListPartsFormat = new Intl.DateTimeFormat("en-US", {
 	month: "short",
 	day: "numeric",
 	year: "numeric",
-	hour: "numeric",
-	minute: "2-digit",
-	hour12: true,
 });
 
 function bookingListParts(value: string) {
@@ -52,16 +50,11 @@ function bookingListParts(value: string) {
 			.formatToParts(date)
 			.map((part) => [part.type, part.value]),
 	);
-	const dayPeriod = (parts.dayPeriod ?? "").replace(/\u202f|\u00a0/g, " ");
 
 	return {
 		month: parts.month ?? "",
 		day: parts.day ?? "",
 		year: parts.year ?? "",
-		time: `${parts.hour}:${parts.minute} ${dayPeriod}`.replace(
-			/\u202f|\u00a0/g,
-			" ",
-		),
 	};
 }
 
@@ -92,7 +85,12 @@ export function formatBookingListDateRange(
 
 /** Pickup clock time in Lagos, such as "11:00 AM". */
 export function formatBookingListTime(value: string) {
-	return bookingListParts(value)?.time ?? value;
+	const date = new Date(value);
+	if (!Number.isFinite(date.getTime())) return value;
+
+	// Lagos stays on UTC+1 year-round. An explicit offset keeps this path
+	// independent of Hermes' incomplete Intl.formatToParts implementation.
+	return format(toZonedTime(date, LAGOS_UTC_OFFSET), "h:mm a");
 }
 
 export function createBookingActionFormValues(
