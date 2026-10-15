@@ -38,9 +38,6 @@ const bookingListPartsFormat = new Intl.DateTimeFormat("en-US", {
 	month: "short",
 	day: "numeric",
 	year: "numeric",
-	hour: "numeric",
-	minute: "2-digit",
-	hour12: true,
 });
 
 function bookingListParts(value: string) {
@@ -52,16 +49,11 @@ function bookingListParts(value: string) {
 			.formatToParts(date)
 			.map((part) => [part.type, part.value]),
 	);
-	const dayPeriod = (parts.dayPeriod ?? "").replace(/\u202f|\u00a0/g, " ");
 
 	return {
 		month: parts.month ?? "",
 		day: parts.day ?? "",
 		year: parts.year ?? "",
-		time: `${parts.hour}:${parts.minute} ${dayPeriod}`.replace(
-			/\u202f|\u00a0/g,
-			" ",
-		),
 	};
 }
 
@@ -92,7 +84,9 @@ export function formatBookingListDateRange(
 
 /** Pickup clock time in Lagos, such as "11:00 AM". */
 export function formatBookingListTime(value: string) {
-	return bookingListParts(value)?.time ?? value;
+	// Hermes on iOS omits hour and minute from Intl formatToParts, so the
+	// list clock has to come from date-fns instead.
+	return formatLagosDate(value, "h:mm a", value);
 }
 
 export function createBookingActionFormValues(
