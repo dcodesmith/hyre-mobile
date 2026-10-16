@@ -234,7 +234,7 @@ function SearchScreen() {
     useCarSearch(searchPayload);
   const activeSearchId = useSearchJourneyRoute({
     routeSearchId: params.searchId,
-    resultSearchId: isFetchedAfterMount ? data?.searchId : undefined,
+    resultSearchId: isFetchedAfterMount && !error ? data?.searchId : undefined,
   });
 
   const handleScroll = useCallback(
