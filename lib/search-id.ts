@@ -1,19 +1,13 @@
-const SEARCH_ID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+import { z } from "zod";
 
-function firstString(value: string | string[] | null | undefined): string | null {
-  if (Array.isArray(value)) {
-    return value[0] ?? null;
-  }
-
-  return value ?? null;
-}
+const searchIdSchema = z.uuid();
 
 export function parseSearchId(
   value: string | string[] | null | undefined,
 ): string | null {
-  const trimmed = firstString(value)?.trim();
-  return trimmed && SEARCH_ID_PATTERN.test(trimmed) ? trimmed : null;
+  const firstValue = Array.isArray(value) ? value[0] : value;
+  const trimmed = firstValue?.trim();
+  return trimmed && searchIdSchema.safeParse(trimmed).success ? trimmed : null;
 }
 
 export function reusedSearchJourneyId({

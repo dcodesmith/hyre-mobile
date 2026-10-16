@@ -14,13 +14,14 @@ const FullWindowOverlay = React.Fragment;
 interface SearchSheetProps {
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
+  readonly searchId?: string;
 }
 
 /**
  * Full-screen search sheet that slides in from the top.
  * Matches the reference design: white bg, booking type tabs, date/time inputs, Search + Search by AI.
  */
-export function SearchSheet({ open, onOpenChange }: SearchSheetProps) {
+export function SearchSheet({ open, onOpenChange, searchId }: SearchSheetProps) {
   const { height: screenHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
@@ -69,6 +70,7 @@ export function SearchSheet({ open, onOpenChange }: SearchSheetProps) {
                   <View className="w-full">
                     <BookingSearch
                       onSearchComplete={() => onOpenChange(false)}
+                      searchId={searchId}
                     />
 
                     {/* Search by AI - mt-4 flex justify-center */}

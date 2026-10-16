@@ -5,6 +5,7 @@ import { CarCardRatingBadge } from "@/components/reviews";
 import { SearchFilters } from "@/components/search-filters";
 import { TabBarVisibilityProvider, useTabBarVisibility } from "@/context/tab-bar-visibility-context";
 import { useCarSearch } from "@/hooks/use-car-search";
+import { useSearchJourneyRoute } from "@/hooks/use-search-journey-route";
 import type { CarSearchParams, SearchCar } from "@/lib/car-types";
 import { hasActivePromotion } from "@/lib/promotion-utils";
 import {
@@ -19,7 +20,7 @@ import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { ArrowLeft } from "lucide-react-native";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
@@ -229,16 +230,12 @@ function SearchScreen() {
     [baseParams, appliedFilters],
   );
 
-  const { data, isLoading, error, refetch, isRefetching } =
+  const { data, isLoading, error, refetch, isRefetching, isFetchedAfterMount } =
     useCarSearch(searchPayload);
-
-  useEffect(() => {
-    if (!data?.searchId || parseSearchId(params.searchId) === data.searchId) {
-      return;
-    }
-
-    router.setParams({ searchId: data.searchId });
-  }, [data?.searchId, params.searchId, router]);
+  const activeSearchId = useSearchJourneyRoute({
+    routeSearchId: params.searchId,
+    resultSearchId: isFetchedAfterMount ? data?.searchId : undefined,
+  });
 
   const handleScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -303,7 +300,7 @@ function SearchScreen() {
               onPress={() => {
                 const carParams = new URLSearchParams();
                 for (const key of CAR_DETAIL_NAV_PARAM_KEYS) {
-                  const value = params[key];
+                  const value = key === "searchId" ? activeSearchId : params[key];
                   if (value) carParams.set(key, value);
                 }
 
@@ -378,6 +375,7 @@ function SearchScreen() {
         <SearchSheet
           open={isSearchModalOpen}
           onOpenChange={setIsSearchModalOpen}
+          searchId={activeSearchId}
         />
 
         {/* Results */}

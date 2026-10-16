@@ -1,5 +1,8 @@
 import { getJson } from "@/lib/api-client";
-import { buildCarSearchRequest } from "@/lib/car-search-request";
+import {
+  buildCarSearchRequest,
+  carSearchQueryKeyParams,
+} from "@/lib/car-search-request";
 import type { CarSearchParams, CarSearchResponse } from "@/lib/car-types";
 import { useQuery } from "@tanstack/react-query";
 
@@ -25,11 +28,8 @@ export function useCarSearch(
   params: CarSearchParams,
   options?: { enabled?: boolean },
 ) {
-  const queryKeyParams = { ...params };
-  delete queryKeyParams.searchId;
-
   return useQuery({
-    queryKey: [...CAR_SEARCH_QUERY_KEY, queryKeyParams],
+    queryKey: [...CAR_SEARCH_QUERY_KEY, carSearchQueryKeyParams(params)],
     queryFn: ({ signal }) => fetchCarSearch(params, { signal }),
     enabled: options?.enabled ?? true,
     // Promotion enrichment changes server-side; refetch on focus + every mount.

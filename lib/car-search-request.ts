@@ -20,6 +20,16 @@ const SCALAR_KEYS = [
   "limit",
 ] as const;
 
+export function carSearchQueryKeyParams(params: CarSearchParams): CarSearchParams {
+  if (!params.countOnly) {
+    return params;
+  }
+
+  const queryKeyParams = { ...params };
+  delete queryKeyParams.searchId;
+  return queryKeyParams;
+}
+
 export function buildCarSearchRequest(params: CarSearchParams): {
   readonly path: string;
   readonly headers?: Record<string, string>;

@@ -42,9 +42,10 @@ const searchStyles = {
 interface BookingSearchProps {
   /** Called after search is triggered (e.g. to close modals) */
   readonly onSearchComplete?: () => void;
+  readonly searchId?: string;
 }
 
-export function BookingSearch({ onSearchComplete }: BookingSearchProps) {
+export function BookingSearch({ onSearchComplete, searchId }: BookingSearchProps) {
   const router = useRouter();
   const pathname = usePathname();
   const routeParams = useLocalSearchParams<{
@@ -246,7 +247,7 @@ export function BookingSearch({ onSearchComplete }: BookingSearchProps) {
       }
 
       const reusedSearchId = reusedSearchJourneyId({
-        currentSearchId: parseSearchId(routeParams.searchId),
+        currentSearchId: searchId ?? parseSearchId(routeParams.searchId),
         isSameSearchPage: pathname === "/search",
         currentBookingType: Array.isArray(routeParams.bookingType)
           ? routeParams.bookingType[0]
@@ -287,6 +288,7 @@ export function BookingSearch({ onSearchComplete }: BookingSearchProps) {
     flightNumber,
     router,
     pathname,
+    searchId,
     routeParams.searchId,
     routeParams.bookingType,
     onSearchComplete,
