@@ -22,6 +22,7 @@ import { useGuestCheckoutForm } from "@/hooks/use-guest-checkout-form";
 import { AIRPORT_PICKUP_BOOKING_TYPE } from "@/lib/booking-types";
 import { isExpoIos } from "@/lib/expo-platform";
 import { hasActivePromotion } from "@/lib/promotion-utils";
+import { parseSearchId } from "@/lib/search-id";
 import { buildCarSignInRedirectPath } from "@/lib/sign-in-redirect";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -44,6 +45,7 @@ export default function CarDetailScreen() {
   const [stickyBottomBarHeight, setStickyBottomBarHeight] = useState(0);
   const params = useLocalSearchParams<{
     id: string;
+    searchId?: string;
     from?: string;
     to?: string;
     bookingType?: string;
@@ -53,6 +55,7 @@ export default function CarDetailScreen() {
     dropOffAddress?: string;
     sameLocation?: string;
   }>();
+  const searchId = parseSearchId(params.searchId);
 
   // `/cars/[id]` always includes this segment in normal app navigation (wrong ids fail via API).
   const carId = (Array.isArray(params.id) ? params.id[0] : params.id) as string;
@@ -133,6 +136,7 @@ export default function CarDetailScreen() {
 
   const { submit, isSubmitting, paymentError } = useBookingCheckout({
     carId,
+    searchId,
     isAuthenticated,
     requiresFullTank,
     useCredits,
@@ -147,6 +151,7 @@ export default function CarDetailScreen() {
   const handleSignIn = useCallback(() => {
     router.push(
       buildCarSignInRedirectPath(carId, {
+        searchId,
         bookingType: booking.values.bookingType,
         fromDate: booking.values.dateRange.from,
         toDate: booking.values.dateRange.to,
@@ -157,7 +162,7 @@ export default function CarDetailScreen() {
         sameLocation: booking.values.sameLocation,
       }),
     );
-  }, [router, carId, booking.values]);
+  }, [router, carId, searchId, booking.values]);
 
   if (isLoading) {
     return (

@@ -1,4 +1,8 @@
 import { getJson } from "@/lib/api-client";
+import {
+  buildCarSearchRequest,
+  carSearchQueryKeyParams,
+} from "@/lib/car-search-request";
 import type { CarSearchParams, CarSearchResponse } from "@/lib/car-types";
 import { useQuery } from "@tanstack/react-query";
 
@@ -8,44 +12,16 @@ async function fetchCarSearch(
   params: CarSearchParams,
   init?: RequestInit,
 ): Promise<CarSearchResponse> {
-  const searchParams = new URLSearchParams();
+  const request = buildCarSearchRequest(params);
+  const headers = new Headers(init?.headers);
 
-  const scalarKeys = [
-    "q",
-    "serviceTier",
-    "vehicleType",
-    "color",
-    "make",
-    "model",
-    "from",
-    "to",
-    "bookingType",
-    "pickupTime",
-    "flightNumber",
-    "minPrice",
-    "maxPrice",
-    "minCapacity",
-    "page",
-    "limit",
-  ] as const;
-
-  for (const key of scalarKeys) {
-    const value = params[key];
-    if (value !== undefined && value !== null && value !== "") {
-      searchParams.set(key, String(value));
+  if (request.headers) {
+    for (const [key, value] of Object.entries(request.headers)) {
+      headers.set(key, value);
     }
   }
 
-  if (params.fuelIncluded) searchParams.set("fuelIncluded", "1");
-  if (params.dealsOnly) searchParams.set("dealsOnly", "1");
-  if (params.countOnly) searchParams.set("countOnly", "1");
-
-  const queryString = searchParams.toString();
-  const url = queryString
-    ? `/api/cars/search?${queryString}`
-    : "/api/cars/search";
-
-  return getJson<CarSearchResponse>(url, init);
+  return getJson<CarSearchResponse>(request.path, { ...init, headers });
 }
 
 export function useCarSearch(
@@ -53,7 +29,7 @@ export function useCarSearch(
   options?: { enabled?: boolean },
 ) {
   return useQuery({
-    queryKey: [...CAR_SEARCH_QUERY_KEY, params],
+    queryKey: [...CAR_SEARCH_QUERY_KEY, carSearchQueryKeyParams(params)],
     queryFn: ({ signal }) => fetchCarSearch(params, { signal }),
     enabled: options?.enabled ?? true,
     // Promotion enrichment changes server-side; refetch on focus + every mount.

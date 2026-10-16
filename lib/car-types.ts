@@ -101,6 +101,7 @@ export interface SearchPagination {
 
 /** Response shape for GET /api/cars/search */
 export interface CarSearchResponse {
+  searchId?: string;
   cars: SearchCar[];
   filters: SearchFilters;
   facets: SearchFacets | null;
@@ -132,4 +133,6 @@ export interface CarSearchParams {
   countOnly?: boolean;
   page?: number;
   limit?: number;
+  /** Journey key sent as `X-Search-Id`, never as a query param. */
+  searchId?: string;
 }

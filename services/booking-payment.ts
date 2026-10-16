@@ -28,6 +28,7 @@ export type CreateBookingCheckoutPayload = {
   guestEmail?: string;
   guestName?: string;
   guestPhone?: string;
+  searchId?: string;
 };
 
 export type CreateBookingCheckoutResponse = {

@@ -5,6 +5,7 @@ import { CarCardRatingBadge } from "@/components/reviews";
 import { SearchFilters } from "@/components/search-filters";
 import { TabBarVisibilityProvider, useTabBarVisibility } from "@/context/tab-bar-visibility-context";
 import { useCarSearch } from "@/hooks/use-car-search";
+import { useSearchJourneyRoute } from "@/hooks/use-search-journey-route";
 import type { CarSearchParams, SearchCar } from "@/lib/car-types";
 import { hasActivePromotion } from "@/lib/promotion-utils";
 import {
@@ -14,6 +15,7 @@ import {
   routeParamsToSearchParams,
   searchFiltersToParams,
 } from "@/lib/search-filters";
+import { parseSearchId } from "@/lib/search-id";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -36,6 +38,7 @@ const SEARCH_SKELETON_IDS = [1, 2, 3];
 
 /** Query keys copied from `/search` onto `/cars/[id]` when opening a vehicle. */
 const CAR_DETAIL_NAV_PARAM_KEYS = [
+  "searchId",
   "bookingType",
   "from",
   "to",
@@ -161,6 +164,7 @@ function SearchScreen() {
   const { onScroll } = useTabBarVisibility();
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const params = useLocalSearchParams<{
+    searchId?: string;
     from?: string;
     to?: string;
     bookingType?: string;
@@ -182,6 +186,7 @@ function SearchScreen() {
     const normalizedBookingType = params.bookingType
       ?.toUpperCase()
       .replace("-", "_");
+    const journeySearchId = parseSearchId(params.searchId);
     const payload: CarSearchParams = {
       from: params.from,
       to: params.to,
@@ -190,6 +195,7 @@ function SearchScreen() {
       flightNumber: params.flightNumber,
       q: params.q,
       limit: 12,
+      ...(journeySearchId ? { searchId: journeySearchId } : {}),
     };
 
     // Night bookings are fixed-start; keep payload explicit if query omitted pickupTime.
@@ -204,6 +210,7 @@ function SearchScreen() {
     params.from,
     params.pickupTime,
     params.q,
+    params.searchId,
     params.to,
   ]);
 
@@ -223,8 +230,12 @@ function SearchScreen() {
     [baseParams, appliedFilters],
   );
 
-  const { data, isLoading, error, refetch, isRefetching } =
+  const { data, isLoading, error, refetch, isRefetching, isFetchedAfterMount } =
     useCarSearch(searchPayload);
+  const activeSearchId = useSearchJourneyRoute({
+    routeSearchId: params.searchId,
+    resultSearchId: isFetchedAfterMount && !error ? data?.searchId : undefined,
+  });
 
   const handleScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -289,7 +300,7 @@ function SearchScreen() {
               onPress={() => {
                 const carParams = new URLSearchParams();
                 for (const key of CAR_DETAIL_NAV_PARAM_KEYS) {
-                  const value = params[key];
+                  const value = key === "searchId" ? activeSearchId : params[key];
                   if (value) carParams.set(key, value);
                 }
 
@@ -364,6 +375,7 @@ function SearchScreen() {
         <SearchSheet
           open={isSearchModalOpen}
           onOpenChange={setIsSearchModalOpen}
+          searchId={activeSearchId}
         />
 
         {/* Results */}

@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { usePathname, useRouter } from "expo-router";
+import { useLocalSearchParams, usePathname, useRouter } from "expo-router";
 import { Loader2, Search } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import { Text, View } from "react-native";
@@ -16,6 +16,7 @@ import {
   ensureDateRangeForPickupTime,
   resolveSearchDateRangeChange,
 } from "@/lib/booking-utils";
+import { parseSearchId, reusedSearchJourneyId } from "@/lib/search-id";
 import {
   clearFlightSearchValidation,
   type FlightSearchValidation,
@@ -41,11 +42,16 @@ const searchStyles = {
 interface BookingSearchProps {
   /** Called after search is triggered (e.g. to close modals) */
   readonly onSearchComplete?: () => void;
+  readonly searchId?: string;
 }
 
-export function BookingSearch({ onSearchComplete }: BookingSearchProps) {
+export function BookingSearch({ onSearchComplete, searchId }: BookingSearchProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const routeParams = useLocalSearchParams<{
+    searchId?: string;
+    bookingType?: string;
+  }>();
   const sharedDraft = useBookingSearchDraft();
   const fetchFlightSearch = useFetchFlightSearch();
   const [isSearching, setIsSearching] = useState(false);
@@ -240,6 +246,18 @@ export function BookingSearch({ onSearchComplete }: BookingSearchProps) {
         }
       }
 
+      const reusedSearchId = reusedSearchJourneyId({
+        currentSearchId: searchId ?? parseSearchId(routeParams.searchId),
+        isSameSearchPage: pathname === "/search",
+        currentBookingType: Array.isArray(routeParams.bookingType)
+          ? routeParams.bookingType[0]
+          : routeParams.bookingType,
+        nextBookingType: bookingType,
+      });
+      if (reusedSearchId) {
+        params.set("searchId", reusedSearchId);
+      }
+
       const searchUrl: `/search?${string}` = `/search?${params.toString()}`;
       const isOnSearchPage = pathname === "/search";
 
@@ -270,6 +288,9 @@ export function BookingSearch({ onSearchComplete }: BookingSearchProps) {
     flightNumber,
     router,
     pathname,
+    searchId,
+    routeParams.searchId,
+    routeParams.bookingType,
     onSearchComplete,
     setFlightNumber,
     applyFlightValidation,
