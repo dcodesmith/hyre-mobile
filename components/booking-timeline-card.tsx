@@ -119,18 +119,27 @@ function BookingLegTimeline({
   const now = new Date();
   const legStart = new Date(leg.legStartTime);
   const legEnd = new Date(leg.legEndTime);
-  const isStarted = now >= legStart && now < legEnd;
-  const isCompleted = now >= legEnd;
+  const isStarted =
+    booking.status !== "CANCELLED" &&
+    booking.status !== "COMPLETED" &&
+    now >= legStart &&
+    now < legEnd;
+  const isCompleted = booking.status === "COMPLETED" || now >= legEnd;
   const extendedHours = confirmedExtensionHours(leg);
+  const originalLegEnd = new Date(
+    legEnd.getTime() - extendedHours * 60 * 60 * 1000,
+  ).toISOString();
   const showDayExtension = extendedHours > 0 && booking.type === DAY_BOOKING_TYPE;
   const status =
     booking.status === "CANCELLED"
       ? "Cancelled"
-      : isStarted
-        ? "Active"
-        : isCompleted
-          ? "Completed"
-          : null;
+      : booking.status === "COMPLETED"
+        ? "Completed"
+        : isStarted
+          ? "Active"
+          : isCompleted
+            ? "Completed"
+            : null;
   const dropoffTime =
     extendedHours > 0
       ? `${formatLegClock(booking.type, leg.legEndTime)} (Extended)`
@@ -190,7 +199,7 @@ function BookingLegTimeline({
             )}
           >
             Your drop-off time {isStarted ? "has been" : "was"} extended by {extendedHours}{" "}
-            {extendedHours === 1 ? "hour" : "hours"} from {formatBookingTime(booking.endDate)} to{" "}
+            {extendedHours === 1 ? "hour" : "hours"} from {formatBookingTime(originalLegEnd)} to{" "}
             {formatBookingTime(leg.legEndTime)}
           </Text>
         </View>
