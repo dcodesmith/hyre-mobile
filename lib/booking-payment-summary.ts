@@ -19,8 +19,28 @@ export function createBookingPaymentSummary(booking: BookingDetail) {
       }),
       { netTotal: 0, hours: 0 },
     );
-  const netTotal = money(booking.netTotal);
   const addons = booking.addons ?? [];
+
+  if (booking.netTotal == null) {
+    return {
+      breakdownAvailable: false,
+      netTotal: 0,
+      extensionNetTotal: 0,
+      extendedHours: extension.hours,
+      addons,
+      fuelUpgradeCost: 0,
+      referralDiscountAmount: 0,
+      referralCreditsUsed: 0,
+      referralCreditsReserved: money(booking.referralCreditsReserved),
+      platformFee: 0,
+      platformFeeRate: 0,
+      vatAmount: 0,
+      vatRate: 0,
+      totalAmount: money(booking.totalAmount),
+    };
+  }
+
+  const netTotal = money(booking.netTotal);
   const addonTotal = addons.reduce(
     (total, addon) => total + money(addon.totalPrice),
     0,
@@ -38,6 +58,7 @@ export function createBookingPaymentSummary(booking: BookingDetail) {
 
   if (extension.hours === 0) {
     return {
+      breakdownAvailable: true,
       netTotal,
       extensionNetTotal: 0,
       extendedHours: 0,
@@ -60,6 +81,7 @@ export function createBookingPaymentSummary(booking: BookingDetail) {
     (extension.netTotal + extensionPlatformFee) * (vatRate / 100);
 
   return {
+    breakdownAvailable: true,
     netTotal,
     extensionNetTotal: extension.netTotal,
     extendedHours: extension.hours,

@@ -12,20 +12,76 @@ export const formatBookingDate = (value: string | null | undefined) =>
 export const formatBookingTime = (value: string | null | undefined) =>
   value ? format(toLagosTime(value), "h:mm a") : "TBD";
 
-export const bookingStatusPillClass = (status: string) => {
-  if (status === "CANCELLED") return "bg-red-100 text-red-800 border-red-200";
-  if (status === "COMPLETED")
-    return "bg-blue-100 text-blue-800 border-blue-200";
-  return "bg-green-100 text-green-800 border-green-200";
+type StatusPill = {
+  readonly container: string;
+  readonly text: string;
+  readonly dot: string;
 };
 
-export const paymentStatusPillClass = (status: string) => {
-  if (status === "PAID")
-    return "bg-green-100 text-green-800 border-green-200";
-  if (status === "REFUNDED")
-    return "bg-blue-100 text-blue-800 border-blue-200";
-  return "bg-yellow-100 text-yellow-800 border-yellow-200";
-};
+const SLATE_PILL = {
+  container: "border-slate-500/20 bg-slate-50",
+  text: "text-slate-700",
+  dot: "bg-slate-500",
+} as const satisfies StatusPill;
+
+const AMBER_PILL = {
+  container: "border-amber-600/20 bg-amber-50",
+  text: "text-amber-800",
+  dot: "bg-amber-500",
+} as const satisfies StatusPill;
+
+const EMERALD_PILL = {
+  container: "border-emerald-600/20 bg-emerald-50",
+  text: "text-emerald-700",
+  dot: "bg-emerald-500",
+} as const satisfies StatusPill;
+
+const BLUE_PILL = {
+  container: "border-blue-600/20 bg-blue-50",
+  text: "text-blue-700",
+  dot: "bg-blue-500",
+} as const satisfies StatusPill;
+
+const RED_PILL = {
+  container: "border-red-600/20 bg-red-50",
+  text: "text-red-700",
+  dot: "bg-red-500",
+} as const satisfies StatusPill;
+
+const BOOKING_STATUS_PILL = {
+  PENDING: AMBER_PILL,
+  CONFIRMED: EMERALD_PILL,
+  ACTIVE: BLUE_PILL,
+  COMPLETED: SLATE_PILL,
+  CANCELLED: RED_PILL,
+  REJECTED: RED_PILL,
+} as const satisfies Record<string, StatusPill>;
+
+const PAYMENT_STATUS_PILL = {
+  UNPAID: AMBER_PILL,
+  PAID: EMERALD_PILL,
+  REFUNDED: BLUE_PILL,
+  PARTIALLY_REFUNDED: BLUE_PILL,
+  REFUND_PROCESSING: AMBER_PILL,
+  REFUND_FAILED: RED_PILL,
+} as const satisfies Record<string, StatusPill>;
+
+export const bookingStatusPill = (status: string): StatusPill =>
+  status in BOOKING_STATUS_PILL
+    ? BOOKING_STATUS_PILL[status as keyof typeof BOOKING_STATUS_PILL]
+    : SLATE_PILL;
+
+export const paymentStatusPill = (status: string): StatusPill =>
+  status in PAYMENT_STATUS_PILL
+    ? PAYMENT_STATUS_PILL[status as keyof typeof PAYMENT_STATUS_PILL]
+    : AMBER_PILL;
+
+export const statusLabel = (value: string) =>
+  value
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 
 export const bookingTypeDescription = (type: BookingType) => {
   if (type === "DAY") {

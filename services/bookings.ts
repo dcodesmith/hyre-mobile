@@ -89,17 +89,27 @@ export type BookingDetail = Omit<BookingSummary, "car"> & {
     id?: string;
     name?: string | null;
     phoneNumber?: string | null;
+    image?: string | null;
   } | null;
   flight?: {
-    id: string;
+    id?: string;
     flightNumber?: string | null;
+    flightDate?: string | null;
     status?: string | null;
     originName?: string | null;
     originCode?: string | null;
+    originCodeIATA?: string | null;
+    originCity?: string | null;
     destinationName?: string | null;
     destinationCode?: string | null;
+    destinationCodeIATA?: string | null;
+    destinationCity?: string | null;
     scheduledArrival?: string | null;
     estimatedArrival?: string | null;
+    actualArrival?: string | null;
+    delayMinutes?: number | null;
+    aircraftType?: string | null;
+    registration?: string | null;
   } | null;
   legs: BookingLeg[];
 };
