@@ -1,20 +1,20 @@
 import { BookingActionDialogs } from "@/components/booking-action-dialogs";
+import { BookingActionFeedbackBanner } from "@/components/booking-action-feedback-banner";
+import { BookingChauffeurCard } from "@/components/booking-chauffeur-card";
+import { BookingDetailActions } from "@/components/booking-detail-actions";
 import { BookingDetailHeader } from "@/components/booking-detail-header";
-import { BookingDetailSectionTitle } from "@/components/booking-detail-section-title";
-import { BookingExtendCard } from "@/components/booking-extend-card";
+import { BookingFlightCard } from "@/components/booking-flight-card";
+import { BookingLocationCard } from "@/components/booking-location-card";
 import { BookingPaymentSummaryCard } from "@/components/booking-payment-summary-card";
 import { BookingTimelineCard } from "@/components/booking-timeline-card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import { useBookingActionController } from "@/hooks/use-booking-action-controller";
 import { useBookingDetailAccess } from "@/hooks/use-booking-detail-access";
 import { ApiError } from "@/lib/api-client";
-import {
-	formatBookingDate as formatDateOnly,
-	formatBookingTime as formatTimeOnly,
-} from "@/lib/booking-detail-display";
+import { bookingTypeDescription } from "@/lib/booking-detail-display";
 import { shareBookingReceipt } from "@/lib/booking-receipt-file";
+import { buildBookingSignInRedirectPath } from "@/lib/sign-in-redirect";
 import { reportHandledException } from "@/lib/telemetry";
 import {
 	fetchBookingReceipt,
@@ -29,7 +29,6 @@ import {
 	useRouter,
 } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { CreditCard, MapPin, Plane, User } from "lucide-react-native";
 import { useEffect, useRef } from "react";
 import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -204,208 +203,82 @@ export default function BookingDetailScreen() {
 		>
 			<StatusBar style="dark" />
 			<ScrollView className="flex-1" contentInsetAdjustmentBehavior="never">
-				<View className="px-4 py-4">
+				<View className="gap-4 px-4 py-4">
 					<BookingDetailHeader
 						booking={booking}
 						isGuest={isGuest}
-						feedback={feedback}
+						actions={
+							!isGuest && (canEdit || canCancel) ? (
+								<BookingDetailActions
+									canEdit={canEdit}
+									canCancel={canCancel}
+									disabled={isUpdatingBooking || isCancellingBooking}
+									onEdit={openModifyDialog}
+									onCancel={openCancelDialog}
+								/>
+							) : null
+						}
 					/>
 
-					<View className="mt-4 gap-4">
-						<BookingTimelineCard booking={booking} />
+					{isGuest ? null : <BookingActionFeedbackBanner feedback={feedback} />}
 
-						<Card className="rounded-xl py-4">
-							<CardHeader className="px-4">
-								<BookingDetailSectionTitle
-									icon={<MapPin size={18} color="#2563EB" />}
-									title="Location Details"
-								/>
-							</CardHeader>
-							<CardContent className="px-4 pt-0">
-								<View className="gap-3">
-									<View className="flex-row items-start gap-3">
-										<View className="mt-2 h-2 w-2 rounded-full bg-green-500" />
-										<View className="flex-1">
-											<Text className="text-sm font-medium text-slate-600">
-												Pickup Location
-											</Text>
-											<Text className="text-sm font-semibold text-slate-900">
-												{booking.pickupLocation}
-											</Text>
-										</View>
-									</View>
-									<View className="h-px bg-neutral-200" />
-									<View className="flex-row items-start gap-3">
-										<View className="mt-2 h-2 w-2 rounded-full bg-red-500" />
-										<View className="flex-1">
-											<Text className="text-sm font-medium text-slate-600">
-												Return Location
-											</Text>
-											<Text className="text-sm font-semibold text-slate-900">
-												{booking.returnLocation}
-											</Text>
-										</View>
-									</View>
-								</View>
-							</CardContent>
-						</Card>
+					{isGuest ? (
+						<View className="rounded border border-blue-200 bg-blue-50 p-4">
+							<Text className="text-sm text-blue-900">
+								Guest access is read-only.{" "}
+								<Text
+									accessibilityRole="link"
+									className="text-sm font-medium text-blue-900 underline"
+									onPress={() =>
+										router.push(buildBookingSignInRedirectPath(booking.id))
+									}
+								>
+									Sign in with the booking email
+								</Text>{" "}
+								to manage this booking.
+							</Text>
+						</View>
+					) : null}
 
-						<Card className="rounded-xl py-4">
-							<CardHeader className="px-4">
-								<BookingDetailSectionTitle
-									icon={<User size={18} color="#2563EB" />}
-									title="Your Chauffeur"
-								/>
-							</CardHeader>
-							<CardContent className="px-4 pt-0">
-								<View className="flex-row items-center gap-3">
-									<View className="h-12 w-12 items-center justify-center rounded-full bg-slate-100">
-										<Text className="text-sm font-semibold text-slate-700">
-											{booking.chauffeur?.name?.charAt(0).toUpperCase() ?? "N"}
-										</Text>
-									</View>
-									<View>
-										<Text className="text-sm font-semibold text-slate-900">
-											{booking.chauffeur?.name ?? "Not Assigned"}
-										</Text>
-										<Text className="text-sm text-slate-600">
-											Professional Chauffeur
-										</Text>
-									</View>
-								</View>
-							</CardContent>
-						</Card>
+					<View className="rounded border border-blue-200 bg-blue-50 p-4">
+						<Text selectable className="text-sm text-blue-800">
+							{bookingTypeDescription(booking.type)}
+						</Text>
+					</View>
 
-						{booking.flight ? (
-							<Card className="rounded-xl py-4">
-								<CardHeader className="px-4">
-									<BookingDetailSectionTitle
-										icon={<Plane size={18} color="#2563EB" />}
-										title="Flight Information"
-									/>
-								</CardHeader>
-								<CardContent className="px-4 pt-0">
-									<View className="gap-3">
-										<View className="flex-row items-center justify-between">
-											<View>
-												<Text className="text-lg font-bold text-slate-900">
-													{booking.flight.flightNumber ?? "Flight"}
-												</Text>
-												<Text className="text-sm text-slate-600">
-													{formatDateOnly(booking.flight.scheduledArrival)}
-												</Text>
-											</View>
-											<View className="rounded border border-blue-200 bg-blue-100 px-2 py-1">
-												<Text className="text-xs font-medium capitalize text-blue-800">
-													{booking.flight.status
-														?.toLowerCase()
-														.replaceAll("_", " ") ?? "scheduled"}
-												</Text>
-											</View>
-										</View>
-										<View className="h-px bg-neutral-200" />
-										<View className="gap-1">
-											<Text className="text-xs font-medium uppercase text-slate-500">
-												From
-											</Text>
-											<Text className="text-sm font-semibold text-slate-900">
-												{booking.flight.originName ??
-													booking.flight.originCode ??
-													"N/A"}
-											</Text>
-										</View>
-										<View className="gap-1">
-											<Text className="text-xs font-medium uppercase text-slate-500">
-												To
-											</Text>
-											<Text className="text-sm font-semibold text-slate-900">
-												{booking.flight.destinationName ??
-													booking.flight.destinationCode ??
-													"N/A"}
-											</Text>
-										</View>
-										<View className="h-px bg-neutral-200" />
-										<View className="flex-row items-center justify-between">
-											<View>
-												<Text className="text-xs font-medium uppercase text-slate-500">
-													Scheduled Arrival
-												</Text>
-												<Text className="text-sm font-semibold text-slate-900">
-													{formatTimeOnly(booking.flight.scheduledArrival)}
-												</Text>
-											</View>
-											{booking.flight.estimatedArrival ? (
-												<View>
-													<Text className="text-xs font-medium uppercase text-slate-500">
-														Estimated Arrival
-													</Text>
-													<Text className="text-sm font-semibold text-slate-900">
-														{formatTimeOnly(booking.flight.estimatedArrival)}
-													</Text>
-												</View>
-											) : null}
-										</View>
-									</View>
-								</CardContent>
-							</Card>
-						) : null}
-
-						<BookingPaymentSummaryCard
-							booking={booking}
-							isDownloadingReceipt={receiptDownload.isPending}
-							onDownloadReceipt={
-								canDownloadReceipt ? () => receiptDownload.mutate() : undefined
-							}
-							receiptError={
-								receiptDownload.error
-									? getBookingReceiptErrorMessage(receiptDownload.error)
-									: null
-							}
-							showBreakdown={!isGuest}
-						/>
-
-						{!isGuest && booking.legs.some((leg) => leg.canExtend) ? (
-							<BookingExtendCard bookingId={booking.id} />
-						) : null}
-
-						{!isGuest && (canEdit || canCancel) ? (
-							<Card className="rounded-xl py-4">
-								<CardHeader className="px-4">
-									<BookingDetailSectionTitle
-										icon={<CreditCard size={18} color="#2563EB" />}
-										title="Booking Actions"
-									/>
-								</CardHeader>
-								<CardContent className="px-4 pt-0">
-									<View className="gap-2">
-										{canEdit ? (
-											<Button
-												variant="outline"
-												onPress={openModifyDialog}
-												disabled={isUpdatingBooking || isCancellingBooking}
-											>
-												<Text className="text-sm font-medium">
-													Modify Booking
-												</Text>
-											</Button>
-										) : null}
-										{canCancel ? (
-											<Button
-												variant="outline"
-												onPress={openCancelDialog}
-												disabled={isUpdatingBooking || isCancellingBooking}
-											>
-												<Text className="text-sm font-medium text-red-600">
-													{isCancellingBooking
-														? "Cancelling..."
-														: "Cancel Booking"}
-												</Text>
-											</Button>
-										) : null}
-									</View>
-								</CardContent>
-							</Card>
-						) : null}
+					<View className="gap-6">
+						<View className="gap-4">
+							<BookingTimelineCard
+								booking={booking}
+								onExtend={
+									!isGuest && booking.legs.some((leg) => leg.canExtend)
+										? () =>
+												router.push(
+													`/bookings/${encodeURIComponent(booking.id)}/extend`,
+												)
+										: undefined
+								}
+							/>
+							<BookingLocationCard booking={booking} />
+						</View>
+						<View className="gap-4">
+							<BookingChauffeurCard booking={booking} />
+							{booking.type === "AIRPORT_PICKUP" && booking.flight ? (
+								<BookingFlightCard flight={booking.flight} />
+							) : null}
+							<BookingPaymentSummaryCard
+								booking={booking}
+								isDownloadingReceipt={receiptDownload.isPending}
+								onDownloadReceipt={
+									canDownloadReceipt ? () => receiptDownload.mutate() : undefined
+								}
+								receiptError={
+									receiptDownload.error
+										? getBookingReceiptErrorMessage(receiptDownload.error)
+										: null
+								}
+							/>
+						</View>
 					</View>
 				</View>
 			</ScrollView>
