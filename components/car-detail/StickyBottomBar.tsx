@@ -50,21 +50,13 @@ export function StickyBottomBar({
       className="absolute bottom-0 left-0 right-0 z-50 rounded-t-xl border-t border-gray-200 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.1)]"
       style={{ paddingBottom: insets.bottom }}
     >
-      {/* Error message */}
-      {error && (
-        <View className="px-4 py-2 bg-red-50 border-b border-red-200">
-          <Text className="text-red-800 text-sm">{error}</Text>
+      {error ? (
+        <View className="border-b border-red-200 bg-red-50 px-4 py-2">
+          <Text className="text-sm text-red-800">{error}</Text>
         </View>
-      )}
+      ) : null}
 
-      {/* hireApp `BookingCardLayout` mobile sticky footer parity:
-        - container: p-4
-        - vertical rhythm between sections: 12px (space-y-3 → flex-col gap-3)
-        - total row: items-center, gap-2
-        - mobile total markup matches `PromoBookingTotal` desktop=mobile spec:
-          flex-col items-end gap-0.5; strike `mr-2`; payable `text-base font-semibold`;
-          savings `text-xs font-medium text-green-600`. */}
-      <View className="p-4 flex-col gap-3">
+      <View className="flex-col gap-3 p-4">
         <View className="flex-row items-center justify-between gap-2">
           <Text className="text-sm font-medium text-gray-600">Total</Text>
           <View className="min-w-0 flex-col items-end gap-y-0.5">
@@ -99,7 +91,7 @@ export function StickyBottomBar({
         </View>
 
         <Button
-          className="h-10 w-full rounded-full bg-neutral-900"
+          className="h-12 w-full rounded-md bg-neutral-900"
           onPress={onPayNow}
           disabled={disabled || isSubmitting}
         >
@@ -111,19 +103,17 @@ export function StickyBottomBar({
               className="animate-spin"
             />
           ) : (
-            <Text className="text-sm font-medium text-white">
-              {isAuthenticated ? "Pay Now" : "Pay Now as Guest"}
-            </Text>
+            <Text className="text-sm font-medium text-white">Pay Now</Text>
           )}
         </Button>
 
-        {!isAuthenticated && (
+        {!isAuthenticated ? (
           <View className="flex-row items-center justify-center pt-1">
             <Text className="text-sm text-gray-600">Have an account?</Text>
             <Pressable
               onPress={onSignIn}
               accessibilityRole="button"
-              className="px-1"
+              className="min-h-11 justify-center px-1"
             >
               <Text
                 className="text-sm font-medium text-gray-950"
@@ -133,7 +123,7 @@ export function StickyBottomBar({
               </Text>
             </Pressable>
           </View>
-        )}
+        ) : null}
       </View>
     </View>
   );

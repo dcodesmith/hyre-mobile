@@ -13,7 +13,7 @@
     "start:ios": "expo start --dev-client --ios --localhost",
     "prestart:simulators": "adb reverse tcp:8081 tcp:8081 && adb reverse tcp:3000 tcp:3000 || true",
     "start:simulators": "node scripts/setup-simulator-env.js && expo start --dev-client --lan",
-    "start:phone": "node scripts/setup-simulator-env.js --hosted && expo start --dev-client --lan",
+    "start:phone": "node scripts/setup-simulator-env.js && expo start --dev-client --lan",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo run:android",
     "preandroid:emulator": "pnpm setup:simulator",
@@ -28,7 +28,7 @@
     "check": "pnpm typecheck && pnpm lint && expo install --check",
     "start:simulator": "pnpm start:simulators",
     "setup:simulator": "node scripts/setup-simulator-env.js",
-    "setup:simulator:hosted": "node scripts/setup-simulator-env.js --hosted"
+    "setup:simulator:local": "node scripts/setup-simulator-env.js --local"
   },
   "dependencies": {
     "@expo-google-fonts/geist": "^0.4.2",

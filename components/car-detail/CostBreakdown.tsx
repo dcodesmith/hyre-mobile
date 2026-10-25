@@ -1,14 +1,13 @@
-import { getUnitLabel } from "@/hooks/use-booking-pricing";
 import type { BookingPricingAddon } from "@/lib/booking-addons";
+import { getBookingRentalCopy } from "@/lib/booking-card-display";
 import type { BookingPricingPreviewResponse } from "@/lib/booking-pricing-preview-types";
 import {
   AIRPORT_PICKUP_BOOKING_TYPE,
-  BOOKING_TYPE_LABELS,
   type BookingType,
 } from "@/lib/booking-types";
 import type { CostBreakdownData } from "@/lib/car-detail-types";
 import { formatCurrency } from "@/lib/currency";
-import type { ReactNode } from "react";
+import { Tag } from "lucide-react-native";
 import { Text, View } from "react-native";
 
 interface CostBreakdownProps {
@@ -16,59 +15,91 @@ interface CostBreakdownProps {
   readonly bookingType: BookingType;
   readonly pricingPreview?: BookingPricingPreviewResponse | null;
   readonly estimatedAddons?: readonly BookingPricingAddon[];
-  /** Hide the in-card total. Sticky footer renders the (promotional) total. */
-  readonly hideTotal?: boolean;
 }
 
-/**
- * hireApp `BookingCostBreakdown` parity:
- * - card: `bg-white border border-neutral-200 rounded shadow-xl p-4`
- * - dl: `text-gray-950 text-sm`
- * - rows: `flex justify-between gap-2 mb-1.5`, last row no mb-1.5
- * - dt: `text-gray-600 min-w-0` (gray-600 label by default; promo override = dark)
- * - dd: `font-medium shrink-0 text-right` (dark)
- * - strike: `text-gray-400 line-through mr-1.5`
- */
-function rentalLineLeftContent(
-  bookingType: BookingType,
-  baseRate: number,
-  originalBaseRate: number | undefined,
-  qty: number,
-  unitLabel: string,
-): ReactNode {
-  const isAirport = bookingType === AIRPORT_PICKUP_BOOKING_TYPE;
-  const hasPerUnitDiscount =
-    originalBaseRate != null && originalBaseRate > baseRate;
-
-  if (isAirport && !hasPerUnitDiscount) {
-    return (
-      <Text className="min-w-0 flex-1 pr-2 text-sm text-gray-600">
-        Airport Pickup
-      </Text>
-    );
-  }
-
-  if (hasPerUnitDiscount && originalBaseRate != null) {
-    // Strike + discounted rate inline; discounted text is dark (text-primary in web).
-    return (
-      <View className="min-w-0 flex-1 flex-row flex-wrap items-baseline pr-2">
-        <Text
-          className="mr-1.5 text-sm font-normal text-gray-400"
-          style={{ textDecorationLine: "line-through" }}
-        >
-          {formatCurrency(originalBaseRate, { fractionDigits: 2 })}
-        </Text>
-        <Text className="text-sm text-gray-950">
-          {`${formatCurrency(baseRate, { fractionDigits: 2 })} × ${qty} ${unitLabel}`}
-        </Text>
-      </View>
-    );
-  }
+function LineAmount({
+  value,
+  compareAt,
+}: {
+  readonly value: number;
+  readonly compareAt?: number | null;
+}) {
+  const showCompare = compareAt != null && compareAt > value;
 
   return (
-    <Text className="min-w-0 flex-1 pr-2 text-sm text-gray-600">
-      {`${formatCurrency(baseRate, { fractionDigits: 2 })} × ${qty} ${unitLabel}`}
-    </Text>
+    <View className="flex-row items-center justify-end gap-2">
+      {showCompare ? (
+        <Text
+          className="text-sm font-medium text-gray-900"
+          style={{
+            textDecorationLine: "line-through",
+            fontVariant: ["tabular-nums"],
+          }}
+        >
+          {formatCurrency(compareAt)}
+        </Text>
+      ) : null}
+      <Text
+        className={
+          showCompare
+            ? "text-sm font-medium text-red-500"
+            : "text-sm font-medium text-gray-900"
+        }
+        style={{ fontVariant: ["tabular-nums"] }}
+      >
+        {formatCurrency(value)}
+      </Text>
+    </View>
+  );
+}
+
+function SimpleRow({
+  label,
+  value,
+}: {
+  readonly label: string;
+  readonly value: number;
+}) {
+  return (
+    <View className="flex-row items-start justify-between gap-3">
+      <Text className="text-sm leading-6 text-gray-900">{label}</Text>
+      <Text
+        className="text-sm font-medium leading-6 text-gray-900"
+        style={{ fontVariant: ["tabular-nums"] }}
+      >
+        {formatCurrency(value)}
+      </Text>
+    </View>
+  );
+}
+
+function RentalRow({
+  bookingType,
+  units,
+  total,
+  compareAtUnitPrice,
+}: {
+  readonly bookingType: BookingType;
+  readonly units: number;
+  readonly total: number;
+  readonly compareAtUnitPrice?: number | null;
+}) {
+  const copy = getBookingRentalCopy(bookingType, units);
+  const compareAt =
+    compareAtUnitPrice != null ? compareAtUnitPrice * units : null;
+
+  return (
+    <View className="flex-row items-center justify-between gap-3">
+      <View>
+        <Text className="text-sm leading-6 text-gray-900">{copy.title}</Text>
+        {copy.detail ? (
+          <Text className="text-xs leading-none text-gray-500">
+            {copy.detail}
+          </Text>
+        ) : null}
+      </View>
+      <LineAmount value={total} compareAt={compareAt} />
+    </View>
   );
 }
 
@@ -77,10 +108,8 @@ export function CostBreakdown({
   bookingType,
   pricingPreview = null,
   estimatedAddons = [],
-  hideTotal = true,
 }: CostBreakdownProps) {
   const {
-    baseRate,
     originalBaseRate,
     totalDays,
     baseTotal,
@@ -92,151 +121,126 @@ export function CostBreakdown({
     fuelUpgradeCost,
     referralDiscountAmount = 0,
     creditsUsed = 0,
+    savingsAmount = 0,
   } = pricing;
 
-  const unitLabels = getUnitLabel(bookingType);
-  const unitLabel = totalDays === 1 ? unitLabels.singular : unitLabels.plural;
   const qty = Math.max(totalDays, 1);
-
-  const leftRentalLabel = rentalLineLeftContent(
-    bookingType,
-    baseRate,
-    originalBaseRate,
-    qty,
-    unitLabel,
-  );
-
-  const splitSegments = pricingPreview?.segments ?? null;
-  const hasSplitPricing = !!splitSegments && splitSegments.length > 0;
+  const rentalRows =
+    pricingPreview?.segments && pricingPreview.segments.length > 0
+      ? pricingPreview.segments.map((segment, index) => ({
+          key: `${segment.kind}-${segment.unitPrice}-${index}`,
+          units: segment.units,
+          total: segment.total,
+          compareAtUnitPrice: segment.compareAtUnitPrice,
+        }))
+      : [
+          {
+            key: "estimated",
+            units: qty,
+            total: baseTotal,
+            compareAtUnitPrice: originalBaseRate,
+          },
+        ];
+  const subtotal = finalTotal + creditsUsed;
 
   return (
-    <View className="rounded border border-neutral-200 bg-white p-4 shadow-xl">
-      {hasSplitPricing ? (
-        splitSegments.map((segment, index) => {
-          const unitLabel =
-            segment.units === 1
-              ? BOOKING_TYPE_LABELS[bookingType].singular
-              : BOOKING_TYPE_LABELS[bookingType].plural;
-          const segmentRateText = `${formatCurrency(segment.unitPrice, { fractionDigits: 2 })} × ${segment.units} ${unitLabel}`;
-          return (
-            <View
-              // biome-ignore lint/suspicious/noArrayIndexKey: segment rows are deterministic from API grouping
-              key={`${segment.kind}-${segment.unitPrice}-${segment.compareAtUnitPrice}-${index}`}
-              className="mb-1.5 flex-row items-baseline justify-between gap-2"
-            >
-              {segment.kind === "PROMO" ? (
-                <View className="min-w-0 flex-1 flex-row flex-wrap items-baseline pr-2">
-                  {segment.compareAtUnitPrice != null ? (
-                    <Text
-                      className="mr-1.5 text-sm font-normal text-gray-400"
-                      style={{ textDecorationLine: "line-through" }}
-                    >
-                      {formatCurrency(segment.compareAtUnitPrice, {
-                        fractionDigits: 2,
-                      })}
-                    </Text>
-                  ) : null}
-                  <Text className="text-sm text-gray-950">
-                    {segmentRateText}
-                  </Text>
-                </View>
-              ) : (
-                <Text className="min-w-0 flex-1 pr-2 text-sm text-gray-600">
-                  {segmentRateText}
-                </Text>
-              )}
-              <Text className="shrink-0 text-right text-sm font-medium text-gray-950">
-                {formatCurrency(segment.total, { fractionDigits: 2 })}
-              </Text>
-            </View>
-          );
-        })
-      ) : (
-        <View className="mb-1.5 flex-row items-baseline justify-between gap-2">
-          {leftRentalLabel}
-          <Text className="shrink-0 text-right text-sm font-medium text-gray-950">
-            {formatCurrency(baseTotal, { fractionDigits: 2 })}
-          </Text>
-        </View>
-      )}
-
-      {(pricingPreview?.addons ?? estimatedAddons).map((addon) => (
-        <View
-          key={addon.id}
-          className="mb-1.5 flex-row items-baseline justify-between gap-2"
-        >
-          <Text className="min-w-0 flex-1 pr-2 text-sm text-gray-600">
-            {addon.quantity > 1
-              ? `${addon.name} × ${addon.quantity}`
-              : addon.name}
-          </Text>
-          <Text className="shrink-0 text-right text-sm font-medium text-gray-950">
-            {formatCurrency(addon.totalPrice, { fractionDigits: 2 })}
-          </Text>
-        </View>
-      ))}
-
-      {fuelUpgradeCost > 0 && bookingType !== AIRPORT_PICKUP_BOOKING_TYPE ? (
-        <View className="mb-1.5 flex-row items-baseline justify-between gap-2">
-          <Text className="text-sm text-gray-600">
-            Fuel Upgrade to Full Tank
-          </Text>
-          <Text className="text-sm font-medium text-gray-950">
-            {formatCurrency(fuelUpgradeCost, { fractionDigits: 2 })}
-          </Text>
-        </View>
-      ) : null}
-
-      {platformFee > 0 ? (
-        <View className="mb-1.5 flex-row items-baseline justify-between gap-2">
-          <Text className="text-sm text-gray-600">
-            Platform Fee ({platformFeeRate.toFixed(1)}%)
-          </Text>
-          <Text className="text-sm font-medium text-gray-950">
-            {formatCurrency(platformFee, { fractionDigits: 2 })}
-          </Text>
-        </View>
-      ) : null}
-
-      {referralDiscountAmount > 0 ? (
-        <View className="mb-1.5 flex-row items-baseline justify-between gap-2">
-          <Text className="text-sm text-green-600">Referral Discount</Text>
-          <Text className="text-sm font-medium text-green-600">
-            -{formatCurrency(referralDiscountAmount, { fractionDigits: 2 })}
-          </Text>
-        </View>
-      ) : null}
-
-      {creditsUsed > 0 ? (
-        <View className="mb-1.5 flex-row items-baseline justify-between gap-2">
-          <Text className="text-sm text-green-600">Referral credit</Text>
-          <Text className="text-sm font-medium text-green-600">
-            -{formatCurrency(creditsUsed, { fractionDigits: 2 })}
-          </Text>
-        </View>
-      ) : null}
-
-      {/* VAT row — no margin (last row) */}
-      <View className="flex-row items-baseline justify-between gap-2">
-        <Text className="text-sm text-gray-600">
-          VAT ({vatRate.toFixed(1)}%)
-        </Text>
-        <Text className="text-sm font-medium text-gray-950">
-          {formatCurrency(vat, { fractionDigits: 2 })}
-        </Text>
-      </View>
-
-      {!hideTotal ? (
-        <>
-          <View className="my-2 border-t border-gray-200" />
-          <View className="flex-row items-baseline justify-between gap-2">
-            <Text className="text-base font-semibold text-gray-950">Total</Text>
-            <Text className="text-base font-semibold text-gray-950">
-              {formatCurrency(finalTotal, { fractionDigits: 2 })}
+    <View>
+      <Text className="mb-2 text-sm font-semibold leading-5 text-gray-950">
+        Cost Breakdown
+      </Text>
+      <View className="gap-2.5">
+        {rentalRows.map((row) => (
+          <RentalRow
+            key={row.key}
+            bookingType={bookingType}
+            units={row.units}
+            total={row.total}
+            compareAtUnitPrice={row.compareAtUnitPrice}
+          />
+        ))}
+        {(pricingPreview?.addons ?? estimatedAddons).map((addon) => (
+          <SimpleRow
+            key={addon.id}
+            label={
+              addon.quantity > 1
+                ? `${addon.name} × ${addon.quantity}`
+                : addon.name
+            }
+            value={addon.totalPrice}
+          />
+        ))}
+        {fuelUpgradeCost > 0 &&
+        bookingType !== AIRPORT_PICKUP_BOOKING_TYPE ? (
+          <SimpleRow
+            label="Fuel upgrade to full tank"
+            value={fuelUpgradeCost}
+          />
+        ) : null}
+        {platformFee > 0 ? (
+          <SimpleRow
+            label={`Platform Fee (${platformFeeRate.toFixed(1)}%)`}
+            value={platformFee}
+          />
+        ) : null}
+        {referralDiscountAmount > 0 ? (
+          <View className="flex-row items-start justify-between gap-3">
+            <Text className="text-sm leading-6 text-gray-900">
+              Referral discount
+            </Text>
+            <Text className="text-sm font-medium leading-6 text-emerald-500">
+              -{formatCurrency(referralDiscountAmount)}
             </Text>
           </View>
-        </>
-      ) : null}
+        ) : null}
+        <SimpleRow label={`VAT (${vatRate.toFixed(1)}%)`} value={vat} />
+      </View>
+
+      <View className="my-4 h-px bg-gray-300" />
+
+      <View className="gap-2.5 rounded-lg bg-white px-3 py-4">
+        {creditsUsed > 0 ? (
+          <>
+            <SimpleRow label="Subtotal" value={subtotal} />
+            <View className="flex-row items-center justify-between gap-3">
+              <View className="flex-row items-center gap-1">
+                <View className="size-5 items-center justify-center rounded-full bg-red-500">
+                  <Tag size={12} color="#FFFFFF" />
+                </View>
+                <Text className="text-sm leading-6 text-gray-900">
+                  Referral credit
+                </Text>
+              </View>
+              <Text className="text-sm font-medium leading-6 text-red-500">
+                -{formatCurrency(creditsUsed)}
+              </Text>
+            </View>
+          </>
+        ) : null}
+        <View className="flex-row items-center justify-between gap-3">
+          <Text className="text-sm font-semibold leading-5 text-gray-950">
+            Order Total:
+          </Text>
+          <Text
+            className="text-base font-semibold leading-6 text-gray-950"
+            style={{ fontVariant: ["tabular-nums"] }}
+          >
+            {formatCurrency(finalTotal)}
+          </Text>
+        </View>
+        {savingsAmount > 0 ? (
+          <View className="flex-row justify-between gap-3">
+            <Text className="text-sm font-medium leading-none text-emerald-500">
+              You save
+            </Text>
+            <Text
+              className="text-sm font-medium leading-none text-emerald-500"
+              style={{ fontVariant: ["tabular-nums"] }}
+            >
+              {formatCurrency(savingsAmount)}
+            </Text>
+          </View>
+        ) : null}
+      </View>
     </View>
   );
 }

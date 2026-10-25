@@ -36,7 +36,6 @@ import {
   type GuestCheckoutFormValues,
 } from "@/lib/validations/booking";
 import {
-  bookingCheckoutPhoneVerificationRoute,
   type CreateBookingCheckoutPayload,
   type CreateBookingCheckoutResponse,
   createBookingCheckout,
@@ -44,13 +43,17 @@ import {
   getBookingPriceChange,
   getBookingRetryAfterMs,
   isIdempotencyKeyReused,
+  isPhoneVerificationRequired,
 } from "@/services/booking-payment";
 import { savePaymentStatusToken } from "@/storage/payment-status-token";
 import type { CarBookingFormValues } from "./use-car-booking-form";
 
 type GuestPayload = Pick<
   CreateBookingCheckoutPayload,
-  "guestName" | "guestEmail" | "guestPhone"
+  | "guestName"
+  | "guestEmail"
+  | "guestPhone"
+  | "guestPhoneVerificationToken"
 >;
 
 type BuildPayloadArgs = {
@@ -119,6 +122,8 @@ function buildCheckoutPayload(
     payload.guestName = args.guest.guestName;
     payload.guestEmail = args.guest.guestEmail;
     payload.guestPhone = args.guest.guestPhone;
+    payload.guestPhoneVerificationToken =
+      args.guest.guestPhoneVerificationToken;
   }
   if (useCredits > 0) {
     payload.useCredits = useCredits;
@@ -195,6 +200,9 @@ export type UseBookingCheckoutArgs = {
   validate: () => Promise<boolean>;
   getBookingValues: () => CarBookingFormValues;
   getGuestValues: () => GuestCheckoutFormValues;
+  phoneNumber: string;
+  phoneVerificationToken: string | null;
+  onPhoneVerificationRequired: () => void;
   onPriceChanged: (pricing: BookingPricingPreviewResponse) => void;
 };
 
@@ -238,6 +246,9 @@ export function useBookingCheckout(
     validate,
     getBookingValues,
     getGuestValues,
+    phoneNumber,
+    phoneVerificationToken,
+    onPhoneVerificationRequired,
     onPriceChanged,
   } = args;
 
@@ -289,7 +300,8 @@ export function useBookingCheckout(
         : {
             guestName: guestValues.name.trim(),
             guestEmail,
-            guestPhone: guestValues.phoneNumber.trim(),
+            guestPhone: phoneNumber,
+            guestPhoneVerificationToken: phoneVerificationToken ?? undefined,
           };
 
       const payload = buildCheckoutPayload({
@@ -313,9 +325,13 @@ export function useBookingCheckout(
           : {}),
       };
 
+      const attemptPayload = {
+        ...payload,
+        guestPhoneVerificationToken: undefined,
+      };
       const attempt = getBookingCheckoutAttempt(
         checkoutAttempt.current,
-        payload,
+        attemptPayload,
         randomUUID,
       );
       checkoutAttempt.current = attempt;
@@ -430,12 +446,8 @@ export function useBookingCheckout(
       if (isIdempotencyKeyReused(error)) {
         checkoutAttempt.current = null;
       }
-      const phoneVerificationRoute = bookingCheckoutPhoneVerificationRoute(
-        error,
-        isAuthenticated,
-      );
-      if (phoneVerificationRoute) {
-        router.push(phoneVerificationRoute as never);
+      if (isPhoneVerificationRequired(error)) {
+        onPhoneVerificationRequired();
         return;
       }
       setPaymentError(getBookingPaymentErrorMessage(error));
@@ -455,6 +467,9 @@ export function useBookingCheckout(
     authoritativeTotal,
     getBookingValues,
     getGuestValues,
+    phoneNumber,
+    phoneVerificationToken,
+    onPhoneVerificationRequired,
     navigateToPaymentStatus,
     onPriceChanged,
     queryClient,

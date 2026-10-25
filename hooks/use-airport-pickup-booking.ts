@@ -23,6 +23,7 @@ export type UseAirportPickupBookingReturn = {
   isCalculatingDuration: boolean;
   hasValidatedFlight: boolean;
   tripEstimation: AirportTripEstimation | null;
+  tripError: string | null;
   handleDropOffAddressSelected: (address: string) => Promise<void>;
 };
 
@@ -68,10 +69,12 @@ export function useAirportPickupBooking(
   const autofilledFlightIdRef = useRef<string | null>(null);
   const [tripEstimation, setTripEstimation] =
     useState<AirportTripEstimation | null>(null);
+  const [tripError, setTripError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isAirport || !validatedFlight) {
       setTripEstimation(null);
+      setTripError(null);
     }
   }, [isAirport, validatedFlight]);
 
@@ -83,10 +86,12 @@ export function useAirportPickupBooking(
       const trimmed = address.trim();
       if (!trimmed) {
         setTripEstimation(null);
+        setTripError(null);
         setValue("pickupTime", undefined, { shouldValidate: false });
         return;
       }
 
+      setTripError(null);
       try {
         const duration = await fetchTripDuration(trimmed);
         const arrivalTime = getFlightArrivalTime(flight);
@@ -106,6 +111,9 @@ export function useAirportPickupBooking(
         form.clearErrors("dropOffAddress");
       } catch {
         setTripEstimation(null);
+        setTripError(
+          "We couldn't calculate this trip. Check the drop-off address and try again.",
+        );
         setValue("pickupTime", undefined, { shouldValidate: false });
       }
     },
@@ -152,6 +160,7 @@ export function useAirportPickupBooking(
     isCalculatingDuration,
     hasValidatedFlight: validatedFlight != null,
     tripEstimation,
+    tripError,
     handleDropOffAddressSelected: applyWindowForDropOff,
   };
 }

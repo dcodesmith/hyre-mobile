@@ -6,7 +6,6 @@ import { DatePicker } from "@/components/ui/date-picker";
 import type { CarBookingFormReturn } from "@/hooks/use-car-booking-form";
 import {
   AIRPORT_PICKUP_BOOKING_TYPE,
-  BOOKING_TYPE_LABELS,
   BOOKING_TYPE_OPTIONS_MAP,
   DAY_BOOKING_TYPE,
 } from "@/lib/booking-types";
@@ -14,10 +13,10 @@ import type { CarDetail, CostBreakdownData } from "@/lib/car-detail-types";
 import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import dayjs from "dayjs";
+import { ChevronDown } from "lucide-react-native";
+import type { ReactNode } from "react";
+import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
-
-/** hireApp / worker: discounted list price emphasis */
-const DISCOUNT_PRICE_COLOR = "#D32F2F";
 
 function FieldError({ error }: { readonly error?: string }) {
   if (!error) return null;
@@ -37,6 +36,10 @@ interface BookingDetailsCardProps {
   readonly flightError?: string | null;
   readonly isValidatingFlight?: boolean;
   readonly onDropOffAddressSelected?: (address: string) => void;
+  readonly guestDetails?: ReactNode;
+  readonly phoneVerification?: ReactNode;
+  readonly addons?: ReactNode;
+  readonly tripDetails?: ReactNode;
 }
 
 /**
@@ -55,7 +58,12 @@ export function BookingDetailsCard({
   flightError,
   isValidatingFlight = false,
   onDropOffAddressSelected,
+  guestDetails,
+  phoneVerification,
+  addons,
+  tripDetails,
 }: BookingDetailsCardProps) {
+  const [isOpen, setIsOpen] = useState(true);
   const { form, values, constraints, handlers } = booking;
   const {
     formState: { errors },
@@ -74,39 +82,44 @@ export function BookingDetailsCard({
   } = values;
 
   return (
-    <View collapsable={false}>
-      <View
-        className="overflow-visible rounded border border-neutral-200 bg-white shadow-xl"
-        style={{ overflow: "visible" }}
-        collapsable={false}
+    <View
+      className="overflow-visible rounded-lg border border-gray-200 bg-white px-4 py-6"
+      style={{
+        overflow: "visible",
+        boxShadow: "0 4px 20px rgba(0, 0, 0, 0.07)",
+      }}
+      collapsable={false}
+    >
+      <Pressable
+        onPress={() => setIsOpen((current) => !current)}
+        className="w-full flex-row items-center justify-between gap-3"
+        hitSlop={12}
+        accessibilityRole="button"
+        accessibilityLabel="Book a service"
+        accessibilityState={{ expanded: isOpen }}
       >
-        <View className="flex-row items-center justify-between gap-2 px-4 py-4 lg:px-6">
-          <View className="min-w-0 flex-1 flex-row flex-wrap items-baseline gap-x-2 gap-y-1">
-            {pricing.originalBaseRate == null ? (
-              <Text className="font-bold leading-none text-gray-900">
-                {formatCurrency(pricing.baseRate)}
-              </Text>
-            ) : (
-              <>
-                <Text className="text-sm text-gray-400 line-through">
-                  {formatCurrency(pricing.originalBaseRate)}
-                </Text>
-                <Text
-                  className="font-bold leading-none"
-                  style={{ color: DISCOUNT_PRICE_COLOR }}
-                >
-                  {formatCurrency(pricing.baseRate)}
-                </Text>
-              </>
-            )}
-            <Text className="text-sm font-normal text-gray-500">
-              / {BOOKING_TYPE_LABELS[bookingType].perUnit}
-            </Text>
-          </View>
+        <Text className="text-base font-semibold leading-5 text-gray-900">
+          Book a service
+        </Text>
+        <View
+          className="shrink-0"
+          style={{
+            width: 16,
+            height: 16,
+            transform: [{ rotate: isOpen ? "180deg" : "0deg" }],
+          }}
+        >
+          <ChevronDown size={16} color="#111827" />
         </View>
-        {/* Explicit mt-* between sections: RN Yoga can mis-measure gap after sibling height changes (accordion). */}
-        <View className="flex flex-col px-4 pb-6 lg:px-6" collapsable={false}>
-          <View className="flex flex-col gap-1">
+      </Pressable>
+
+      {isOpen ? (
+        <View
+          className="mt-4 flex flex-col border-t border-gray-200 pt-6"
+          style={{ overflow: "visible" }}
+          collapsable={false}
+        >
+          <View className="flex flex-col gap-2">
             <Text className="text-sm font-semibold text-gray-900">
               Booking Type
             </Text>
@@ -117,7 +130,7 @@ export function BookingDetailsCard({
             />
           </View>
 
-          <View className="relative z-50 mt-4 flex flex-col gap-1">
+          <View className="relative z-50 mt-6 flex flex-col gap-2">
             <Text className="text-sm font-semibold text-gray-900">
               Select Dates
             </Text>
@@ -125,7 +138,7 @@ export function BookingDetailsCard({
                 section (Pickup Time) doesn't overlap after re-layout. */}
             <View
               className={cn(
-                "h-10",
+                "h-11",
                 isAirport ? "w-full" : "flex-row gap-2",
               )}
             >
@@ -137,11 +150,11 @@ export function BookingDetailsCard({
                 placeholder="Select date"
                 minDate={constraints.fromDateMinDate}
                 triggerClassName={cn(
-                  "h-10",
+                  "h-11",
                   isAirport ? "w-full" : "flex-1 min-w-0",
                 )}
                 buttonClassName={cn(
-                  "h-10 flex-row items-center justify-between rounded-md border border-neutral-200 bg-white px-3 py-2",
+                  "h-11 flex-row items-center justify-between rounded-md border border-neutral-200 bg-white px-3 py-2",
                   errors.from && "border-red-500",
                 )}
                 icon="chevrons"
@@ -154,9 +167,9 @@ export function BookingDetailsCard({
                   }
                   placeholder="Select date"
                   minDate={constraints.toDateMinDate}
-                  triggerClassName="flex-1 min-w-0 h-10"
+                  triggerClassName="flex-1 min-w-0 h-11"
                   buttonClassName={cn(
-                    "h-10 flex-row items-center justify-between rounded-md border border-neutral-200 bg-white px-3 py-2",
+                    "h-11 flex-row items-center justify-between rounded-md border border-neutral-200 bg-white px-3 py-2",
                     errors.to && "border-red-500",
                   )}
                   icon="chevrons"
@@ -167,7 +180,7 @@ export function BookingDetailsCard({
           </View>
 
           <View
-            className="mt-4 flex flex-col gap-1"
+            className="mt-6 flex flex-col gap-2"
             style={{ overflow: "visible", zIndex: isAirport ? 30 : 0 }}
             collapsable={false}
           >
@@ -198,7 +211,7 @@ export function BookingDetailsCard({
           </View>
 
           <View
-            className="mt-4 flex flex-col gap-1"
+            className="mt-6 flex flex-col gap-2"
             style={{ overflow: "visible", zIndex: 10 }}
             collapsable={false}
           >
@@ -208,7 +221,7 @@ export function BookingDetailsCard({
             {isAirport ? (
               <View
                 className={cn(
-                  "min-h-10 w-full justify-center rounded-md border border-neutral-200 bg-gray-50 px-3 py-2",
+                  "min-h-11 w-full justify-center rounded-md border border-neutral-200 bg-gray-50 px-3 py-2",
                   errors.pickupAddress && "border-red-500",
                 )}
               >
@@ -238,7 +251,7 @@ export function BookingDetailsCard({
                 }}
                 placeholder="Start typing to search for an address"
                 inputClassName={cn(
-                  "h-10 text-sm border-neutral-200 bg-white shadow-none",
+                  "h-11 text-sm border-neutral-200 bg-white shadow-none",
                   errors.pickupAddress && "border-red-500",
                 )}
               />
@@ -247,7 +260,7 @@ export function BookingDetailsCard({
           </View>
 
           {isAirport ? null : (
-            <View className="mt-4 flex-row items-center gap-2">
+            <View className="mt-6 flex-row items-center gap-2">
               <Checkbox
                 checked={sameLocation}
                 onCheckedChange={(v) => {
@@ -277,7 +290,7 @@ export function BookingDetailsCard({
 
           {(isAirport || !sameLocation) && (
             <View
-              className="mt-4 flex flex-col gap-1"
+              className="mt-6 flex flex-col gap-2"
               style={{ overflow: "visible", zIndex: 20 }}
               collapsable={false}
             >
@@ -307,7 +320,7 @@ export function BookingDetailsCard({
                 }}
                 placeholder="Start typing to search for an address"
                 inputClassName={cn(
-                  "h-10 text-sm border-neutral-200 bg-white shadow-none",
+                  "h-11 text-sm border-neutral-200 bg-white shadow-none",
                   errors.dropOffAddress && "border-red-500",
                 )}
               />
@@ -318,7 +331,7 @@ export function BookingDetailsCard({
           {pricing.fuelNote &&
             !car.pricingIncludesFuel &&
             bookingType !== AIRPORT_PICKUP_BOOKING_TYPE && (
-              <View className="mt-4 min-w-0 rounded-md bg-slate-100 p-2">
+              <View className="mt-6 min-w-0 rounded-md bg-slate-100 p-2">
                 <Text className="text-sm text-orange-600">
                   <Text className="font-medium">Fuel included: </Text>
                   {pricing.fuelNote}
@@ -330,7 +343,7 @@ export function BookingDetailsCard({
             totalDays > 0 &&
             totalDays <= 2 &&
             bookingType === DAY_BOOKING_TYPE && (
-              <View className="mt-4 flex flex-col gap-1">
+              <View className="mt-6 flex flex-col gap-2">
                 <View className="flex-row items-center gap-2">
                   <Checkbox
                     checked={requiresFullTank}
@@ -354,8 +367,12 @@ export function BookingDetailsCard({
                 </View>
               </View>
             )}
+            {guestDetails}
+            {phoneVerification}
+            {addons}
+            {tripDetails}
         </View>
-      </View>
+      ) : null}
     </View>
   );
 }

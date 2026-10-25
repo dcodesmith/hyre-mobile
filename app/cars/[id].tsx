@@ -4,6 +4,9 @@ import {
   BookingAddons,
   BookingCreditsToggle,
   BookingDetailsCard,
+  BookingPaymentSection,
+  BookingPhoneVerification,
+  BookingRate,
   CarDetailSkeleton,
   CarImageCarousel,
   CarInformationAccordion,
@@ -15,10 +18,12 @@ import {
 import { useAirportPickupBooking } from "@/hooks/use-airport-pickup-booking";
 import { useAuth } from "@/hooks/use-auth";
 import { useBookingCheckout } from "@/hooks/use-booking-checkout";
+import { useBookingPhoneVerification } from "@/hooks/use-booking-phone-verification";
 import { useCarBookingForm } from "@/hooks/use-car-booking-form";
 import { useCarDetailPricing } from "@/hooks/use-car-detail-pricing";
 import { useCarDetail } from "@/hooks/use-car-detail";
 import { useGuestCheckoutForm } from "@/hooks/use-guest-checkout-form";
+import { getBookingIdentityVisibility } from "@/lib/booking-card-display";
 import { AIRPORT_PICKUP_BOOKING_TYPE } from "@/lib/booking-types";
 import { isExpoIos } from "@/lib/expo-platform";
 import { hasActivePromotion } from "@/lib/promotion-utils";
@@ -41,7 +46,7 @@ import {
 export default function CarDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, refreshUser, user } = useAuth();
   const [stickyBottomBarHeight, setStickyBottomBarHeight] = useState(0);
   const params = useLocalSearchParams<{
     id: string;
@@ -80,6 +85,17 @@ export default function CarDetailScreen() {
   });
   const airportPickup = useAirportPickupBooking({ booking });
   const guest = useGuestCheckoutForm();
+  const phoneVerification = useBookingPhoneVerification({
+    isAuthenticated,
+    identityKey: isAuthenticated ? (user?.id ?? "authenticated") : "guest",
+    initialPhoneNumber: isAuthenticated ? (user?.phoneNumber ?? "") : "",
+    initiallyVerified: isAuthenticated && user?.phoneVerified === true,
+    onVerified: isAuthenticated ? refreshUser : undefined,
+  });
+  const identityVisibility = getBookingIdentityVisibility({
+    isAuthenticated,
+    phoneVerified: phoneVerification.phoneVerified,
+  });
   const {
     effectivePricing,
     totalDays,
@@ -116,15 +132,15 @@ export default function CarDetailScreen() {
     }
 
     if (isAuthenticated) {
-      return booking.form.trigger();
+      return phoneVerification.phoneVerified && booking.form.trigger();
     }
 
     const [bookingValid, guestValid] = await Promise.all([
       booking.form.trigger(),
-      guest.form.trigger(["name", "email", "phoneNumber"]),
+      guest.form.trigger(["name", "email"]),
     ]);
 
-    return bookingValid && guestValid;
+    return bookingValid && guestValid && phoneVerification.phoneVerified;
   }, [
     airportPickup.flightError,
     booking.form,
@@ -132,6 +148,7 @@ export default function CarDetailScreen() {
     booking.values.pickupTime,
     guest.form,
     isAuthenticated,
+    phoneVerification.phoneVerified,
   ]);
 
   const { submit, isSubmitting, paymentError } = useBookingCheckout({
@@ -145,6 +162,9 @@ export default function CarDetailScreen() {
     validate,
     getBookingValues: booking.form.getValues,
     getGuestValues: guest.form.getValues,
+    phoneNumber: phoneVerification.phoneNumber,
+    phoneVerificationToken: phoneVerification.verificationToken,
+    onPhoneVerificationRequired: phoneVerification.reset,
     onPriceChanged: handlePriceChanged,
   });
 
@@ -239,8 +259,14 @@ export default function CarDetailScreen() {
           <Text className="px-4 mt-3 mb-2 text-xl font-bold">
             {car.make} {car.model} - {car.year}
           </Text>
+          <View className="mb-4 px-4">
+            <BookingRate
+              pricing={effectivePricing}
+              bookingType={booking.values.bookingType}
+            />
+          </View>
 
-          <View className="bg-white px-4 pt-0" collapsable={false}>
+          <View className="gap-4 bg-white px-4" collapsable={false}>
             <CarInformationAccordion car={car} />
             <BookingDetailsCard
               car={car}
@@ -256,96 +282,96 @@ export default function CarDetailScreen() {
                   .handleDropOffAddressSelected(address)
                   .catch(() => undefined);
               }}
+              guestDetails={
+                identityVisibility.showGuestDetails ? (
+                  <GuestDetailsForm
+                    name={guest.values.name}
+                    email={guest.values.email}
+                    onNameChange={(value) =>
+                      guest.form.setValue("name", value, {
+                        shouldDirty: true,
+                        shouldValidate: Boolean(guest.errors.name),
+                      })
+                    }
+                    onEmailChange={(value) =>
+                      guest.form.setValue("email", value, {
+                        shouldDirty: true,
+                        shouldValidate: Boolean(guest.errors.email),
+                      })
+                    }
+                    errors={guest.errors}
+                  />
+                ) : undefined
+              }
+              phoneVerification={
+                identityVisibility.showPhoneVerification ? (
+                  <BookingPhoneVerification phone={phoneVerification} />
+                ) : undefined
+              }
+              addons={
+                <BookingAddons
+                  addons={addons}
+                  addonsLoading={addonsLoading}
+                  selectedAddonIds={selectedAddonIds}
+                  onSelectionChange={toggleAddon}
+                />
+              }
+              tripDetails={
+                booking.values.bookingType ===
+                AIRPORT_PICKUP_BOOKING_TYPE ? (
+                  <>
+                    {airportPickup.tripError ? (
+                      <View
+                        className="mt-6 rounded-md border border-red-200 bg-red-50 px-3 py-2"
+                        accessibilityRole="alert"
+                      >
+                        <Text className="text-sm text-red-800">
+                          {airportPickup.tripError}
+                        </Text>
+                      </View>
+                    ) : null}
+                    {booking.values.dropOffAddress?.trim() &&
+                    airportPickup.hasValidatedFlight &&
+                    (airportPickup.isCalculatingDuration ||
+                      airportPickup.tripEstimation) ? (
+                      airportPickup.isCalculatingDuration ? (
+                        <AirportTripDetailsSkeleton />
+                      ) : airportPickup.tripEstimation ? (
+                        <AirportTripDetails
+                          estimation={airportPickup.tripEstimation}
+                        />
+                      ) : null
+                    ) : null}
+                  </>
+                ) : undefined
+              }
             />
           </View>
 
-          {/* hireApp parity: outer column has `space-y-4` (16px) and enough
-              bottom padding to clear every sticky-footer variant. */}
-          <View
-            className="flex-col px-4 mt-4 gap-4"
-            style={{
-              paddingBottom:
-                stickyBottomBarHeight > 0
-                  ? stickyBottomBarHeight + 16
-                  : isAuthenticated
-                    ? 160
-                    : 192,
-            }}
-          >
-            {!isAuthenticated && (
-              <View>
-                <Text className="mb-2 text-sm font-semibold text-gray-950">
-                  Guest Details
-                </Text>
-                <GuestDetailsForm
-                  name={guest.values.name}
-                  email={guest.values.email}
-                  phoneNumber={guest.values.phoneNumber}
-                  onNameChange={(value) =>
-                    guest.form.setValue("name", value, {
-                      shouldDirty: true,
-                      shouldValidate: Boolean(guest.errors.name),
-                    })
-                  }
-                  onEmailChange={(value) =>
-                    guest.form.setValue("email", value, {
-                      shouldDirty: true,
-                      shouldValidate: Boolean(guest.errors.email),
-                    })
-                  }
-                  onPhoneNumberChange={(value) =>
-                    guest.form.setValue("phoneNumber", value, {
-                      shouldDirty: true,
-                      shouldValidate: Boolean(guest.errors.phoneNumber),
-                    })
-                  }
-                  errors={guest.errors}
-                />
-              </View>
-            )}
-
-            <BookingAddons
-              addons={addons}
-              addonsLoading={addonsLoading}
-              selectedAddonIds={selectedAddonIds}
-              onSelectionChange={toggleAddon}
-            />
-
+          {availableCredits > 0 && creditLimit > 0 ? (
+            <View className="mt-4 px-4">
             <BookingCreditsToggle
               availableCredits={availableCredits}
               creditLimit={creditLimit}
               applyCredits={applyCredits}
               onApplyCreditsChange={setApplyCredits}
             />
+            </View>
+          ) : null}
 
-            {booking.values.bookingType === AIRPORT_PICKUP_BOOKING_TYPE &&
-            booking.values.dropOffAddress?.trim() &&
-            airportPickup.hasValidatedFlight &&
-            (airportPickup.isCalculatingDuration ||
-              airportPickup.tripEstimation) ? (
-              <View>
-                {airportPickup.isCalculatingDuration ? (
-                  <AirportTripDetailsSkeleton />
-                ) : airportPickup.tripEstimation ? (
-                  <AirportTripDetails
-                    estimation={airportPickup.tripEstimation}
-                  />
-                ) : null}
-              </View>
-            ) : null}
-
-            <View>
-              <Text className="mb-2 text-sm font-semibold text-gray-950">
-                Cost Breakdown
-              </Text>
+          <View
+            style={{
+              paddingBottom: stickyBottomBarHeight > 0 ? stickyBottomBarHeight + 16 : 160,
+            }}
+          >
+            <BookingPaymentSection>
               <CostBreakdown
                 pricing={effectivePricing}
                 bookingType={booking.values.bookingType}
                 pricingPreview={pricingPreview}
                 estimatedAddons={estimatedAddons}
-                hideTotal
               />
-            </View>
+            </BookingPaymentSection>
           </View>
         </ScrollView>
 
@@ -358,7 +384,11 @@ export default function CarDetailScreen() {
             airportPickup.isValidatingFlight ||
             airportPickup.isCalculatingDuration
           }
-          disabled={!pricingIsAuthoritative}
+          disabled={
+            !pricingIsAuthoritative ||
+            !phoneVerification.phoneVerified ||
+            phoneVerification.isSubmitting
+          }
           onPayNow={submit}
           onSignIn={handleSignIn}
           error={

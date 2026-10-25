@@ -5,15 +5,12 @@ import { Text, View } from "react-native";
 interface GuestDetailsFormProps {
   readonly name: string;
   readonly email: string;
-  readonly phoneNumber: string;
   readonly onNameChange: (value: string) => void;
   readonly onEmailChange: (value: string) => void;
-  readonly onPhoneNumberChange: (value: string) => void;
   readonly className?: string;
   readonly errors?: {
     name?: string;
     email?: string;
-    phoneNumber?: string;
   };
 }
 
@@ -25,23 +22,17 @@ function FieldError({ error }: { readonly error?: string }) {
 export function GuestDetailsForm({
   name,
   email,
-  phoneNumber,
   onNameChange,
   onEmailChange,
-  onPhoneNumberChange,
   className,
   errors,
 }: GuestDetailsFormProps) {
   return (
-    <View
-      className={cn(
-        "bg-white border border-neutral-200 rounded shadow-xl px-4 py-4",
-        className
-      )}
-    >
-      <View className="gap-4">
-        <View className="space-y-1">
-          <Text className="text-sm font-semibold text-gray-900">Name</Text>
+    <View className={cn("mt-6 gap-6", className)}>
+        <View className="gap-2">
+          <Text className="text-sm font-semibold text-gray-900">
+            Full Name
+          </Text>
           <Input
             value={name}
             onChangeText={onNameChange}
@@ -49,15 +40,17 @@ export function GuestDetailsForm({
             autoCapitalize="words"
             autoComplete="name"
             className={cn(
-              "h-10 text-sm border-neutral-200 bg-white shadow-none",
+              "h-11 text-sm border-neutral-200 bg-white shadow-none",
               errors?.name && "border-red-500"
             )}
           />
           <FieldError error={errors?.name} />
         </View>
 
-        <View className="space-y-1">
-          <Text className="text-sm font-semibold text-gray-900">Email</Text>
+        <View className="gap-2">
+          <Text className="text-sm font-semibold text-gray-900">
+            Email Address
+          </Text>
           <Input
             value={email}
             onChangeText={onEmailChange}
@@ -66,31 +59,12 @@ export function GuestDetailsForm({
             autoCapitalize="none"
             autoComplete="email"
             className={cn(
-              "h-10 text-sm border-neutral-200 bg-white shadow-none",
+              "h-11 text-sm border-neutral-200 bg-white shadow-none",
               errors?.email && "border-red-500"
             )}
           />
           <FieldError error={errors?.email} />
         </View>
-
-        <View className="space-y-1">
-          <Text className="text-sm font-semibold text-gray-900">
-            Phone Number
-          </Text>
-          <Input
-            value={phoneNumber}
-            onChangeText={onPhoneNumberChange}
-            placeholder="Enter your phone number"
-            keyboardType="phone-pad"
-            autoComplete="tel"
-            className={cn(
-              "h-10 text-sm border-neutral-200 bg-white shadow-none",
-              errors?.phoneNumber && "border-red-500"
-            )}
-          />
-          <FieldError error={errors?.phoneNumber} />
-        </View>
-      </View>
     </View>
   );
 }

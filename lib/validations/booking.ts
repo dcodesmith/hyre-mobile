@@ -16,7 +16,6 @@ export const guestCheckoutFormSchema = z.object({
     .refine((value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value), {
       message: "Invalid email address",
     }),
-  phoneNumber: z.string().trim().min(1, "Phone number is required"),
 });
 
 export type GuestCheckoutFormValues = z.infer<typeof guestCheckoutFormSchema>;
