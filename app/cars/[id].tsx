@@ -161,10 +161,11 @@ export default function CarDetailScreen() {
     phoneVerification.phoneVerified,
   ]);
 
+  const resetPhoneVerification = phoneVerification.reset;
   const handlePhoneVerificationRequired = useCallback(() => {
-    phoneVerification.reset();
+    resetPhoneVerification();
     setIsBookingCardOpen(true);
-  }, [phoneVerification.reset]);
+  }, [resetPhoneVerification]);
 
   const { submit, isSubmitting, paymentError } = useBookingCheckout({
     carId,
