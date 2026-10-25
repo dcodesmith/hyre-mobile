@@ -11,7 +11,14 @@ import {
   phoneOtpCodeSchema,
 } from "@/lib/validations/auth";
 import { normalizePhoneOtpInput } from "@/lib/phone-verification-continuation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+
+function verificationErrorMessage(error: unknown) {
+  return getAuthErrorMessage(
+    error,
+    error instanceof Error ? error.message : undefined,
+  );
+}
 
 type UseBookingPhoneVerificationArgs = {
   isAuthenticated: boolean;
@@ -37,7 +44,9 @@ export function useBookingPhoneVerification({
   const [notice, setNotice] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const identityRef = useRef(identityKey);
-  identityRef.current = identityKey;
+  useLayoutEffect(() => {
+    identityRef.current = identityKey;
+  }, [identityKey]);
 
   useEffect(() => {
     setPhoneNumber(initialPhoneNumber);
@@ -74,7 +83,7 @@ export function useBookingPhoneVerification({
         if (isResend) setNotice("A new code is on its way.");
       } catch (requestError) {
         if (identityRef.current === requestIdentity) {
-          setError(getAuthErrorMessage(requestError));
+          setError(verificationErrorMessage(requestError));
         }
       } finally {
         if (identityRef.current === requestIdentity) {
@@ -117,7 +126,7 @@ export function useBookingPhoneVerification({
       setPhoneVerified(true);
     } catch (verificationError) {
       if (identityRef.current === requestIdentity) {
-        setError(getAuthErrorMessage(verificationError));
+        setError(verificationErrorMessage(verificationError));
       }
     } finally {
       if (identityRef.current === requestIdentity) {

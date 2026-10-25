@@ -48,6 +48,7 @@ export default function CarDetailScreen() {
   const insets = useSafeAreaInsets();
   const { isAuthenticated, refreshUser, user } = useAuth();
   const [stickyBottomBarHeight, setStickyBottomBarHeight] = useState(0);
+  const [isBookingCardOpen, setIsBookingCardOpen] = useState(true);
   const params = useLocalSearchParams<{
     id: string;
     searchId?: string;
@@ -121,26 +122,35 @@ export default function CarDetailScreen() {
   // Inline error messages (below each field) come from the RHF instances, so
   // `validate` only decides whether to proceed with submission.
   const validate = useCallback(async () => {
+    const revealCard = () => setIsBookingCardOpen(true);
+
     if (airportPickup.flightError) {
+      revealCard();
       return false;
     }
 
     const isAirport =
       booking.values.bookingType === AIRPORT_PICKUP_BOOKING_TYPE;
     if (isAirport && !booking.values.pickupTime?.trim()) {
+      revealCard();
       return false;
     }
 
     if (isAuthenticated) {
-      return phoneVerification.phoneVerified && booking.form.trigger();
+      const bookingValid = await booking.form.trigger();
+      const valid = phoneVerification.phoneVerified && bookingValid;
+      if (!valid) revealCard();
+      return valid;
     }
 
     const [bookingValid, guestValid] = await Promise.all([
       booking.form.trigger(),
       guest.form.trigger(["name", "email"]),
     ]);
-
-    return bookingValid && guestValid && phoneVerification.phoneVerified;
+    const valid =
+      bookingValid && guestValid && phoneVerification.phoneVerified;
+    if (!valid) revealCard();
+    return valid;
   }, [
     airportPickup.flightError,
     booking.form,
@@ -150,6 +160,11 @@ export default function CarDetailScreen() {
     isAuthenticated,
     phoneVerification.phoneVerified,
   ]);
+
+  const handlePhoneVerificationRequired = useCallback(() => {
+    phoneVerification.reset();
+    setIsBookingCardOpen(true);
+  }, [phoneVerification.reset]);
 
   const { submit, isSubmitting, paymentError } = useBookingCheckout({
     carId,
@@ -164,7 +179,7 @@ export default function CarDetailScreen() {
     getGuestValues: guest.form.getValues,
     phoneNumber: phoneVerification.phoneNumber,
     phoneVerificationToken: phoneVerification.verificationToken,
-    onPhoneVerificationRequired: phoneVerification.reset,
+    onPhoneVerificationRequired: handlePhoneVerificationRequired,
     onPriceChanged: handlePriceChanged,
   });
 
@@ -316,6 +331,8 @@ export default function CarDetailScreen() {
                   onSelectionChange={toggleAddon}
                 />
               }
+              isOpen={isBookingCardOpen}
+              onOpenChange={setIsBookingCardOpen}
               tripDetails={
                 booking.values.bookingType ===
                 AIRPORT_PICKUP_BOOKING_TYPE ? (
@@ -394,6 +411,12 @@ export default function CarDetailScreen() {
           error={
             paymentError ?? airportPickup.flightError ?? pricingPreviewError
           }
+          disabledReason={
+            phoneVerification.phoneVerified
+              ? null
+              : "Verify your phone number to continue"
+          }
+          onDisabledReasonPress={() => setIsBookingCardOpen(true)}
           isAuthenticated={isAuthenticated}
           onLayout={(event) =>
             setStickyBottomBarHeight(event.nativeEvent.layout.height)

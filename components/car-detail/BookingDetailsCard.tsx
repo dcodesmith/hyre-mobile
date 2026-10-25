@@ -15,7 +15,6 @@ import { cn } from "@/lib/utils";
 import dayjs from "dayjs";
 import { ChevronDown } from "lucide-react-native";
 import type { ReactNode } from "react";
-import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 
 function FieldError({ error }: { readonly error?: string }) {
@@ -40,6 +39,8 @@ interface BookingDetailsCardProps {
   readonly phoneVerification?: ReactNode;
   readonly addons?: ReactNode;
   readonly tripDetails?: ReactNode;
+  readonly isOpen: boolean;
+  readonly onOpenChange: (open: boolean) => void;
 }
 
 /**
@@ -62,8 +63,9 @@ export function BookingDetailsCard({
   phoneVerification,
   addons,
   tripDetails,
+  isOpen,
+  onOpenChange,
 }: BookingDetailsCardProps) {
-  const [isOpen, setIsOpen] = useState(true);
   const { form, values, constraints, handlers } = booking;
   const {
     formState: { errors },
@@ -91,7 +93,7 @@ export function BookingDetailsCard({
       collapsable={false}
     >
       <Pressable
-        onPress={() => setIsOpen((current) => !current)}
+        onPress={() => onOpenChange(!isOpen)}
         className="w-full flex-row items-center justify-between gap-3"
         hitSlop={12}
         accessibilityRole="button"
