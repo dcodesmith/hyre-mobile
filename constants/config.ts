@@ -87,6 +87,8 @@ export const API_ENDPOINTS = {
   currentUser: "/api/users/me",
   phoneVerifications: "/api/users/me/phone-verifications",
   phoneVerificationChecks: "/api/users/me/phone-verification-checks",
+  guestPhoneVerifications: "/api/bookings/guest-phone-verifications",
+  guestPhoneVerificationChecks: "/api/bookings/guest-phone-verification-checks",
   pushTokens: "/api/users/me/push-tokens",
   referralsUser: "/api/referrals/user",
 } as const;

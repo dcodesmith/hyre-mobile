@@ -9,7 +9,6 @@ import { type UseFormReturn, useForm } from "react-hook-form";
 export type GuestCheckoutErrors = {
   name?: string;
   email?: string;
-  phoneNumber?: string;
 };
 
 export type GuestCheckoutFormReturn = {
@@ -26,7 +25,7 @@ export type GuestCheckoutFormReturn = {
 export function useGuestCheckoutForm(): GuestCheckoutFormReturn {
   const form = useForm<GuestCheckoutFormValues>({
     resolver: zodResolver(guestCheckoutFormSchema),
-    defaultValues: { name: "", email: "", phoneNumber: "" },
+    defaultValues: { name: "", email: "" },
     reValidateMode: "onChange",
   });
   const {
@@ -36,20 +35,18 @@ export function useGuestCheckoutForm(): GuestCheckoutFormReturn {
 
   const name = watch("name");
   const email = watch("email");
-  const phoneNumber = watch("phoneNumber");
 
   const errorsMap = useMemo<GuestCheckoutErrors>(
     () => ({
       name: errors.name?.message,
       email: errors.email?.message,
-      phoneNumber: errors.phoneNumber?.message,
     }),
-    [errors.name?.message, errors.email?.message, errors.phoneNumber?.message],
+    [errors.name?.message, errors.email?.message],
   );
 
   return {
     form,
-    values: { name, email, phoneNumber },
+    values: { name, email },
     errors: errorsMap,
   };
 }

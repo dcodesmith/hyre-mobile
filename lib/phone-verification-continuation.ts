@@ -43,56 +43,12 @@ export function readPhoneVerificationContinuation(params: {
   };
 }
 
-export function phoneVerificationRouteParams(continuation: {
-  redirectTo?: string;
-  resumePrevious?: boolean;
-}): { redirectTo?: string; resumePrevious?: "true" } {
-  return {
-    ...(continuation.redirectTo ? { redirectTo: continuation.redirectTo } : {}),
-    ...(continuation.resumePrevious ? { resumePrevious: "true" as const } : {}),
-  };
-}
-
-export function phoneVerificationRouteDecision(input: {
-  pathname: string;
-  isAlreadyRouting: boolean;
-  continuation: { redirectTo?: string; resumePrevious?: boolean };
-}): {
-  method: "push" | "replace";
-  pathname: typeof PHONE_VERIFICATION_PATHNAME;
-  params: { redirectTo?: string; resumePrevious?: "true" };
-} | null {
-  if (
-    input.pathname === PHONE_VERIFICATION_PATHNAME ||
-    input.isAlreadyRouting
-  ) {
-    return null;
-  }
-
-  return {
-    method: input.continuation.resumePrevious ? "push" : "replace",
-    pathname: PHONE_VERIFICATION_PATHNAME,
-    params: phoneVerificationRouteParams(input.continuation),
-  };
-}
-
-export function shouldRequirePhoneVerification(input: {
-  isHydrating: boolean;
-  hasAuthToken: boolean;
-  phoneVerified: boolean | undefined;
-}): boolean {
-  return (
-    !input.isHydrating && input.hasAuthToken && input.phoneVerified === false
-  );
-}
-
-/** Signed-in users with a verified phone leave login. Phone setup defers that. */
+/** Route-based login continues; booking enforces phone verification inline. */
 export function postLoginContinuation(input: {
-  phoneVerified: boolean;
   resumePrevious: boolean;
   redirectTo?: string;
 }): { method: "replace"; href: SafeContinuationHref } | null {
-  if (!input.phoneVerified || input.resumePrevious) return null;
+  if (input.resumePrevious) return null;
   return { method: "replace", href: resolvePostLoginHref(input.redirectTo) };
 }
 

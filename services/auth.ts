@@ -63,6 +63,10 @@ export type PhoneVerificationResponse = {
   phoneNumber: string;
 };
 
+export type GuestPhoneVerificationResponse = PhoneVerificationResponse & {
+  verificationToken?: string;
+};
+
 export type VerifyOtpResponse = {
   token?: string;
 };
@@ -151,6 +155,21 @@ export const checkPhoneVerification = (phoneNumber: string, code: string) =>
     PhoneVerificationResponse,
     { phoneNumber: string; code: string }
   >(API_ENDPOINTS.phoneVerificationChecks, { phoneNumber, code });
+
+export const requestGuestPhoneVerification = (phoneNumber: string) =>
+  postJson<GuestPhoneVerificationResponse, { phoneNumber: string }>(
+    API_ENDPOINTS.guestPhoneVerifications,
+    { phoneNumber },
+  );
+
+export const checkGuestPhoneVerification = (
+  phoneNumber: string,
+  code: string,
+) =>
+  postJson<
+    GuestPhoneVerificationResponse,
+    { phoneNumber: string; code: string }
+  >(API_ENDPOINTS.guestPhoneVerificationChecks, { phoneNumber, code });
 
 export const logout = (token: string) => {
   return postJsonWithAuth<{ success: boolean }, Record<string, never>>(

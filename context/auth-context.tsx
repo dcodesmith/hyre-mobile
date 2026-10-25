@@ -11,6 +11,7 @@ export type AuthContextValue = {
   user: UserProfile | null;
   userEmail: string | null;
   openLoginModal: () => void;
+  refreshUser: () => Promise<UserProfile>;
   completePhoneVerification: (
     redirectTo?: string,
     resumePrevious?: boolean,

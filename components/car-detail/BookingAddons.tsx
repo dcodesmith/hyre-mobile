@@ -22,9 +22,12 @@ export function BookingAddons({
   if (!addonsLoading && addons.length === 0) return null;
 
   return (
-    <View>
-      <Text className="mb-2 text-sm font-semibold text-foreground">Add-ons</Text>
-      <View className="gap-3 rounded border border-neutral-200 bg-white px-4 py-4 shadow-xl">
+    <View className="mt-6">
+      <Text className="mb-2 text-sm leading-5 text-gray-900">
+        <Text className="font-semibold">Add-ons </Text>
+        <Text className="font-normal">(optional)</Text>
+      </Text>
+      <View className="gap-3 rounded-lg border border-gray-200 bg-white px-3 py-4">
         {addonsLoading && addons.length === 0 ? (
           <Text className="text-sm text-muted-foreground">
             Loading add-ons…
@@ -66,7 +69,7 @@ export function BookingAddons({
                     </Text>
                   </View>
                   {addon.description ? (
-                    <Text className="mt-0.5 text-xs leading-4 text-muted-foreground">
+                    <Text className="mt-0.5 text-sm leading-6 text-gray-900">
                       {addon.description}
                     </Text>
                   ) : null}

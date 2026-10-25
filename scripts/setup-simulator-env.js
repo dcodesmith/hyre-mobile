@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
  * Updates .env for development.
- * Default: local API on localhost:3000 (iOS simulator reaches it directly;
+ * Default: hosted API on fly.io.
+ * Pass --local for localhost:3000 (iOS simulator reaches it directly;
  * Android emulator via `adb reverse tcp:3000`, run by the start scripts).
- * Pass --hosted to use the fly.io dev environment (for physical phones).
  *
- * Usage: node scripts/setup-simulator-env.js [--hosted]
+ * Usage: node scripts/setup-simulator-env.js [--local]
  * Or: pnpm run setup:simulator
  */
 const fs = require("node:fs");
@@ -14,8 +14,8 @@ const path = require("node:path");
 const HOSTED_API_URL = "https://hyre-worker-nestjs.fly.dev";
 const LOCAL_API_URL = "http://localhost:3000";
 
-const useHostedApi = process.argv.includes("--hosted");
-const apiUrl = useHostedApi ? HOSTED_API_URL : LOCAL_API_URL;
+const useLocalApi = process.argv.includes("--local");
+const apiUrl = useLocalApi ? LOCAL_API_URL : HOSTED_API_URL;
 const envPath = path.join(__dirname, "..", ".env");
 
 const existing = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf8") : "";

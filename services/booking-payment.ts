@@ -28,6 +28,7 @@ export type CreateBookingCheckoutPayload = {
   guestEmail?: string;
   guestName?: string;
   guestPhone?: string;
+  guestPhoneVerificationToken?: string;
   searchId?: string;
 };
 
@@ -167,20 +168,6 @@ export function isPhoneVerificationRequired(error: unknown): boolean {
     error instanceof ApiError &&
     error.code === "BOOKING_PHONE_VERIFICATION_REQUIRED"
   );
-}
-
-export function bookingCheckoutPhoneVerificationRoute(
-  error: unknown,
-  isAuthenticated: boolean,
-): {
-  pathname: "/phone-verification";
-  params: { resumePrevious: "true"; reason: "booking" };
-} | null {
-  if (!isAuthenticated || !isPhoneVerificationRequired(error)) return null;
-  return {
-    pathname: "/phone-verification",
-    params: { resumePrevious: "true", reason: "booking" },
-  };
 }
 
 export async function fetchBookingPaymentStatus(
