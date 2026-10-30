@@ -17,6 +17,9 @@ interface StickyBottomBarProps {
   readonly onPayNow: () => void;
   readonly onSignIn: () => void;
   readonly error?: string | null;
+  /** Shown above Pay Now when the button is disabled and there is no error. */
+  readonly disabledReason?: string | null;
+  readonly onDisabledReasonPress?: () => void;
   /** When true, primary CTA is "Pay Now" and the guest sign-in row is hidden. */
   readonly isAuthenticated?: boolean;
   readonly onLayout?: (event: LayoutChangeEvent) => void;
@@ -30,13 +33,25 @@ export function StickyBottomBar({
   onPayNow,
   onSignIn,
   error,
+  disabledReason,
+  onDisabledReasonPress,
   isAuthenticated = false,
   onLayout,
 }: StickyBottomBarProps) {
   const content = (
     <>
       {children}
-      {error ? <Text className="text-sm text-red-800">{error}</Text> : null}
+      {error ? (
+        <Text className="text-sm text-red-800">{error}</Text>
+      ) : disabledReason ? (
+        <Pressable
+          onPress={onDisabledReasonPress}
+          disabled={!onDisabledReasonPress}
+          accessibilityRole={onDisabledReasonPress ? "button" : undefined}
+        >
+          <Text className="text-sm text-gray-700">{disabledReason}</Text>
+        </Pressable>
+      ) : null}
       <Button
         className="h-12 w-full rounded-md bg-neutral-900"
         onPress={onPayNow}
