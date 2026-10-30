@@ -121,7 +121,6 @@ export function CostBreakdown({
     fuelUpgradeCost,
     referralDiscountAmount = 0,
     creditsUsed = 0,
-    savingsAmount = 0,
   } = pricing;
 
   const qty = Math.max(totalDays, 1);
@@ -193,11 +192,6 @@ export function CostBreakdown({
           </View>
         ) : null}
         <SimpleRow label={`VAT (${vatRate.toFixed(1)}%)`} value={vat} />
-      </View>
-
-      <View className="my-4 h-px bg-gray-300" />
-
-      <View className="gap-2.5 rounded-lg bg-white px-3 py-4">
         {creditsUsed > 0 ? (
           <>
             <SimpleRow label="Subtotal" value={subtotal} />
@@ -216,31 +210,44 @@ export function CostBreakdown({
             </View>
           </>
         ) : null}
-        <View className="flex-row items-center justify-between gap-3">
-          <Text className="text-sm font-semibold leading-5 text-gray-950">
-            Order Total:
+      </View>
+    </View>
+  );
+}
+
+export function OrderTotal({
+  total,
+  savingsAmount = 0,
+}: {
+  readonly total: number;
+  readonly savingsAmount?: number;
+}) {
+  return (
+    <View className="w-full gap-2.5 rounded-lg bg-white px-3 py-4">
+      <View className="flex-row items-center justify-between gap-3">
+        <Text className="text-sm font-semibold leading-5 text-gray-900">
+          Order Total:
+        </Text>
+        <Text
+          className="flex-1 text-right text-base font-semibold leading-6 text-gray-900"
+          style={{ fontVariant: ["tabular-nums"] }}
+        >
+          {formatCurrency(total)}
+        </Text>
+      </View>
+      {savingsAmount > 0 ? (
+        <View className="flex-row justify-between gap-3">
+          <Text className="text-sm font-medium leading-none text-emerald-500">
+            You save
           </Text>
           <Text
-            className="text-base font-semibold leading-6 text-gray-950"
+            className="text-sm font-medium leading-none text-emerald-500"
             style={{ fontVariant: ["tabular-nums"] }}
           >
-            {formatCurrency(finalTotal)}
+            {formatCurrency(savingsAmount)}
           </Text>
         </View>
-        {savingsAmount > 0 ? (
-          <View className="flex-row justify-between gap-3">
-            <Text className="text-sm font-medium leading-none text-emerald-500">
-              You save
-            </Text>
-            <Text
-              className="text-sm font-medium leading-none text-emerald-500"
-              style={{ fontVariant: ["tabular-nums"] }}
-            >
-              {formatCurrency(savingsAmount)}
-            </Text>
-          </View>
-        ) : null}
-      </View>
+      ) : null}
     </View>
   );
 }

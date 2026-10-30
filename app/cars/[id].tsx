@@ -4,7 +4,6 @@ import {
   BookingAddons,
   BookingCreditsToggle,
   BookingDetailsCard,
-  BookingPaymentSection,
   BookingPhoneVerification,
   BookingRate,
   CarDetailSkeleton,
@@ -12,6 +11,7 @@ import {
   CarInformationAccordion,
   CarReviewsSection,
   CostBreakdown,
+  OrderTotal,
   GuestDetailsForm,
   StickyBottomBar,
 } from "@/components/car-detail";
@@ -236,6 +236,39 @@ export default function CarDetailScreen() {
 
   const carName = `${car.make} ${car.model} (${car.year})`;
   const statusBarScrimHeight = Math.max(insets.top, 24);
+  const paymentPanel = (
+    <StickyBottomBar
+      sticky={isBookingCardOpen}
+      isSubmitting={
+        isSubmitting ||
+        airportPickup.isValidatingFlight ||
+        airportPickup.isCalculatingDuration
+      }
+      disabled={
+        !pricingIsAuthoritative ||
+        !phoneVerification.phoneVerified ||
+        phoneVerification.isSubmitting
+      }
+      disabledReason={
+        phoneVerification.phoneVerified
+          ? null
+          : "Verify your phone number to continue"
+      }
+      onDisabledReasonPress={() => setIsBookingCardOpen(true)}
+      onPayNow={submit}
+      onSignIn={handleSignIn}
+      error={paymentError ?? airportPickup.flightError ?? pricingPreviewError}
+      isAuthenticated={isAuthenticated}
+      onLayout={(event) =>
+        setStickyBottomBarHeight(event.nativeEvent.layout.height)
+      }
+    >
+      <OrderTotal
+        total={effectivePricing.finalTotal}
+        savingsAmount={effectivePricing.savingsAmount}
+      />
+    </StickyBottomBar>
+  );
 
   return (
     <SafeAreaView
@@ -377,52 +410,24 @@ export default function CarDetailScreen() {
             </View>
           ) : null}
 
-          <View
-            style={{
-              paddingBottom: stickyBottomBarHeight > 0 ? stickyBottomBarHeight + 16 : 160,
-            }}
-          >
-            <BookingPaymentSection>
+          <View className="mt-4 bg-gray-100">
+            <View className="px-4 py-4">
               <CostBreakdown
                 pricing={effectivePricing}
                 bookingType={booking.values.bookingType}
                 pricingPreview={pricingPreview}
                 estimatedAddons={estimatedAddons}
               />
-            </BookingPaymentSection>
+            </View>
+            {isBookingCardOpen ? (
+              <View style={{ height: stickyBottomBarHeight }} />
+            ) : (
+              paymentPanel
+            )}
           </View>
         </ScrollView>
 
-        <StickyBottomBar
-          total={effectivePricing.finalTotal}
-          originalTotal={effectivePricing.originalGrandTotal}
-          savingsAmount={effectivePricing.savingsAmount}
-          isSubmitting={
-            isSubmitting ||
-            airportPickup.isValidatingFlight ||
-            airportPickup.isCalculatingDuration
-          }
-          disabled={
-            !pricingIsAuthoritative ||
-            !phoneVerification.phoneVerified ||
-            phoneVerification.isSubmitting
-          }
-          onPayNow={submit}
-          onSignIn={handleSignIn}
-          error={
-            paymentError ?? airportPickup.flightError ?? pricingPreviewError
-          }
-          disabledReason={
-            phoneVerification.phoneVerified
-              ? null
-              : "Verify your phone number to continue"
-          }
-          onDisabledReasonPress={() => setIsBookingCardOpen(true)}
-          isAuthenticated={isAuthenticated}
-          onLayout={(event) =>
-            setStickyBottomBarHeight(event.nativeEvent.layout.height)
-          }
-        />
+        {isBookingCardOpen ? paymentPanel : null}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
