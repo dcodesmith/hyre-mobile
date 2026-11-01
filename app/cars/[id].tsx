@@ -249,12 +249,6 @@ export default function CarDetailScreen() {
         !phoneVerification.phoneVerified ||
         phoneVerification.isSubmitting
       }
-      disabledReason={
-        phoneVerification.phoneVerified
-          ? null
-          : "Verify your phone number to continue"
-      }
-      onDisabledReasonPress={() => setIsBookingCardOpen(true)}
       onPayNow={submit}
       onSignIn={handleSignIn}
       error={paymentError ?? airportPickup.flightError ?? pricingPreviewError}
