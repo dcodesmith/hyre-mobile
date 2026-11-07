@@ -303,7 +303,7 @@ export default function CarDetailScreen() {
             <Text className="font-bold" style={{ fontSize: 20, lineHeight: 28 }}>
               {carName}
             </Text>
-            <View className="mt-1">
+            <View className="mt-2">
               <BookingRate
                 pricing={effectivePricing}
                 bookingType={booking.values.bookingType}
