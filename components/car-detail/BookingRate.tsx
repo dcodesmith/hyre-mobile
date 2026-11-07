@@ -34,23 +34,24 @@ export function BookingRate({
             fontVariant: ["tabular-nums"],
           }}
         >
-          {formatCurrency(originalBaseRate)}
+          {formatCurrency(originalBaseRate, { fractionDigits: 0 })}
         </Text>
       ) : null}
-      <Text
-        className={
-          originalBaseRate != null
-            ? "text-xl font-semibold leading-5 text-red-500"
-            : "text-xl font-semibold leading-5 text-gray-900"
-        }
-        style={{ fontVariant: ["tabular-nums"] }}
-      >
-        {formatCurrency(pricing.baseRate)}
+      <View className="flex-row items-baseline gap-1">
+        <Text
+          className={
+            originalBaseRate != null
+              ? "text-xl font-semibold leading-5 text-red-500"
+              : "text-xl font-semibold leading-5 text-gray-900"
+          }
+          style={{ fontVariant: ["tabular-nums"] }}
+        >
+          {formatCurrency(pricing.baseRate, { fractionDigits: 0 })}
+        </Text>
         <Text className="text-xl font-normal leading-5 text-gray-500">
-          {" "}
           {RATE_SUFFIX[bookingType]}
         </Text>
-      </Text>
+      </View>
     </View>
   );
 }

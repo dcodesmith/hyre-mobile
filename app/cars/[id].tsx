@@ -299,8 +299,8 @@ export default function CarDetailScreen() {
           <View className="px-4">
             <CarReviewsSection carId={car.id} />
           </View>
-          <Text className="px-4 mt-3 mb-2 text-xl font-bold">
-            {car.make} {car.model} - {car.year}
+          <Text className="px-4 mt-3 mb-1 text-xl font-bold">
+            {carName}
           </Text>
           <View className="mb-4 px-4">
             <BookingRate
