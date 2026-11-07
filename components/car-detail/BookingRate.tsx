@@ -1,6 +1,6 @@
 import { type BookingType } from "@/lib/booking-types";
 import type { CostBreakdownData } from "@/lib/car-detail-types";
-import { formatCurrency } from "@/lib/currency";
+import { formatRateAmount } from "@/lib/currency";
 import { Text, View } from "react-native";
 
 const RATE_SUFFIX: Record<BookingType, string> = {
@@ -34,21 +34,21 @@ export function BookingRate({
             fontVariant: ["tabular-nums"],
           }}
         >
-          {formatCurrency(originalBaseRate, { fractionDigits: 0 })}
+          {formatRateAmount(originalBaseRate)}
         </Text>
       ) : null}
-      <View className="flex-row items-baseline gap-1">
+      <View className="flex-row flex-wrap items-baseline gap-1 shrink">
         <Text
           className={
             originalBaseRate != null
-              ? "font-semibold text-red-500 text-[16px] leading-6"
-              : "font-semibold text-gray-900 text-[16px] leading-6"
+              ? "shrink font-semibold text-red-500 text-[16px] leading-6"
+              : "shrink font-semibold text-gray-900 text-[16px] leading-6"
           }
           style={{ fontVariant: ["tabular-nums"] }}
         >
-          {formatCurrency(pricing.baseRate, { fractionDigits: 0 })}
+          {formatRateAmount(pricing.baseRate)}
         </Text>
-        <Text className="font-normal text-gray-500 text-[16px] leading-6">
+        <Text className="shrink font-normal text-gray-500 text-[16px] leading-6">
           {RATE_SUFFIX[bookingType]}
         </Text>
       </View>
