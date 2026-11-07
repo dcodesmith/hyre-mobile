@@ -299,14 +299,16 @@ export default function CarDetailScreen() {
           <View className="px-4">
             <CarReviewsSection carId={car.id} />
           </View>
-          <Text className="px-4 mt-3 mb-1 text-xl font-bold">
-            {carName}
-          </Text>
-          <View className="mb-4 px-4">
-            <BookingRate
-              pricing={effectivePricing}
-              bookingType={booking.values.bookingType}
-            />
+          <View className="mb-4 mt-4 pl-4 pr-6">
+            <Text className="font-bold" style={{ fontSize: 20, lineHeight: 28 }}>
+              {carName}
+            </Text>
+            <View className="mt-1">
+              <BookingRate
+                pricing={effectivePricing}
+                bookingType={booking.values.bookingType}
+              />
+            </View>
           </View>
 
           <View className="gap-4 bg-white px-4" collapsable={false}>

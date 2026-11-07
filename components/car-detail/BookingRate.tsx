@@ -28,8 +28,10 @@ export function BookingRate({
     <View className="flex-row flex-wrap items-baseline gap-2">
       {originalBaseRate != null ? (
         <Text
-          className="text-xl font-medium leading-5 text-gray-400"
+          className="font-medium text-gray-400"
           style={{
+            fontSize: 14,
+            lineHeight: 20,
             textDecorationLine: "line-through",
             fontVariant: ["tabular-nums"],
           }}
@@ -41,14 +43,17 @@ export function BookingRate({
         <Text
           className={
             originalBaseRate != null
-              ? "text-xl font-semibold leading-5 text-red-500"
-              : "text-xl font-semibold leading-5 text-gray-900"
+              ? "font-semibold text-red-500"
+              : "font-semibold text-gray-900"
           }
-          style={{ fontVariant: ["tabular-nums"] }}
+          style={{ fontSize: 14, lineHeight: 20, fontVariant: ["tabular-nums"] }}
         >
           {formatCurrency(pricing.baseRate, { fractionDigits: 0 })}
         </Text>
-        <Text className="text-xl font-normal leading-5 text-gray-500">
+        <Text
+          className="font-normal text-gray-500"
+          style={{ fontSize: 14, lineHeight: 20 }}
+        >
           {RATE_SUFFIX[bookingType]}
         </Text>
       </View>
