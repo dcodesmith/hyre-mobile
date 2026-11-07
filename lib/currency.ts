@@ -71,3 +71,18 @@ export function formatCurrency(
     fractionDigits: options.fractionDigits,
   }).format(amount);
 }
+
+/**
+ * Formats a booking rate so whole amounts render without decimals (e.g. ₦120,000),
+ * while fractional amounts (e.g. promotion-discounted rates) keep two decimals
+ * (e.g. ₦9,509.50) instead of being rounded to the nearest unit.
+ */
+export function formatRateAmount(
+  amount: number,
+  options: Omit<FormatCurrencyOptions, "fractionDigits"> = {},
+): string {
+  return formatCurrency(amount, {
+    ...options,
+    fractionDigits: Number.isInteger(amount) ? 0 : 2,
+  });
+}
