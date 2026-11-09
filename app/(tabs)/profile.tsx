@@ -1,9 +1,8 @@
 import { useRouter } from "expo-router";
 import { Check } from "lucide-react-native";
 import { useEffect, useState } from "react";
-import { Alert, Pressable, ScrollView, View } from "react-native";
+import { Alert, Pressable, ScrollView, Text as FieldText, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { AuthTextInput } from "@/components/auth/auth-text-input";
 import {
 	DetailCard,
 	DetailCardBody,
@@ -11,6 +10,7 @@ import {
 	DetailCardTitle,
 } from "@/components/booking-detail-card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 import { useAuth } from "@/hooks/use-auth";
 import { phoneNumberSchema } from "@/lib/validations/auth";
@@ -21,6 +21,11 @@ import {
 } from "@/services/auth";
 
 const emptyToNull = (value: string) => value.trim() || null;
+
+/** Same field classes the booking card passes to `Input`. */
+const bookingFieldClassName =
+	"h-11 text-sm border-neutral-200 bg-white shadow-none";
+const bookingFieldLabelClassName = "text-sm font-semibold text-gray-900";
 
 const formatPhoneNumber = (phoneNumber: string) => {
 	const nigeriaMatch = phoneNumber.match(/^\+234(\d{3})(\d{3})(\d{4})$/);
@@ -40,7 +45,7 @@ function ProfileSwitch({
 			accessibilityLabel="Marketing communications"
 			accessibilityRole="switch"
 			accessibilityState={{ checked: value }}
-			className={`h-6 w-11 rounded-full ${value ? "bg-[#111827]" : "bg-[#D1D5DB]"}`}
+			className={`h-6 w-11 rounded-full ${value ? "bg-[#111827]" : "bg-[#E5E7EB]"}`}
 			onPress={() => onValueChange(!value)}
 		>
 			<View
@@ -144,73 +149,78 @@ export default function ProfileScreen() {
 							</DetailCardHeader>
 
 							<DetailCardBody>
-								<View>
-									<View className="gap-4">
-										<View>
-											<AuthTextInput
-												value={name}
-												onChangeText={setName}
-												placeholder="Enter name"
-												textContentType="name"
-												editable={!isSaving}
-												accessibilityLabel="Name"
-											/>
-										</View>
-										<View>
-											<AuthTextInput
-												value={user?.email ?? ""}
-												placeholder="Enter email"
-												editable={false}
-												inputMode="email"
-												accessibilityLabel="Email"
-											/>
-										</View>
+								<View className="gap-5">
+									<View className="gap-2">
+										<FieldText className={bookingFieldLabelClassName}>
+											Name
+										</FieldText>
+										<Input
+											value={name}
+											onChangeText={setName}
+											placeholder="Enter name"
+											textContentType="name"
+											autoComplete="name"
+											editable={!isSaving}
+											accessibilityLabel="Name"
+											className={bookingFieldClassName}
+										/>
+									</View>
+									<View className="gap-2">
+										<FieldText
+											className={`${bookingFieldLabelClassName} opacity-50`}
+										>
+											Email
+										</FieldText>
+										<Input
+											value={user?.email ?? ""}
+											editable={false}
+											inputMode="email"
+											autoComplete="email"
+											accessibilityLabel="Email"
+											className={bookingFieldClassName}
+										/>
 									</View>
 
 									{isChangingPhone ? (
-										<View className="mt-5 gap-2">
+										<View className="gap-2">
 											<View className="gap-1">
-												<Text className="font-geist-semibold text-sm leading-5 text-[#111827]">
+												<FieldText className="text-sm font-semibold leading-5 text-[#111827]">
 													Phone Number
-												</Text>
+												</FieldText>
 												<Text className="font-geist text-sm leading-5 text-[#374151]">
 													We’ll send you a code to verify this number
 												</Text>
 											</View>
-											<View className="flex-row gap-2">
-												<View className="min-w-0 flex-1">
-													<AuthTextInput
-														value={phoneNumber}
-														onChangeText={setPhoneNumber}
-														placeholder="+234 803 123 4675"
-														autoComplete="tel"
-														textContentType="telephoneNumber"
-														keyboardType="phone-pad"
-														inputMode="tel"
-														editable={!isSendingCode}
-													/>
-												</View>
-												<View className="w-[104px]">
-													<Button
-														className="h-12 w-full rounded-md bg-neutral-900"
-														disabled={
-															isSendingCode || phoneNumber.trim().length === 0
-														}
-														onPress={() => void sendPhoneCode()}
-													>
-														<Text className="text-sm font-medium text-white">
-															{isSendingCode ? "Sending…" : "Send code"}
-														</Text>
-													</Button>
-												</View>
+											<View className="flex-row items-center gap-2">
+												<Input
+													value={phoneNumber}
+													onChangeText={setPhoneNumber}
+													placeholder="+234 803 123 4675"
+													autoComplete="tel"
+													textContentType="telephoneNumber"
+													keyboardType="phone-pad"
+													inputMode="tel"
+													editable={!isSendingCode}
+													accessibilityLabel="Phone Number"
+													className={`${bookingFieldClassName} min-w-0 flex-1`}
+												/>
+												<Button
+													className="h-11 shrink-0 rounded-md bg-neutral-900 px-4"
+													disabled={isSendingCode}
+													onPress={() => void sendPhoneCode()}
+												>
+													<Text className="text-sm font-medium leading-5 text-white">
+														{isSendingCode ? "Sending…" : "Send code"}
+													</Text>
+												</Button>
 											</View>
 										</View>
 									) : (
-										<View className="mt-5 gap-2">
-											<Text className="font-geist-semibold text-sm leading-5 text-[#111827]">
+										<View className="gap-2">
+											<FieldText className="text-sm font-semibold leading-5 text-[#111827]">
 												Phone Number
-											</Text>
-											<View className="h-[66px] flex-row items-center gap-4 rounded-[4px] border border-[#047857] bg-[#D1FAE5] px-[14px]">
+											</FieldText>
+											<View className="flex-row items-center gap-4 rounded border border-[#047857] bg-[#D1FAE5] px-3.5 py-3">
 												<View className="size-8 items-center justify-center rounded-full bg-[#047857]">
 													<Check size={16} color="#FFFFFF" strokeWidth={3} />
 												</View>
@@ -230,40 +240,44 @@ export default function ProfileScreen() {
 												accessibilityRole="button"
 												onPress={() => setIsChangingPhone(true)}
 											>
-												<Text className="font-geist-medium text-sm leading-5 text-neutral-900 underline">
+												<Text className="font-geist-medium text-sm leading-5 text-[#171717] underline">
 													Change phone number
 												</Text>
 											</Pressable>
 										</View>
 									)}
 
-									<View className={isChangingPhone ? "mt-5" : "mt-6"}>
-										<View className="gap-4">
-											<View>
-												<AuthTextInput
-													value={city}
-													onChangeText={setCity}
-													placeholder="Enter city"
-													textContentType="addressCity"
-													editable={!isSaving}
-													accessibilityLabel="City"
-												/>
-											</View>
-											<View>
-												<AuthTextInput
-													value={address}
-													onChangeText={setAddress}
-													placeholder="Enter address"
-													textContentType="fullStreetAddress"
-													editable={!isSaving}
-													accessibilityLabel="Address"
-												/>
-											</View>
-										</View>
+									<View className="gap-2">
+										<FieldText className={bookingFieldLabelClassName}>
+											City
+										</FieldText>
+										<Input
+											value={city}
+											onChangeText={setCity}
+											placeholder="Enter city"
+											textContentType="addressCity"
+											editable={!isSaving}
+											accessibilityLabel="City"
+											className={bookingFieldClassName}
+										/>
+									</View>
+									<View className="gap-2">
+										<FieldText className={bookingFieldLabelClassName}>
+											Address
+										</FieldText>
+										<Input
+											value={address}
+											onChangeText={setAddress}
+											placeholder="Enter address"
+											textContentType="fullStreetAddress"
+											editable={!isSaving}
+											accessibilityLabel="Address"
+											className={bookingFieldClassName}
+										/>
 									</View>
 								</View>
 
-								<View className="mt-[54px] w-[152px]">
+								<View className="mt-6 w-[152px]">
 									<Button
 										className="h-12 w-full rounded-md bg-neutral-900"
 										disabled={isSaving}
@@ -285,7 +299,7 @@ export default function ProfileScreen() {
 							</DetailCardHeader>
 
 							<DetailCardBody>
-								<View className="min-h-16 flex-row items-start justify-between gap-4">
+								<View className="min-h-16 flex-row items-start justify-between gap-8">
 									<View className="min-w-0 flex-1 gap-1">
 										<Text className="font-geist-semibold text-sm leading-5 text-[#111827]">
 											Marketing communications
@@ -303,7 +317,7 @@ export default function ProfileScreen() {
 
 								<View className="mt-3 h-px bg-[#E5E7EB]" />
 
-								<View className="mt-8 gap-8">
+								<View className="mt-8 gap-5">
 									<View className="gap-1">
 										<Text className="font-geist-semibold text-sm leading-5 text-[#111827]">
 											Delete Tripidly Account?
@@ -315,11 +329,8 @@ export default function ProfileScreen() {
 										</Text>
 									</View>
 									<View className="w-[152px]">
-										<Button
-											className="h-12 w-full rounded-md bg-neutral-900"
-											disabled
-										>
-											<Text className="text-sm font-medium text-white">
+										<Button className="h-12 w-full rounded-md bg-destructive/10 shadow-none active:bg-destructive/20">
+											<Text className="text-sm font-medium text-destructive">
 												Delete Account
 											</Text>
 										</Button>
