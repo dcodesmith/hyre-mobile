@@ -2,6 +2,7 @@ import { API_ENDPOINTS } from "@/constants/config";
 import {
   ApiError,
   getJsonWithAuth,
+  patchJsonWithAuth,
   postJson,
   postJsonWithAuth,
 } from "@/lib/api-client";
@@ -43,7 +44,7 @@ export type RequestOtpResponse = {
   success: boolean;
 };
 
-type CurrentUserProfile = {
+export type CurrentUserProfile = {
   name: string | null;
   phoneNumber: string | null;
   city: string | null;
@@ -57,6 +58,11 @@ export type UserProfile = Pick<
   "id" | "email" | "roles"
 > &
   CurrentUserProfile;
+
+export type UpdateCurrentUserPayload = Pick<
+  CurrentUserProfile,
+  "name" | "city" | "address" | "marketingConsent"
+>;
 
 export type PhoneVerificationResponse = {
   status: "PENDING" | "VERIFIED";
@@ -116,6 +122,12 @@ export const fetchCurrentUser = async (token: string) => {
 
   return { ...sessionUser, ...profile };
 };
+
+export const updateCurrentUser = (profile: UpdateCurrentUserPayload) =>
+  patchJsonWithAuth<CurrentUserProfile, UpdateCurrentUserPayload>(
+    API_ENDPOINTS.currentUser,
+    profile,
+  );
 
 export const verifyOtp = async ({
   email,
