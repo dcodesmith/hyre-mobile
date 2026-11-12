@@ -1,6 +1,4 @@
-import { useRouter } from "expo-router";
-import { Check } from "lucide-react-native";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Alert, Pressable, ScrollView, Text as FieldText, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -9,14 +7,23 @@ import {
 	DetailCardHeader,
 	DetailCardTitle,
 } from "@/components/booking-detail-card";
+import { BookingPhoneVerification } from "@/components/car-detail/BookingPhoneVerification";
 import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 import { useAuth } from "@/hooks/use-auth";
-import { phoneNumberSchema } from "@/lib/validations/auth";
+import { useBookingPhoneVerification } from "@/hooks/use-booking-phone-verification";
 import {
+	deleteCurrentUserAccount,
 	getAuthErrorMessage,
-	requestPhoneVerification,
 	updateCurrentUser,
 } from "@/services/auth";
 
@@ -26,12 +33,6 @@ const emptyToNull = (value: string) => value.trim() || null;
 const bookingFieldClassName =
 	"h-11 text-sm border-neutral-200 bg-white shadow-none";
 const bookingFieldLabelClassName = "text-sm font-semibold text-gray-900";
-
-const formatPhoneNumber = (phoneNumber: string) => {
-	const nigeriaMatch = phoneNumber.match(/^\+234(\d{3})(\d{3})(\d{4})$/);
-	if (!nigeriaMatch) return phoneNumber;
-	return `+234 ${nigeriaMatch[1]} ${nigeriaMatch[2]} ${nigeriaMatch[3]}`;
-};
 
 function ProfileSwitch({
 	onValueChange,
@@ -58,29 +59,28 @@ function ProfileSwitch({
 }
 
 export default function ProfileScreen() {
-	const router = useRouter();
-	const { refreshUser, user } = useAuth();
+	const { user } = useAuth();
+	return <ProfileContent key={user?.id ?? "profile"} />;
+}
+
+function ProfileContent() {
+	const { logout, refreshUser, user } = useAuth();
 	const [name, setName] = useState(user?.name ?? "");
 	const [city, setCity] = useState(user?.city ?? "");
 	const [address, setAddress] = useState(user?.address ?? "");
-	const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber ?? "");
 	const [marketingConsent, setMarketingConsent] = useState(
 		user?.marketingConsent ?? false,
 	);
-	const [isChangingPhone, setIsChangingPhone] = useState(
-		user?.phoneVerified !== true,
-	);
 	const [isSaving, setIsSaving] = useState(false);
-	const [isSendingCode, setIsSendingCode] = useState(false);
-
-	useEffect(() => {
-		setName(user?.name ?? "");
-		setCity(user?.city ?? "");
-		setAddress(user?.address ?? "");
-		setPhoneNumber(user?.phoneNumber ?? "");
-		setMarketingConsent(user?.marketingConsent ?? false);
-		setIsChangingPhone(user?.phoneVerified !== true);
-	}, [user]);
+	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+	const [isDeleting, setIsDeleting] = useState(false);
+	const phone = useBookingPhoneVerification({
+		isAuthenticated: true,
+		identityKey: user?.id ?? "profile",
+		initialPhoneNumber: user?.phoneNumber ?? "",
+		initiallyVerified: user?.phoneVerified === true,
+		onVerified: refreshUser,
+	});
 
 	const saveProfile = async () => {
 		setIsSaving(true);
@@ -100,28 +100,21 @@ export default function ProfileScreen() {
 		}
 	};
 
-	const sendPhoneCode = async () => {
-		const parsed = phoneNumberSchema.safeParse(phoneNumber);
-		if (!parsed.success) {
-			Alert.alert(
-				"Could not send code",
-				parsed.error.issues[0]?.message ?? "Enter a valid phone number.",
-			);
-			return;
-		}
-
-		setIsSendingCode(true);
+	const deleteAccount = async () => {
+		setIsDeleting(true);
 		try {
-			await requestPhoneVerification(parsed.data);
-			await refreshUser();
-			router.push({
-				pathname: "/phone-verification",
-				params: { reason: "profile", redirectTo: "/profile" },
-			});
+			await deleteCurrentUserAccount();
+			await logout();
 		} catch (error) {
-			Alert.alert("Could not send code", getAuthErrorMessage(error));
+			Alert.alert(
+				"Could not delete account",
+				getAuthErrorMessage(
+					error,
+					"Failed to delete account. Please try again.",
+				),
+			);
 		} finally {
-			setIsSendingCode(false);
+			setIsDeleting(false);
 		}
 	};
 
@@ -181,71 +174,11 @@ export default function ProfileScreen() {
 										/>
 									</View>
 
-									{isChangingPhone ? (
-										<View className="gap-2">
-											<View className="gap-1">
-												<FieldText className="text-sm font-semibold leading-5 text-[#111827]">
-													Phone Number
-												</FieldText>
-												<Text className="font-geist text-sm leading-5 text-[#374151]">
-													We’ll send you a code to verify this number
-												</Text>
-											</View>
-											<View className="flex-row items-center gap-2">
-												<Input
-													value={phoneNumber}
-													onChangeText={setPhoneNumber}
-													placeholder="+234 803 123 4675"
-													autoComplete="tel"
-													textContentType="telephoneNumber"
-													keyboardType="phone-pad"
-													inputMode="tel"
-													editable={!isSendingCode}
-													accessibilityLabel="Phone Number"
-													className={`${bookingFieldClassName} min-w-0 flex-1`}
-												/>
-												<Button
-													className="h-11 shrink-0 rounded-md bg-neutral-900 px-4"
-													disabled={isSendingCode}
-													onPress={() => void sendPhoneCode()}
-												>
-													<Text className="text-sm font-medium leading-5 text-white">
-														{isSendingCode ? "Sending…" : "Send code"}
-													</Text>
-												</Button>
-											</View>
-										</View>
-									) : (
-										<View className="gap-2">
-											<FieldText className="text-sm font-semibold leading-5 text-[#111827]">
-												Phone Number
-											</FieldText>
-											<View className="flex-row items-center gap-4 rounded border border-[#047857] bg-[#D1FAE5] px-3.5 py-3">
-												<View className="size-8 items-center justify-center rounded-full bg-[#047857]">
-													<Check size={16} color="#FFFFFF" strokeWidth={3} />
-												</View>
-												<View className="min-w-0 flex-1">
-													<Text
-														className="font-geist-medium text-sm leading-5 text-[#111827]"
-														numberOfLines={1}
-													>
-														{formatPhoneNumber(user?.phoneNumber ?? "")}
-													</Text>
-													<Text className="font-geist text-xs leading-5 text-[#111827]">
-														Phone number verified
-													</Text>
-												</View>
-											</View>
-											<Pressable
-												accessibilityRole="button"
-												onPress={() => setIsChangingPhone(true)}
-											>
-												<Text className="font-geist-medium text-sm leading-5 text-[#171717] underline">
-													Change phone number
-												</Text>
-											</Pressable>
-										</View>
-									)}
+									<BookingPhoneVerification
+										allowChange
+										className="mt-0"
+										phone={phone}
+									/>
 
 									<View className="gap-2">
 										<FieldText className={bookingFieldLabelClassName}>
@@ -329,7 +262,10 @@ export default function ProfileScreen() {
 										</Text>
 									</View>
 									<View className="w-[152px]">
-										<Button className="h-12 w-full rounded-md bg-destructive/10 shadow-none active:bg-destructive/20">
+										<Button
+											className="h-12 w-full rounded-md bg-destructive/10 shadow-none active:bg-destructive/20"
+											onPress={() => setIsDeleteDialogOpen(true)}
+										>
 											<Text className="text-sm font-medium text-destructive">
 												Delete Account
 											</Text>
@@ -341,6 +277,43 @@ export default function ProfileScreen() {
 					</View>
 				</View>
 			</ScrollView>
+
+			<Dialog
+				open={isDeleteDialogOpen}
+				onOpenChange={(open) => {
+					if (!isDeleting) setIsDeleteDialogOpen(open);
+				}}
+			>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Are you absolutely sure?</DialogTitle>
+						<DialogDescription>
+							This action cannot be undone. This will permanently delete your
+							account, including your profile, bank details, and identity
+							documents. Your booking history will be anonymized for our
+							records.
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter>
+						<Button
+							variant="outline"
+							disabled={isDeleting}
+							onPress={() => setIsDeleteDialogOpen(false)}
+						>
+							<Text>Cancel</Text>
+						</Button>
+						<Button
+							variant="destructive"
+							disabled={isDeleting}
+							onPress={() => void deleteAccount()}
+						>
+							<Text className="text-white">
+								{isDeleting ? "Deleting…" : "Delete Account"}
+							</Text>
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</SafeAreaView>
 	);
 }

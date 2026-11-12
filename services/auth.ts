@@ -129,6 +129,12 @@ export const updateCurrentUser = (profile: UpdateCurrentUserPayload) =>
     profile,
   );
 
+export const deleteCurrentUserAccount = () =>
+  postJsonWithAuth<{ success: boolean }, Record<string, never>>(
+    API_ENDPOINTS.accountDelete,
+    {},
+  );
+
 export const verifyOtp = async ({
   email,
   otpCode,
