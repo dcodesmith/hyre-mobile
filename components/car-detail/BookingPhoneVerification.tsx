@@ -2,18 +2,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 import type { BookingPhoneVerificationController } from "@/hooks/use-booking-phone-verification";
+import { cn } from "@/lib/utils";
 import { PHONE_OTP_MAX_LENGTH } from "@/lib/validations/auth";
 import { Check } from "lucide-react-native";
 import { Pressable, View } from "react-native";
 
 export function BookingPhoneVerification({
+  allowChange = false,
+  className,
   phone,
 }: {
+  readonly allowChange?: boolean;
+  readonly className?: string;
   readonly phone: BookingPhoneVerificationController;
 }) {
   if (phone.phoneVerified) {
     return (
-      <View className="mt-6 gap-2">
+      <View className={cn("mt-6 gap-2", className)}>
         <Text className="text-sm font-semibold text-gray-950">Phone Number</Text>
         <View className="flex-row items-center gap-3 rounded-md border border-emerald-700 bg-emerald-50 px-3 py-3">
           <View className="size-8 items-center justify-center rounded-full bg-emerald-700">
@@ -26,13 +31,20 @@ export function BookingPhoneVerification({
             <Text className="text-xs text-gray-700">Phone number verified</Text>
           </View>
         </View>
+        {allowChange ? (
+          <Pressable accessibilityRole="button" onPress={phone.editPhoneNumber}>
+            <Text className="text-sm font-medium text-gray-950 underline">
+              Change phone number
+            </Text>
+          </Pressable>
+        ) : null}
       </View>
     );
   }
 
   if (phone.maskedPhoneNumber) {
     return (
-      <View className="mt-6 gap-2">
+      <View className={cn("mt-6 gap-2", className)}>
         <Text className="text-sm font-semibold text-gray-950">
           Enter Verification Code
         </Text>
@@ -100,7 +112,7 @@ export function BookingPhoneVerification({
   }
 
   return (
-    <View className="mt-6 gap-2">
+    <View className={cn("mt-6 gap-2", className)}>
       <Text className="text-sm font-semibold text-gray-950">Phone Number</Text>
       <Text className="text-sm text-gray-600">
         We&apos;ll send you a code to verify this number

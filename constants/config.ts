@@ -85,6 +85,7 @@ export const API_ENDPOINTS = {
   session: "/auth/session",
   logout: "/api/auth/sign-out",
   currentUser: "/api/users/me",
+  accountDelete: "/api/account/delete",
   phoneVerifications: "/api/users/me/phone-verifications",
   phoneVerificationChecks: "/api/users/me/phone-verification-checks",
   guestPhoneVerifications: "/api/bookings/guest-phone-verifications",

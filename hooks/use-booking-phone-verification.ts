@@ -48,6 +48,7 @@ export function useBookingPhoneVerification({
     identityRef.current = identityKey;
   }, [identityKey]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset transient state when the account identity changes
   useEffect(() => {
     setPhoneNumber(initialPhoneNumber);
     setMaskedPhoneNumber(null);
@@ -79,7 +80,12 @@ export function useBookingPhoneVerification({
         setPhoneNumber(parsed.data);
         setMaskedPhoneNumber(response.phoneNumber);
         setVerificationToken(null);
-        setPhoneVerified(response.status === "VERIFIED" && isAuthenticated);
+        const verified = response.status === "VERIFIED" && isAuthenticated;
+        if (verified) {
+          await onVerified?.();
+          if (identityRef.current !== requestIdentity) return;
+        }
+        setPhoneVerified(verified);
         if (isResend) setNotice("A new code is on its way.");
       } catch (requestError) {
         if (identityRef.current === requestIdentity) {
@@ -91,7 +97,7 @@ export function useBookingPhoneVerification({
         }
       }
     },
-    [identityKey, isAuthenticated, phoneNumber],
+    [identityKey, isAuthenticated, onVerified, phoneNumber],
   );
 
   const verifyCode = useCallback(async () => {
