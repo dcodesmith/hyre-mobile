@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Alert, Pressable, ScrollView, Text as FieldText, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -35,9 +35,11 @@ const bookingFieldClassName =
 const bookingFieldLabelClassName = "text-sm font-semibold text-gray-900";
 
 function ProfileSwitch({
+	disabled,
 	onValueChange,
 	value,
 }: Readonly<{
+	disabled?: boolean;
 	onValueChange: (nextValue: boolean) => void;
 	value: boolean;
 }>) {
@@ -45,8 +47,9 @@ function ProfileSwitch({
 		<Pressable
 			accessibilityLabel="Marketing communications"
 			accessibilityRole="switch"
-			accessibilityState={{ checked: value }}
+			accessibilityState={{ checked: value, disabled }}
 			className={`h-6 w-11 rounded-full ${value ? "bg-[#111827]" : "bg-[#E5E7EB]"}`}
+			disabled={disabled}
 			onPress={() => onValueChange(!value)}
 		>
 			<View
@@ -65,6 +68,12 @@ export default function ProfileScreen() {
 
 function ProfileContent() {
 	const { logout, refreshUser, user } = useAuth();
+	const edited = useRef({
+		address: false,
+		city: false,
+		marketingConsent: false,
+		name: false,
+	});
 	const [name, setName] = useState(user?.name ?? "");
 	const [city, setCity] = useState(user?.city ?? "");
 	const [address, setAddress] = useState(user?.address ?? "");
@@ -82,15 +91,34 @@ function ProfileContent() {
 		onVerified: refreshUser,
 	});
 
+	useEffect(() => {
+		if (!edited.current.name) setName(user?.name ?? "");
+		if (!edited.current.city) setCity(user?.city ?? "");
+		if (!edited.current.address) setAddress(user?.address ?? "");
+		if (!edited.current.marketingConsent) {
+			setMarketingConsent(user?.marketingConsent ?? false);
+		}
+	}, [user]);
+
 	const saveProfile = async () => {
 		setIsSaving(true);
 		try {
-			await updateCurrentUser({
+			const profile = await updateCurrentUser({
 				name: emptyToNull(name),
 				city: emptyToNull(city),
 				address: emptyToNull(address),
 				marketingConsent,
 			});
+			edited.current = {
+				address: false,
+				city: false,
+				marketingConsent: false,
+				name: false,
+			};
+			setName(profile.name ?? "");
+			setCity(profile.city ?? "");
+			setAddress(profile.address ?? "");
+			setMarketingConsent(profile.marketingConsent);
 			await refreshUser();
 			Alert.alert("Profile updated", "Your changes have been saved.");
 		} catch (error) {
@@ -103,7 +131,10 @@ function ProfileContent() {
 	const deleteAccount = async () => {
 		setIsDeleting(true);
 		try {
-			await deleteCurrentUserAccount();
+			const deletion = await deleteCurrentUserAccount();
+			if (!deletion.success) {
+				throw new Error("Account deletion was not confirmed.");
+			}
 			await logout();
 		} catch (error) {
 			Alert.alert(
@@ -149,7 +180,10 @@ function ProfileContent() {
 										</FieldText>
 										<Input
 											value={name}
-											onChangeText={setName}
+											onChangeText={(value) => {
+												edited.current.name = true;
+												setName(value);
+											}}
 											placeholder="Enter name"
 											textContentType="name"
 											autoComplete="name"
@@ -186,7 +220,10 @@ function ProfileContent() {
 										</FieldText>
 										<Input
 											value={city}
-											onChangeText={setCity}
+											onChangeText={(value) => {
+												edited.current.city = true;
+												setCity(value);
+											}}
 											placeholder="Enter city"
 											textContentType="addressCity"
 											editable={!isSaving}
@@ -200,7 +237,10 @@ function ProfileContent() {
 										</FieldText>
 										<Input
 											value={address}
-											onChangeText={setAddress}
+											onChangeText={(value) => {
+												edited.current.address = true;
+												setAddress(value);
+											}}
 											placeholder="Enter address"
 											textContentType="fullStreetAddress"
 											editable={!isSaving}
@@ -243,8 +283,12 @@ function ProfileContent() {
 										</Text>
 									</View>
 									<ProfileSwitch
+										disabled={isSaving}
 										value={marketingConsent}
-										onValueChange={setMarketingConsent}
+										onValueChange={(value) => {
+											edited.current.marketingConsent = true;
+											setMarketingConsent(value);
+										}}
 									/>
 								</View>
 
