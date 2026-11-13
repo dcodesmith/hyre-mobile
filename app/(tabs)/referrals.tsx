@@ -61,7 +61,7 @@ function StatCard({
 }>) {
   return (
     <View
-      className="min-h-[140px] justify-between rounded-lg border border-neutral-200 bg-white p-4"
+      className="min-h-[140px] justify-between rounded-lg border border-neutral-200 bg-white p-4 shadow-none"
       style={{
         borderCurve: "continuous",
         flexBasis: "47.5%",
