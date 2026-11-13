@@ -273,7 +273,7 @@ export default function ReferralsScreen() {
                   </View>
                 </View>
 
-                {referralSummary.referralCode ? (
+                {referralSummary.referralCode && shareLink ? (
                   <View className="gap-6">
                     <View className="gap-2">
                       <Text className="text-sm font-semibold text-neutral-900">
@@ -309,69 +309,68 @@ export default function ReferralsScreen() {
                       </View>
                     </View>
 
-                    {shareLink ? (
-                      <View className="gap-2">
-                        <Text className="text-sm font-semibold text-neutral-900">
-                          Your Referral Link
-                        </Text>
-                        <View className="flex-row gap-2">
-                          <Input
-                            value={shareLink}
-                            readOnly
-                            selectTextOnFocus
-                            className="h-10 min-w-0 flex-1 text-sm shadow-none"
-                            accessibilityLabel="Referral link"
+                    <View className="gap-2">
+                      <Text className="text-sm font-semibold text-neutral-900">
+                        Your Referral Link
+                      </Text>
+                      <View className="flex-row gap-2">
+                        <Input
+                          value={shareLink}
+                          readOnly
+                          selectTextOnFocus
+                          className="h-10 min-w-0 flex-1 text-sm shadow-none"
+                          accessibilityLabel="Referral link"
+                        />
+                        <Button
+                          className="h-10 px-3.5"
+                          onPress={() =>
+                            void copyToClipboard(shareLink, "link")
+                          }
+                          accessibilityLabel="Copy referral link"
+                        >
+                          <ClipboardIcon
+                            size={16}
+                            color="#FFFFFF"
+                            strokeWidth={2}
                           />
-                          <Button
-                            className="h-10 px-3.5"
-                            onPress={() =>
-                              void copyToClipboard(shareLink, "link")
-                            }
-                            accessibilityLabel="Copy referral link"
-                          >
-                            <ClipboardIcon
-                              size={16}
-                              color="#FFFFFF"
-                              strokeWidth={2}
-                            />
-                            <Text className="text-sm font-medium text-white">
-                              {copiedTarget === "link" ? "Copied!" : "Copy"}
-                            </Text>
-                          </Button>
-                        </View>
-                        <View className="flex-row items-center gap-2.5">
-                          <Text className="text-xs font-semibold text-neutral-500">
-                            SHARE VIA:
+                          <Text className="text-sm font-medium text-white">
+                            {copiedTarget === "link" ? "Copied!" : "Copy"}
                           </Text>
-                          <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel="Share referral link on WhatsApp"
-                            className="flex-row items-center gap-1 rounded-xl border border-neutral-300 px-2 py-1"
-                            onPress={() => void shareReferralLink("whatsapp")}
-                          >
-                            <MessageCircle
-                              size={16}
-                              color="#22C55E"
-                              strokeWidth={2}
-                            />
-                            <Text className="text-xs text-neutral-950">
-                              WhatsApp
-                            </Text>
-                          </Pressable>
-                          <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel="Share referral link on Telegram"
-                            className="flex-row items-center gap-1 rounded-xl border border-neutral-300 px-2 py-1"
-                            onPress={() => void shareReferralLink("telegram")}
-                          >
-                            <Send size={16} color="#229ED9" strokeWidth={2} />
-                            <Text className="text-xs text-neutral-950">
-                              Telegram
-                            </Text>
-                          </Pressable>
-                        </View>
+                        </Button>
                       </View>
-                    ) : null}
+                    </View>
+
+                    <View className="flex-row items-center gap-2.5">
+                      <Text className="text-xs font-semibold text-neutral-500">
+                        SHARE VIA:
+                      </Text>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="Share referral link on WhatsApp"
+                        className="flex-row items-center gap-1 rounded-xl border border-neutral-300 px-2 py-1"
+                        onPress={() => void shareReferralLink("whatsapp")}
+                      >
+                        <MessageCircle
+                          size={16}
+                          color="#22C55E"
+                          strokeWidth={2}
+                        />
+                        <Text className="text-xs text-neutral-950">
+                          WhatsApp
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel="Share referral link on Telegram"
+                        className="flex-row items-center gap-1 rounded-xl border border-neutral-300 px-2 py-1"
+                        onPress={() => void shareReferralLink("telegram")}
+                      >
+                        <Send size={16} color="#229ED9" strokeWidth={2} />
+                        <Text className="text-xs text-neutral-950">
+                          Telegram
+                        </Text>
+                      </Pressable>
+                    </View>
                   </View>
                 ) : (
                   <Text className="text-sm text-neutral-500">
