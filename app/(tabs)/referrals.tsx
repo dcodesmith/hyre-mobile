@@ -6,7 +6,7 @@ import {
 } from "@/components/booking-detail-card";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
-import { TRUSTED_REQUEST_ORIGIN } from "@/constants/config";
+import { PUBLIC_WEB_ORIGIN } from "@/constants/config";
 import { useTabBarVisibility } from "@/context/tab-bar-visibility-context";
 import { useAuth } from "@/hooks/use-auth";
 import { useReferralSummary } from "@/hooks/use-referrals";
@@ -91,7 +91,7 @@ export default function ReferralsScreen() {
   const referralSummary = referralQuery.data;
   const shareLink = useMemo(() => {
     if (!referralSummary?.referralCode) return null;
-    return `${TRUSTED_REQUEST_ORIGIN}/r/${encodeURIComponent(referralSummary.referralCode)}`;
+    return `${PUBLIC_WEB_ORIGIN}/r/${encodeURIComponent(referralSummary.referralCode)}`;
   }, [referralSummary?.referralCode]);
 
   const stats = referralSummary?.stats;

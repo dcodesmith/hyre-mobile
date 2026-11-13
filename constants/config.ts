@@ -3,6 +3,7 @@ import Constants from "expo-constants";
 import { isExpoAndroid } from "@/lib/expo-platform";
 
 const DEFAULT_BASE_URL = "http://localhost:3000";
+const DEFAULT_PUBLIC_WEB_ORIGIN = "https://tripidly.com";
 const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "0.0.0.0"]);
 const ANDROID_EMULATOR_HOST = "10.0.2.2";
 
@@ -58,6 +59,10 @@ const normalizeBaseUrl = (value: string) => {
 export const API_BASE_URL = normalizeBaseUrl(
   (process.env.EXPO_PUBLIC_API_BASE_URL ?? DEFAULT_BASE_URL).trim(),
 );
+
+export const PUBLIC_WEB_ORIGIN = (
+  process.env.EXPO_PUBLIC_WEB_ORIGIN?.trim() || DEFAULT_PUBLIC_WEB_ORIGIN
+).replace(/\/+$/, "");
 
 /**
  * Sent as the `Origin` header on every API request. Better Auth (hyre-worker-nestjs) still
