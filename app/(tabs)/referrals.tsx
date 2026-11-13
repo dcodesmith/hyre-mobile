@@ -274,7 +274,7 @@ export default function ReferralsScreen() {
                 </View>
 
                 {referralSummary.referralCode && shareLink ? (
-                  <View className="min-h-52 justify-between">
+                  <View className="h-52 justify-between">
                     <View className="gap-2">
                       <Text className="text-sm font-semibold text-neutral-900">
                         Your Referral Code
