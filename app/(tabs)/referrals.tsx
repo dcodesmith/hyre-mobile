@@ -1,24 +1,31 @@
+import {
+  DetailCard,
+  DetailCardBody,
+  DetailCardHeader,
+  DetailCardTitle,
+} from "@/components/booking-detail-card";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { TRUSTED_REQUEST_ORIGIN } from "@/constants/config";
 import { useTabBarVisibility } from "@/context/tab-bar-visibility-context";
 import { useAuth } from "@/hooks/use-auth";
 import { useReferralSummary } from "@/hooks/use-referrals";
-import { formatCurrency } from "@/lib/currency";
-import {
-  getReferralErrorMessage,
-  type ReferralReward,
-} from "@/services/referrals";
+import { formatRateAmount } from "@/lib/currency";
+import { getReferralErrorMessage } from "@/services/referrals";
 import * as ExpoClipboard from "expo-clipboard";
+import * as Linking from "expo-linking";
 import { StatusBar } from "expo-status-bar";
 import {
   AlertTriangle,
+  CircleDollarSign,
   Clipboard as ClipboardIcon,
-  Gift,
-  Share2,
-  Sparkles,
+  Clock3,
+  Coins,
+  EyeOff,
+  MessageCircle,
+  Send,
+  TableProperties,
   Users,
-  Wallet,
 } from "lucide-react-native";
 import type { ReactNode } from "react";
 import { useCallback, useMemo, useState } from "react";
@@ -26,9 +33,8 @@ import {
   ActivityIndicator,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
+  Pressable,
   ScrollView,
-  Share,
-  TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -44,19 +50,6 @@ const referralDateFormatter = new Intl.DateTimeFormat("en-NG", {
 const formatDate = (value: string) =>
   referralDateFormatter.format(new Date(value));
 
-const getRewardStatusClassName = (status: string) => {
-  switch (status) {
-    case "RELEASED":
-      return "bg-green-100 text-green-700";
-    case "PENDING":
-      return "bg-orange-100 text-orange-700";
-    case "REVERSED":
-      return "bg-red-100 text-red-700";
-    default:
-      return "bg-neutral-100 text-neutral-700";
-  }
-};
-
 function StatCard({
   label,
   value,
@@ -68,47 +61,21 @@ function StatCard({
 }>) {
   return (
     <View
-      className="rounded border border-neutral-200 bg-white p-4"
+      className="min-h-[140px] justify-between rounded-lg border border-neutral-200 bg-white p-4"
       style={{
         borderCurve: "continuous",
-        flexBasis: "48%",
-        boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
+        flexBasis: "47.5%",
       }}
     >
-      <View className="mb-3 size-9 items-center justify-center rounded-full bg-neutral-100">
+      <View className="size-8 items-center justify-center rounded-full bg-neutral-100">
         {icon}
       </View>
-      <Text selectable className="text-xl font-bold text-neutral-950">
-        {value}
-      </Text>
-      <Text className="mt-1 text-xs font-medium text-neutral-500">{label}</Text>
-    </View>
-  );
-}
-
-function RewardRow({ reward }: Readonly<{ reward: ReferralReward }>) {
-  return (
-    <View className="flex-row items-center justify-between rounded border border-neutral-200 p-3">
-      <View className="flex-1 pr-3">
-        <Text selectable className="text-base font-semibold text-neutral-950">
-          {formatCurrency(reward.amount, { fractionDigits: 0 })}
+      <View className="gap-1">
+        <Text selectable className="text-xl font-semibold text-neutral-950">
+          {value}
         </Text>
-        <Text selectable className="mt-0.5 text-sm text-neutral-500">
-          From {reward.refereeName}
-        </Text>
-      </View>
-
-      <View className="items-end">
-        <Text
-          className={[
-            "overflow-hidden rounded-full px-2.5 py-1 text-xs font-semibold capitalize",
-            getRewardStatusClassName(reward.status),
-          ].join(" ")}
-        >
-          {reward.status.toLowerCase()}
-        </Text>
-        <Text className="mt-1 text-xs text-neutral-500">
-          {formatDate(reward.createdAt)}
+        <Text className="text-xs font-medium text-neutral-500">
+          {label}
         </Text>
       </View>
     </View>
@@ -124,40 +91,31 @@ export default function ReferralsScreen() {
   const referralSummary = referralQuery.data;
   const shareLink = useMemo(() => {
     if (!referralSummary?.referralCode) return null;
-    return `${TRUSTED_REQUEST_ORIGIN}/auth?ref=${referralSummary.referralCode}`;
+    return `${TRUSTED_REQUEST_ORIGIN}/r/${encodeURIComponent(referralSummary.referralCode)}`;
   }, [referralSummary?.referralCode]);
 
   const stats = referralSummary?.stats;
   const statsData = stats
     ? [
         {
-          label: "Total Referrals",
-          value: stats.totalReferrals,
-          icon: <Users size={18} color="#3B82F6" strokeWidth={2} />,
-        },
-        {
           label: "Rewards Earned",
-          value: formatCurrency(stats.totalRewardsGranted, {
-            fractionDigits: 0,
-          }),
-          icon: <Gift size={18} color="#22C55E" strokeWidth={2} />,
+          value: formatRateAmount(stats.totalRewardsGranted),
+          icon: <CircleDollarSign size={17} color="#6B7280" strokeWidth={2} />,
         },
         {
           label: "Pending Rewards",
-          value: formatCurrency(stats.totalRewardsPending, {
-            fractionDigits: 0,
-          }),
-          icon: <Sparkles size={18} color="#F97316" strokeWidth={2} />,
+          value: formatRateAmount(stats.totalRewardsPending),
+          icon: <Clock3 size={17} color="#6B7280" strokeWidth={2} />,
         },
         {
           label: "Used Credits",
-          value: formatCurrency(stats.totalUsed, { fractionDigits: 0 }),
-          icon: <Wallet size={18} color="#EF4444" strokeWidth={2} />,
+          value: formatRateAmount(stats.totalUsed),
+          icon: <Coins size={17} color="#6B7280" strokeWidth={2} />,
         },
         {
-          label: "Available Credits",
-          value: formatCurrency(stats.availableCredits, { fractionDigits: 0 }),
-          icon: <Wallet size={18} color="#8B5CF6" strokeWidth={2} />,
+          label: "Total Referrals",
+          value: stats.totalReferrals,
+          icon: <Users size={17} color="#6B7280" strokeWidth={2} />,
         },
       ]
     : [];
@@ -168,13 +126,14 @@ export default function ReferralsScreen() {
     setTimeout(() => setCopiedTarget(null), 2000);
   };
 
-  const shareReferralLink = async () => {
+  const shareReferralLink = async (provider: "whatsapp" | "telegram") => {
     if (!shareLink) return;
-    await Share.share({
-      title: "Join HireApp with my referral code",
-      message: `Get a discount on your first booking with Tripdly: ${shareLink}`,
-      url: shareLink,
-    });
+    const text = "Get a discount on your first booking with Tripdly";
+    const url =
+      provider === "whatsapp"
+        ? `https://wa.me/?text=${encodeURIComponent(`${text}: ${shareLink}`)}`
+        : `https://t.me/share/url?url=${encodeURIComponent(shareLink)}&text=${encodeURIComponent(text)}`;
+    await Linking.openURL(url);
   };
   const handleScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -263,130 +222,165 @@ export default function ReferralsScreen() {
         onScroll={handleScroll}
         scrollEventThrottle={16}
       >
-        <View className="gap-6 p-4">
+        <View className="gap-4 p-5 pb-10">
           <View>
-            <Text className="text-3xl font-bold text-neutral-950">
+            <Text className="text-2xl font-semibold leading-9 text-neutral-950">
               Referral Program
             </Text>
-            <Text className="mt-2 text-base text-neutral-500">
-              Invite friends and earn rewards when they book their first trip!
+            <Text className="text-sm font-medium text-neutral-950">
+              <Text className="text-neutral-500">New to Tripidly? </Text>
+              See how it works
             </Text>
           </View>
 
           {referralSummary.programEnabled ? null : (
-            <View className="rounded border border-yellow-200 bg-yellow-50 p-4">
-              <View className="flex-row items-center gap-2">
-                <AlertTriangle size={18} color="#854D0E" strokeWidth={2} />
-                <Text className="font-semibold text-yellow-800">
-                  Referral Program Temporarily Disabled
+            <View
+              accessibilityRole="alert"
+              className="flex-row items-start gap-3 rounded-md border border-amber-500 bg-amber-50 p-4"
+            >
+              <AlertTriangle size={16} color="#F59E0B" strokeWidth={2} />
+              <View className="min-w-0 flex-1 gap-1">
+                <Text className="text-base font-medium leading-5 text-amber-600">
+                  Referral program temporarily closed
+                </Text>
+                <Text className="text-sm leading-5 text-amber-600">
+                  New referrals cannot be processed at this time.
                 </Text>
               </View>
-              <Text className="mt-1 text-sm text-yellow-700">
-                New referrals cannot be processed at this time.
-              </Text>
             </View>
           )}
 
-          <View
-            className="rounded border border-neutral-200 bg-white"
-            style={{
-              borderCurve: "continuous",
-              boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
-            }}
-          >
-            <View className="border-b border-neutral-100 px-5 py-4">
-              <View className="flex-row items-center gap-2">
-                <Gift size={20} color="#171717" strokeWidth={2} />
-                <Text className="text-lg font-semibold text-neutral-950">
-                  Your Referral Code
-                </Text>
-              </View>
-            </View>
-
-            <View className="gap-4 p-5">
-              {referralSummary.referralCode ? (
-                <>
-                  <View className="flex-row items-center justify-between gap-3 rounded bg-neutral-100 p-4">
-                    <Text
-                      selectable
-                      className="flex-1 font-mono text-lg font-bold tracking-wider text-neutral-950"
-                    >
-                      {referralSummary.referralCode}
-                    </Text>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onPress={() =>
-                        void copyToClipboard(
-                          referralSummary.referralCode ?? "",
-                          "code",
-                        )
-                      }
-                    >
-                      <ClipboardIcon
-                        size={16}
-                        color="#171717"
-                        strokeWidth={2}
-                      />
-                      <Text className="text-sm font-semibold">
-                        {copiedTarget === "code" ? "Copied!" : "Copy"}
-                      </Text>
-                    </Button>
+          <DetailCard>
+            <DetailCardHeader>
+              <DetailCardTitle>Invite friends and Earn</DetailCardTitle>
+            </DetailCardHeader>
+            <DetailCardBody>
+              <View className="gap-6">
+                <View className="h-52 overflow-hidden rounded-lg border border-neutral-800 bg-[#111827] p-5">
+                  <Text className="text-sm font-medium text-neutral-300">
+                    Available Credits
+                  </Text>
+                  <Text
+                    selectable
+                    className="mt-1 text-3xl font-semibold leading-9 text-white"
+                  >
+                    {formatRateAmount(referralSummary.stats.availableCredits)}
+                  </Text>
+                  <View className="mt-auto flex-row items-end justify-between">
+                    <Coins size={74} color="#4B5563" strokeWidth={1.5} />
+                    <EyeOff size={18} color="#FFFFFF" strokeWidth={2} />
                   </View>
+                </View>
 
-                  {shareLink ? (
+                {referralSummary.referralCode ? (
+                  <View className="gap-6">
                     <View className="gap-2">
-                      <Text className="text-sm font-semibold text-neutral-800">
-                        Share Link:
+                      <Text className="text-sm font-semibold text-neutral-900">
+                        Your Referral Code
                       </Text>
                       <View className="flex-row gap-2">
-                        <TextInput
-                          value={shareLink}
-                          editable={false}
-                          multiline={false}
-                          scrollEnabled={false}
-                          caretHidden
-                          underlineColorAndroid="transparent"
-                          className="h-10 min-w-0 flex-1 rounded-md border border-neutral-200 bg-white px-3 py-1 text-sm leading-5 text-neutral-700"
-                        />
+                        <View className="h-11 min-w-0 flex-1 justify-center rounded-md border border-neutral-300 bg-neutral-50 px-3.5">
+                          <Text selectable className="text-sm text-neutral-900">
+                            {referralSummary.referralCode}
+                          </Text>
+                        </View>
                         <Button
-                          variant="outline"
-                          size="icon"
+                          className="h-11 px-3.5"
                           onPress={() =>
-                            void copyToClipboard(shareLink, "link")
+                            void copyToClipboard(
+                              referralSummary.referralCode ?? "",
+                              "code",
+                            )
                           }
-                          accessibilityLabel="Copy referral link"
+                          accessibilityLabel="Copy referral code"
                         >
                           <ClipboardIcon
                             size={16}
-                            color="#171717"
+                            color="#FFFFFF"
                             strokeWidth={2}
                           />
-                        </Button>
-                        <Button
-                          size="icon"
-                          onPress={() => void shareReferralLink()}
-                          accessibilityLabel="Share referral link"
-                        >
-                          <Share2 size={16} color="#FFFFFF" strokeWidth={2} />
+                          <Text className="text-sm font-medium text-white">
+                            {copiedTarget === "code" ? "Copied!" : "Copy"}
+                          </Text>
                         </Button>
                       </View>
-                      {copiedTarget === "link" ? (
-                        <Text className="text-xs font-medium text-green-700">
-                          Referral link copied to clipboard.
-                        </Text>
-                      ) : null}
                     </View>
-                  ) : null}
-                </>
-              ) : (
-                <Text className="text-sm text-neutral-500">
-                  Your referral code is being generated. Please refresh the
-                  page.
-                </Text>
-              )}
-            </View>
-          </View>
+
+                    {shareLink ? (
+                      <View className="gap-2">
+                        <Text className="text-sm font-semibold text-neutral-900">
+                          Your Referral Link
+                        </Text>
+                        <View className="flex-row gap-2">
+                          <View className="h-11 min-w-0 flex-1 justify-center rounded-md border border-neutral-300 bg-neutral-50 px-3.5">
+                            <Text
+                              selectable
+                              numberOfLines={1}
+                              className="text-sm text-neutral-900"
+                            >
+                              {shareLink}
+                            </Text>
+                          </View>
+                          <Button
+                            className="h-11 px-3.5"
+                            onPress={() =>
+                              void copyToClipboard(shareLink, "link")
+                            }
+                            accessibilityLabel="Copy referral link"
+                          >
+                            <ClipboardIcon
+                              size={16}
+                              color="#FFFFFF"
+                              strokeWidth={2}
+                            />
+                            <Text className="text-sm font-medium text-white">
+                              {copiedTarget === "link" ? "Copied!" : "Copy"}
+                            </Text>
+                          </Button>
+                        </View>
+                        <View className="flex-row items-center gap-2.5 py-1">
+                          <Text className="text-xs font-semibold text-neutral-500">
+                            SHARE VIA:
+                          </Text>
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel="Share referral link on WhatsApp"
+                            className="flex-row items-center gap-1 rounded-xl border border-neutral-300 px-2 py-1"
+                            onPress={() => void shareReferralLink("whatsapp")}
+                          >
+                            <MessageCircle
+                              size={16}
+                              color="#22C55E"
+                              strokeWidth={2}
+                            />
+                            <Text className="text-xs text-neutral-950">
+                              WhatsApp
+                            </Text>
+                          </Pressable>
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel="Share referral link on Telegram"
+                            className="flex-row items-center gap-1 rounded-xl border border-neutral-300 px-2 py-1"
+                            onPress={() => void shareReferralLink("telegram")}
+                          >
+                            <Send size={16} color="#229ED9" strokeWidth={2} />
+                            <Text className="text-xs text-neutral-950">
+                              Telegram
+                            </Text>
+                          </Pressable>
+                        </View>
+                      </View>
+                    ) : null}
+                  </View>
+                ) : (
+                  <Text className="text-sm text-neutral-500">
+                    Your referral code is being generated. Please refresh the
+                    page.
+                  </Text>
+                )}
+              </View>
+            </DetailCardBody>
+          </DetailCard>
 
           <View className="flex-row flex-wrap gap-3">
             {statsData.map((stat) => (
@@ -399,110 +393,60 @@ export default function ReferralsScreen() {
             ))}
           </View>
 
-          {referralSummary.rewards.length > 0 ? (
-            <View
-              className="rounded border border-neutral-200 bg-white"
-              style={{
-                borderCurve: "continuous",
-                boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
-              }}
-            >
-              <View className="border-b border-neutral-100 px-5 py-4">
-                <Text className="text-lg font-semibold text-neutral-950">
-                  Recent Rewards
-                </Text>
-              </View>
-              <View className="gap-3 p-5">
-                {referralSummary.rewards.slice(0, 5).map((reward) => (
-                  <RewardRow key={reward.id} reward={reward} />
-                ))}
-              </View>
-            </View>
-          ) : null}
-
-          {referralSummary.referrals.length > 0 ? (
-            <View
-              className="rounded border border-neutral-200 bg-white"
-              style={{
-                borderCurve: "continuous",
-                boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
-              }}
-            >
-              <View className="border-b border-neutral-100 px-5 py-4">
-                <Text className="text-lg font-semibold text-neutral-950">
-                  Your Referrals
-                </Text>
-              </View>
-              <View className="gap-3 p-5">
-                {referralSummary.referrals.map((referral) => (
-                  <View
-                    key={referral.id}
-                    className="rounded border border-neutral-200 p-3"
-                  >
-                    <Text
-                      selectable
-                      className="text-base font-semibold text-neutral-950"
-                    >
-                      {referral.name || referral.email}
-                    </Text>
-                    <Text
-                      selectable
-                      className="mt-0.5 text-sm text-neutral-500"
-                    >
-                      {referral.email}
-                    </Text>
-                    <Text className="mt-2 text-xs text-neutral-500">
-                      Joined {formatDate(referral.createdAt)}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          ) : null}
-
-          <View
-            className="rounded border border-neutral-200 bg-white"
-            style={{
-              borderCurve: "continuous",
-              boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
-            }}
-          >
-            <View className="border-b border-neutral-100 px-5 py-4">
-              <Text className="text-lg font-semibold text-neutral-950">
-                How it works
-              </Text>
-            </View>
-            <View className="gap-4 p-5">
-              {[
-                {
-                  title: "Share your code",
-                  body: "Send your referral code or link to friends",
-                },
-                {
-                  title: "They sign up",
-                  body: "Friends create an account using your code",
-                },
-                {
-                  title: "Both get rewards",
-                  body: `They get ${formatCurrency(referralSummary.discountAmount, { fractionDigits: 0 })} discount, you earn ${formatCurrency(referralSummary.discountAmount, { fractionDigits: 0 })} reward`,
-                },
-              ].map((step, index) => (
-                <View key={step.title} className="items-center rounded p-2">
-                  <View className="size-8 items-center justify-center rounded-full bg-neutral-950">
-                    <Text className="text-sm font-bold text-white">
-                      {index + 1}
-                    </Text>
-                  </View>
-                  <Text className="mt-2 text-center font-semibold text-neutral-950">
-                    {step.title}
+          <DetailCard>
+            <DetailCardHeader>
+              <DetailCardTitle>Your Referral History</DetailCardTitle>
+            </DetailCardHeader>
+            <DetailCardBody>
+              {referralSummary.referrals.length === 0 ? (
+                <View className="min-h-[360px] items-center justify-center px-2">
+                  <TableProperties size={56} color="#6B7280" strokeWidth={1.5} />
+                  <Text className="mt-4 text-base font-semibold text-neutral-900">
+                    No referral history
                   </Text>
-                  <Text className="mt-1 text-center text-sm text-neutral-500">
-                    {step.body}
+                  <Text className="mt-1 max-w-[290px] text-center text-sm leading-5 text-neutral-600">
+                    Your referral history will appear here. You can share your
+                    referral link to get started
                   </Text>
                 </View>
-              ))}
-            </View>
-          </View>
+              ) : (
+                <View>
+                  {referralSummary.referrals.map((referral, index) => (
+                    <View
+                      key={referral.id}
+                      className={[
+                        "flex-row items-center justify-between gap-3 py-4",
+                        index < referralSummary.referrals.length - 1
+                          ? "border-b border-neutral-200"
+                          : "",
+                      ].join(" ")}
+                    >
+                      <View className="min-w-0 flex-1">
+                        <Text
+                          selectable
+                          numberOfLines={1}
+                          className="text-sm font-semibold text-neutral-900"
+                        >
+                          {referral.name || referral.email}
+                        </Text>
+                        <Text
+                          selectable
+                          numberOfLines={1}
+                          className="mt-1 text-xs text-neutral-500"
+                        >
+                          {referral.email}
+                        </Text>
+                      </View>
+                      <Text className="text-xs text-neutral-500">
+                        {formatDate(referral.createdAt)}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </DetailCardBody>
+          </DetailCard>
+
         </View>
       </ScrollView>
     </SafeAreaView>
