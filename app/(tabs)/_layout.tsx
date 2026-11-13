@@ -9,7 +9,7 @@ import { THEME } from "@/lib/theme";
 import { twStyle } from "@/lib/tw-style";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { Tabs, useSegments } from "expo-router";
-import { Calendar, Gift, Home, LogIn, LogOut, User } from "lucide-react-native";
+import { Calendar, Gift, Home, LogIn, User } from "lucide-react-native";
 import { useCallback, useEffect } from "react";
 import { View } from "react-native";
 
@@ -56,7 +56,6 @@ const HOME_TAB_LABEL = createTabLabel("Tripdly");
 const BOOKINGS_TAB_LABEL = createTabLabel("Bookings");
 const REFERRALS_TAB_LABEL = createTabLabel("Referrals");
 const PROFILE_TAB_LABEL = createTabLabel("Profile");
-const LOGOUT_TAB_LABEL = createTabLabel("Logout");
 
 function TabLayoutContent() {
   const { isAuthenticated } = useAuth();
@@ -152,7 +151,6 @@ function TabLayoutContent() {
           tabBarIcon: ({ color, focused }) => TabIcon(Calendar, color, focused),
           tabBarLabel: BOOKINGS_TAB_LABEL,
           tabBarItemStyle: HREF_TAB_ITEM_STYLE,
-          href: isAuthenticated ? "/bookings" : null,
         }}
       />
       <Tabs.Screen
@@ -162,7 +160,6 @@ function TabLayoutContent() {
           tabBarIcon: ({ color, focused }) => TabIcon(Gift, color, focused),
           tabBarLabel: REFERRALS_TAB_LABEL,
           tabBarItemStyle: HREF_TAB_ITEM_STYLE,
-          href: isAuthenticated ? "/referrals" : null,
         }}
       />
       <Tabs.Screen
@@ -173,16 +170,6 @@ function TabLayoutContent() {
           tabBarLabel: PROFILE_TAB_LABEL,
           tabBarItemStyle: HREF_TAB_ITEM_STYLE,
           href: isAuthenticated ? "/profile" : null,
-        }}
-      />
-      <Tabs.Screen
-        name="logout"
-        options={{
-          title: "Logout",
-          tabBarIcon: ({ color, focused }) => TabIcon(LogOut, color, focused),
-          tabBarLabel: LOGOUT_TAB_LABEL,
-          tabBarItemStyle: HREF_TAB_ITEM_STYLE,
-          href: isAuthenticated ? "/logout" : null,
         }}
       />
       <Tabs.Screen

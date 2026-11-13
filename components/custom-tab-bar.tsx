@@ -2,14 +2,7 @@ import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { CommonActions } from "@react-navigation/native";
 import type { Href } from "expo-router";
 import { usePathname, useRouter } from "expo-router";
-import {
-  Calendar,
-  Gift,
-  Home,
-  LogIn,
-  LogOut,
-  User,
-} from "lucide-react-native";
+import { Calendar, Gift, Home, LogIn, User } from "lucide-react-native";
 import type { ComponentType, ReactNode } from "react";
 import { Animated, Platform, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -18,14 +11,16 @@ import { useTabBarVisibility } from "@/context/tab-bar-visibility-context";
 import { useAuth } from "@/hooks/use-auth";
 
 /** Order must match the tab screens in `app/(tabs)/_layout.tsx`. */
-const AUTH_TAB_ORDER = [
-  "index",
-  "bookings",
-  "referrals",
-  "profile",
-  "logout",
-] as const;
-const GUEST_TAB_ORDER = ["index", "login"] as const;
+const AUTH_TAB_ORDER = ["index", "bookings", "referrals", "profile"] as const;
+const GUEST_TAB_ORDER = ["index", "bookings", "referrals", "login"] as const;
+
+/** Bookings and referrals stay in the bar; guests land on the existing login screen. */
+function tabRouteName(name: string, isAuthenticated: boolean) {
+  if (!isAuthenticated && (name === "bookings" || name === "referrals")) {
+    return "login";
+  }
+  return name;
+}
 
 const SEARCH_TAB_HREFS: Record<string, Href | null> = {
   index: "/",
@@ -33,7 +28,6 @@ const SEARCH_TAB_HREFS: Record<string, Href | null> = {
   referrals: "/referrals",
   profile: "/profile",
   login: "/login",
-  logout: null,
 };
 
 const SEARCH_TAB_LABELS: Record<string, string> = {
@@ -42,7 +36,6 @@ const SEARCH_TAB_LABELS: Record<string, string> = {
   referrals: "Referrals",
   profile: "Profile",
   login: "Log in",
-  logout: "Logout",
 };
 
 const SEARCH_TAB_ICONS: Record<
@@ -54,7 +47,6 @@ const SEARCH_TAB_ICONS: Record<
   referrals: Gift,
   profile: User,
   login: LogIn,
-  logout: LogOut,
 };
 
 function isSearchTabFocused(name: string, pathname: string): boolean {
@@ -108,7 +100,7 @@ function FloatingTabBarChrome({
 }
 
 export function CustomTabBar(props: Readonly<BottomTabBarProps>) {
-  const { isAuthenticated, isLoggingOut, logout } = useAuth();
+  const { isAuthenticated } = useAuth();
   const tabOrder = isAuthenticated ? AUTH_TAB_ORDER : GUEST_TAB_ORDER;
   const visibleRoutes = tabOrder
     .map((name) => props.state.routes.find((r) => r.name === name))
@@ -124,26 +116,21 @@ export function CustomTabBar(props: Readonly<BottomTabBarProps>) {
         }
         const { options } = descriptor;
         const focused = activeTab?.key === route.key;
-        const isLogoutRoute = route.name === "logout";
+        const target =
+          props.state.routes.find(
+            (item) => item.name === tabRouteName(route.name, isAuthenticated),
+          ) ?? route;
 
         const onPress = () => {
           const event = props.navigation.emit({
             type: "tabPress",
-            target: route.key,
+            target: target.key,
             canPreventDefault: true,
           });
-          // Avoid navigating to the placeholder logout screen (which renders an
-          // empty view while logout runs) to prevent a brief blank-page flash.
-          if (isLogoutRoute) {
-            if (!event.defaultPrevented && !isLoggingOut) {
-              void logout();
-            }
-            return;
-          }
-          if (!focused && !event.defaultPrevented) {
+          if (activeTab?.key !== target.key && !event.defaultPrevented) {
             props.navigation.dispatch({
               ...CommonActions.navigate({
-                name: route.name,
+                name: target.name,
                 merge: true,
               }),
               target: props.state.key,
@@ -168,7 +155,6 @@ export function CustomTabBar(props: Readonly<BottomTabBarProps>) {
             accessibilityRole="button"
             accessibilityState={focused ? { selected: true } : {}}
             accessibilityLabel={options.tabBarAccessibilityLabel}
-            disabled={isLogoutRoute && isLoggingOut}
             onPress={onPress}
             onLongPress={onLongPress}
             android_ripple={null}
@@ -200,22 +186,21 @@ export function CustomTabBar(props: Readonly<BottomTabBarProps>) {
 export function SearchTabBar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { isAuthenticated, isLoggingOut, logout } = useAuth();
+  const { isAuthenticated } = useAuth();
   const tabOrder = isAuthenticated ? AUTH_TAB_ORDER : GUEST_TAB_ORDER;
 
   return (
     <FloatingTabBarChrome compact={tabOrder.length <= 2}>
       {tabOrder.map((name) => {
         const Icon = SEARCH_TAB_ICONS[name];
-        const href = SEARCH_TAB_HREFS[name];
+        const targetName = tabRouteName(name, isAuthenticated);
+        const href = SEARCH_TAB_HREFS[targetName];
         if (!Icon) {
           return null;
         }
         const focused = isSearchTabFocused(name, pathname);
-        const isLogout = name === "logout";
         const color = focused ? "#18181B" : "#71717A";
-        const label =
-          isLogout && isLoggingOut ? "Logging out…" : SEARCH_TAB_LABELS[name];
+        const label = SEARCH_TAB_LABELS[name];
 
         return (
           <Pressable
@@ -223,15 +208,8 @@ export function SearchTabBar() {
             accessibilityRole="button"
             accessibilityState={focused ? { selected: true } : {}}
             accessibilityLabel={label}
-            disabled={isLogout && isLoggingOut}
             onPress={() => {
-              if (isLogout) {
-                if (!isLoggingOut) {
-                  void logout();
-                }
-                return;
-              }
-              if (href && !focused) {
+              if (href && !isSearchTabFocused(targetName, pathname)) {
                 router.replace(href);
               }
             }}
