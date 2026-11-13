@@ -67,7 +67,7 @@ export default function ProfileScreen() {
 }
 
 function ProfileContent() {
-	const { logout, refreshUser, user } = useAuth();
+	const { isLoggingOut, logout, refreshUser, user } = useAuth();
 	const edited = useRef({
 		address: false,
 		city: false,
@@ -319,6 +319,16 @@ function ProfileContent() {
 							</DetailCardBody>
 						</DetailCard>
 					</View>
+
+					<Button
+						variant="link"
+						className="mt-8 self-start px-0"
+						disabled={isLoggingOut}
+						onPress={() => void logout()}
+						accessibilityLabel="Logout"
+					>
+						<Text>{isLoggingOut ? "Logging out…" : "Logout"}</Text>
+					</Button>
 				</View>
 			</ScrollView>
 
