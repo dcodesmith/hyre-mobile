@@ -5,6 +5,7 @@ import {
   DetailCardTitle,
 } from "@/components/booking-detail-card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 import { PUBLIC_WEB_ORIGIN } from "@/constants/config";
 import { useTabBarVisibility } from "@/context/tab-bar-visibility-context";
@@ -279,13 +280,15 @@ export default function ReferralsScreen() {
                         Your Referral Code
                       </Text>
                       <View className="flex-row gap-2">
-                        <View className="h-11 min-w-0 flex-1 justify-center rounded-md border border-neutral-300 bg-neutral-50 px-3.5">
-                          <Text selectable className="text-sm text-neutral-900">
-                            {referralSummary.referralCode}
-                          </Text>
-                        </View>
+                        <Input
+                          value={referralSummary.referralCode}
+                          readOnly
+                          selectTextOnFocus
+                          className="h-10 min-w-0 flex-1 text-sm shadow-none"
+                          accessibilityLabel="Referral code"
+                        />
                         <Button
-                          className="h-11 px-3.5"
+                          className="h-10 px-3.5"
                           onPress={() =>
                             void copyToClipboard(
                               referralSummary.referralCode ?? "",
@@ -312,17 +315,15 @@ export default function ReferralsScreen() {
                           Your Referral Link
                         </Text>
                         <View className="flex-row gap-2">
-                          <View className="h-11 min-w-0 flex-1 justify-center rounded-md border border-neutral-300 bg-neutral-50 px-3.5">
-                            <Text
-                              selectable
-                              numberOfLines={1}
-                              className="text-sm text-neutral-900"
-                            >
-                              {shareLink}
-                            </Text>
-                          </View>
+                          <Input
+                            value={shareLink}
+                            readOnly
+                            selectTextOnFocus
+                            className="h-10 min-w-0 flex-1 text-sm shadow-none"
+                            accessibilityLabel="Referral link"
+                          />
                           <Button
-                            className="h-11 px-3.5"
+                            className="h-10 px-3.5"
                             onPress={() =>
                               void copyToClipboard(shareLink, "link")
                             }
@@ -338,7 +339,7 @@ export default function ReferralsScreen() {
                             </Text>
                           </Button>
                         </View>
-                        <View className="flex-row items-center gap-2.5 py-1">
+                        <View className="flex-row items-center gap-2.5">
                           <Text className="text-xs font-semibold text-neutral-500">
                             SHARE VIA:
                           </Text>
