@@ -152,66 +152,74 @@ export default function LoginScreen() {
             <Controller
               control={control}
               name="acceptTerms"
-              render={({ field: { onChange, value } }) => (
-                <View>
-                  <Pressable
-                    className={cn(
-                      "flex-row items-start gap-2.5",
-                      isSubmitting && "opacity-50",
-                    )}
-                    disabled={isSubmitting}
-                    onPress={() => {
-                      setApiError(null);
-                      onChange(!value);
-                    }}
-                    accessibilityRole="checkbox"
-                    accessibilityState={{ checked: value }}
-                    accessibilityLabel="I agree to Tripdly's Terms of Service and Privacy Policy"
-                  >
-                    <Checkbox
-                      pointerEvents="none"
-                      checked={value}
-                      onCheckedChange={onChange}
+              render={({ field: { onChange, value } }) => {
+                const acceptTerms = () => {
+                  if (isSubmitting) return;
+                  setApiError(null);
+                  onChange(!value);
+                };
+
+                return (
+                  <View>
+                    <View
                       className={cn(
-                        "mt-0.5 rounded-[2px] shadow-none",
-                        value
-                          ? "border-neutral-900 bg-neutral-900"
-                          : "border-neutral-400 bg-white",
-                        errors.acceptTerms && "border-red-500",
+                        "flex-row items-start gap-2.5",
+                        isSubmitting && "opacity-50",
                       )}
-                      checkedClassName="border-neutral-900"
-                      indicatorClassName="bg-neutral-900"
-                    />
-                    <Text className="flex-1 text-sm text-neutral-600">
-                      I agree to Tripdly&apos;s{" "}
-                      <Text
-                        className="text-sm underline"
-                        onPress={(event) => {
-                          event.stopPropagation();
-                          openTerms();
+                    >
+                      <Checkbox
+                        checked={value}
+                        disabled={isSubmitting}
+                        onCheckedChange={(checked) => {
+                          if (isSubmitting) return;
+                          setApiError(null);
+                          onChange(checked === true);
                         }}
-                      >
-                        Terms
-                      </Text>{" "}
-                      and{" "}
-                      <Text
-                        className="text-sm underline"
-                        onPress={(event) => {
-                          event.stopPropagation();
-                          openPrivacy();
-                        }}
-                      >
-                        Privacy Policy
+                        accessibilityLabel="I agree to Tripdly's Terms of Service and Privacy Policy"
+                        className={cn(
+                          "mt-0.5 rounded-[2px] shadow-none",
+                          value
+                            ? "border-neutral-900 bg-neutral-900"
+                            : "border-neutral-400 bg-white",
+                          errors.acceptTerms && "border-red-500",
+                        )}
+                        checkedClassName="border-neutral-900"
+                        indicatorClassName="bg-neutral-900"
+                        iconClassName="text-white"
+                      />
+                      <Text className="flex-1 text-sm text-neutral-600">
+                        <Text
+                          className="text-sm text-neutral-600"
+                          onPress={acceptTerms}
+                        >
+                          I agree to Tripdly&apos;s{" "}
+                        </Text>
+                        <Text className="text-sm underline" onPress={openTerms}>
+                          Terms
+                        </Text>
+                        <Text
+                          className="text-sm text-neutral-600"
+                          onPress={acceptTerms}
+                        >
+                          {" "}
+                          and{" "}
+                        </Text>
+                        <Text
+                          className="text-sm underline"
+                          onPress={openPrivacy}
+                        >
+                          Privacy Policy
+                        </Text>
                       </Text>
-                    </Text>
-                  </Pressable>
-                  {errors.acceptTerms ? (
-                    <Text selectable className="mt-1 text-sm text-red-500">
-                      {errors.acceptTerms.message}
-                    </Text>
-                  ) : null}
-                </View>
-              )}
+                    </View>
+                    {errors.acceptTerms ? (
+                      <Text selectable className="mt-1 text-sm text-red-500">
+                        {errors.acceptTerms.message}
+                      </Text>
+                    ) : null}
+                  </View>
+                );
+              }}
             />
 
             {apiError ? (
